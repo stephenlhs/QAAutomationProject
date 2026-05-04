@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;padding:40px;max-width:400px;">
+  <h2>Captcha Helper</h2>
+  <img id="img" src="captcha.png" style="border:1px solid #ccc;margin-bottom:16px;display:block;">
+  <input id="val" type="text" placeholder="Type captcha here" autofocus
+    style="font-size:24px;letter-spacing:6px;padding:10px;width:100%;box-sizing:border-box;">
+  <button onclick="save()"
+    style="margin-top:12px;padding:10px 24px;font-size:16px;cursor:pointer;">
+    Save &amp; Continue
+  </button>
+  <p id="msg" style="color:green;font-weight:500;"></p>
+  <script>
+    async function save() {
+      const val = document.getElementById('val').value.trim();
+      if (!val) return alert('Please enter the captcha first');
+      const res = await fetch('/save-captcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ captcha: val })
+      });
+      if (res.ok) {
+        document.getElementById('msg').textContent = 'Saved!';
+      }
+    }
+    document.getElementById('val').addEventListener('keydown', e => {
+      if (e.key === 'Enter') save();
+    });
+  </script>
+</body>
+</html>

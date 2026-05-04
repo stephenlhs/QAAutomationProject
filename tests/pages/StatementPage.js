@@ -1,0 +1,47 @@
+import { expect } from '@playwright/test';
+
+export class StatementPage {
+  constructor(page) {
+    this.page = page;
+
+    this.statementLink = page.getByRole('link', { name: ' Statement' });
+    this.transactionsLink = page.getByRole('link', { name: ' Transactions' });
+    this.cashHistoryTab = page.getByText('Cash History');
+  }
+
+  async navigateToCashHistory() {
+    await this.statementLink.click();
+    await this.transactionsLink.click();
+    await this.cashHistoryTab.click();
+    await this.page.waitForTimeout(1500);
+  }
+
+  async getLatestTransaction() {
+    const latestRow = this.page.getByRole('row').nth(1);
+    const cells = await latestRow.getByRole('cell').allInnerTexts();
+    console.log('>> Transaction row:', cells);
+
+    return {
+      dateTime:    cells[0] || '-',
+      txNo:        cells[1] || '-',
+      description: cells[2] || '-',
+      type:        cells[3] || '-',
+      status:      cells[4] || '-',
+      amount:      cells[5] || '-',
+      bonus:       cells[6] || '-',
+      row:         latestRow
+    };
+  }
+
+  async verifyLatestStatus(status) {
+    const latestRow = this.page.getByRole('row').nth(1);
+    await expect(latestRow.getByRole('cell', { name: status })).toBeVisible({ timeout: 5000 });
+    console.log(`>> Cash History status: ${status} ✅`);
+  }
+
+  async verifyRejectRemark(remark) {
+    const remarkTooltip = this.page.locator('i').filter({ hasText: new RegExp(remark, 'i') }).first();
+    await expect(remarkTooltip).toBeVisible({ timeout: 5000 });
+    console.log(`>> Reject remark visible: ${remark} ✅`);
+  }
+}

@@ -1,0 +1,10 @@
+.env
+.auth/
+node_modules/
+captcha*.png
+captcha-answer*.txt
+member-account*.png
+withdrawal-*.png
+test-results/
+playwright-report/
+test-report*.txt
