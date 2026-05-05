@@ -217,4 +217,4 @@ Make sure to start captcha server before running tests:
 
 ## Author
 
-Stephen - QA Automation Engineer
+Stephen - QA Engineer
