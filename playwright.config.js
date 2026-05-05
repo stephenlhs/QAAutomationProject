@@ -5,6 +5,7 @@ export default defineConfig({
   workers: 1,
   timeout: 180000,
   reporter: 'html',
+
   projects: [
     {
       name: 'setup',
@@ -20,6 +21,19 @@ export default defineConfig({
         trace: 'on',
       },
       dependencies: ['setup'],
+      testIgnore: '**/CreateMemberAndSaveSession.spec.js',
+    },
+    {
+      name: 'member-setup',
+      testMatch: '**/CreateMemberAndSaveSession.spec.js',
+      use: {
+        ...devices['Desktop Chromium'],
+        headless: false,
+        screenshot: 'on',
+        video: 'on',
+        trace: 'on',
+      },
+      // no dependencies — runs standalone
     },
   ],
 });
