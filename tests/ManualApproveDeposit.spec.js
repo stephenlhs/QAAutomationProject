@@ -1,30 +1,33 @@
 import { test, expect } from '@playwright/test';
 import { writeFileSync } from 'fs';
+import { CaptchaHelper } from './helpers/CaptchaHelper.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { BackofficePage } from './pages/BackofficePage.js';
 import { DepositPage } from './pages/DepositPage.js';
 import { WithdrawalPage } from './pages/WithdrawalPage.js';
 import { StatementPage } from './pages/StatementPage.js';
-
-const DEPOSIT_AMOUNT = 50;
-const ROLLOVER_MULTIPLIER = 1;
-const BANK_NAME = 'C zh test - zh test all';
+import { PLAYER, BACKOFFICE, DEPOSIT } from './config.js';
 
 test('deposit approve — verify balance and rollover', async ({ browser }) => {
 
- // ── PART 1: Player — check stats before ──
-const playerContext = await browser.newContext({ storageState: '.auth/player.json' });
-const playerPage = await playerContext.newPage();
-const loginPage = new LoginPage(playerPage);
-const depositPage = new DepositPage(playerPage);
-const withdrawalPage = new WithdrawalPage(playerPage);
-const statementPage = new StatementPage(playerPage);
+  // ── PART 1: Player — login fresh + save session + check stats before ──
+  const playerContext = await browser.newContext();
+  const playerPage = await playerContext.newPage();
+  const loginPage = new LoginPage(playerPage, 'player');
+  const depositPage = new DepositPage(playerPage);
+  const withdrawalPage = new WithdrawalPage(playerPage);
+  const statementPage = new StatementPage(playerPage);
+  const captcha = new CaptchaHelper(playerPage, 'player');
 
-await loginPage.loginWithSession();
+  await loginPage.loginAndSaveSession(
+    PLAYER.username,
+    PLAYER.password,
+    captcha,
+    PLAYER.sessionPath
+  );
 
-// Get username dynamically
-const actualUsername = await loginPage.getLoggedInUsername();
-console.log(`>> Logged in as: ${actualUsername}`);
+  const actualUsername = await loginPage.getLoggedInUsername();
+  console.log(`>> Logged in as: ${actualUsername}`);
 
   await withdrawalPage.navigate();
   const before = await withdrawalPage.getStats('before');
@@ -32,8 +35,8 @@ console.log(`>> Logged in as: ${actualUsername}`);
 
   // ── PART 2: Submit deposit ──
   await depositPage.navigate();
-  await depositPage.selectBankTransfer(BANK_NAME);
-  await depositPage.submit(DEPOSIT_AMOUNT);
+  await depositPage.selectBankTransfer(DEPOSIT.bankName);
+  await depositPage.submit(DEPOSIT.amount);
 
   // ── PART 3: Verify pending in Cash History ──
   await statementPage.navigateToCashHistory();
@@ -43,21 +46,28 @@ console.log(`>> Logged in as: ${actualUsername}`);
 
   await playerContext.close();
 
-// ── PART 4: Backoffice ──
-  const boContext = await browser.newContext({ storageState: '.auth/backoffice.json' });
+  // ── PART 4: Backoffice — login fresh + save session + check outstanding + approve ──
+  const boContext = await browser.newContext();
   const boPage = await boContext.newPage();
-  const backoffice = new BackofficePage(boPage);
+  const backoffice = new BackofficePage(boPage, 'backoffice');
+  const boCaptcha = new CaptchaHelper(boPage, 'backoffice');
 
-  await backoffice.loginWithSession();
+  await backoffice.loginAndSaveSession(
+    BACKOFFICE.username,
+    BACKOFFICE.password,
+    boCaptcha,
+    BACKOFFICE.sessionPath
+  );
+
   const outstanding = await backoffice.getMemberOutstandingBalance(actualUsername);
-  await backoffice.approveDeposit('test manual approve');
+  await backoffice.approveDeposit(actualUsername, 'test manual approve');
 
   await boContext.close();
 
-  // ── PART 5: Player — verify after approval ──
-  const playerContext2 = await browser.newContext({ storageState: '.auth/player.json' });
+  // ── PART 5: Player — restore session + verify after approval ──
+  const playerContext2 = await browser.newContext({ storageState: PLAYER.sessionPath });
   const playerPage2 = await playerContext2.newPage();
-  const loginPage2 = new LoginPage(playerPage2);
+  const loginPage2 = new LoginPage(playerPage2, 'player');
   const withdrawalPage2 = new WithdrawalPage(playerPage2);
   const statementPage2 = new StatementPage(playerPage2);
 
@@ -72,17 +82,19 @@ console.log(`>> Logged in as: ${actualUsername}`);
 
   // ── Calculations ──
   const txBonusAmount = parseFloat(tx.bonus) || 0;
-  const totalCredit = DEPOSIT_AMOUNT + txBonusAmount;
+  const totalCredit = DEPOSIT.amount + txBonusAmount;
   const effectiveBalance = before.balance + outstanding.total;
-  const rolloverIncrease = totalCredit * ROLLOVER_MULTIPLIER;
+  const rolloverIncrease = totalCredit * DEPOSIT.rolloverMultiplier;
 
   let expectedRollover, expectedTarget;
   if (effectiveBalance <= 20) {
     expectedRollover = 0;
     expectedTarget = rolloverIncrease;
+    console.log(`>> Effective balance <= 20 — rollover RESETS`);
   } else {
     expectedRollover = before.rollover;
     expectedTarget = before.target + rolloverIncrease;
+    console.log(`>> Effective balance > 20 — rollover STACKS`);
   }
 
   const expectedBalance = before.balance + totalCredit;
@@ -91,7 +103,7 @@ console.log(`>> Logged in as: ${actualUsername}`);
   expect(after.balance).toBeCloseTo(expectedBalance, 1);
   expect(after.rollover).toBeCloseTo(expectedRollover, 1);
   expect(after.target).toBeCloseTo(expectedTarget, 1);
-  console.log(`>> All assertions passed ✅`);
+  console.log('>> All assertions passed ✅');
 
   // ── Report ──
   const report = `
@@ -112,9 +124,9 @@ TRANSACTION
   Total Credit: MYR ${totalCredit.toFixed(2)}
 ----------------------------------------
 DEPOSIT
-  Amount      : MYR ${DEPOSIT_AMOUNT.toFixed(2)}
+  Amount      : MYR ${DEPOSIT.amount.toFixed(2)}
   Bonus       : MYR ${txBonusAmount.toFixed(2)}
-  Package     : Stephen Turnover Package (x${ROLLOVER_MULTIPLIER})
+  Package     : ${DEPOSIT.packageName} (x${DEPOSIT.rolloverMultiplier})
 ----------------------------------------
 BALANCE
   Before      : MYR ${before.balance.toFixed(2)}

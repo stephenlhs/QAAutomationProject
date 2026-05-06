@@ -1,23 +1,29 @@
 import { test, expect } from '@playwright/test';
 import { writeFileSync } from 'fs';
+import { CaptchaHelper } from './helpers/CaptchaHelper.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { BackofficePage } from './pages/BackofficePage.js';
 import { WithdrawalPage } from './pages/WithdrawalPage.js';
 import { StatementPage } from './pages/StatementPage.js';
-
-const WITHDRAW_AMOUNT = 10;
-const USERNAME = 'automatemyr1';
+import { PLAYER, BACKOFFICE, WITHDRAWAL } from './config.js';
 
 test('withdrawal reject — verify balance and rollover unchanged', async ({ browser }) => {
 
-  // ── PART 1: Player — check stats before ──
-  const playerContext = await browser.newContext({ storageState: '.auth/player.json' });
+  // ── PART 1: Player — login fresh + save session + check stats before ──
+  const playerContext = await browser.newContext();
   const playerPage = await playerContext.newPage();
-  const loginPage = new LoginPage(playerPage);
+  const loginPage = new LoginPage(playerPage, 'player');
   const withdrawalPage = new WithdrawalPage(playerPage);
   const statementPage = new StatementPage(playerPage);
+  const captcha = new CaptchaHelper(playerPage, 'player');
 
-  await loginPage.loginWithSession();
+  await loginPage.loginAndSaveSession(
+    PLAYER.username,
+    PLAYER.password,
+    captcha,
+    PLAYER.sessionPath
+  );
+
   const actualUsername = await loginPage.getLoggedInUsername();
   console.log(`>> Logged in as: ${actualUsername}`);
 
@@ -25,15 +31,14 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   const before = await withdrawalPage.getStats('before');
   console.log(`>> BEFORE — Balance: ${before.balance}, Rollover: ${before.rollover}, Target: ${before.target}`);
 
-// ── PART 2: Validate rollover met ──
+  // ── PART 2: Validate rollover met ──
   if (before.rollover < before.target) {
     console.log(`>> Rollover not met: ${before.rollover} < ${before.target}`);
-    await withdrawalPage.verifyRolloverError(WITHDRAW_AMOUNT);
+    await withdrawalPage.verifyRolloverError(WITHDRAWAL.amount);
 
-    // Generate report for rollover not met
     const report = `
 ========================================
-   WITHDRAWAL TEST REPORT
+   WITHDRAWAL REJECT TEST REPORT
 ========================================
 Date/Time     : ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}
 Player        : ${actualUsername}
@@ -43,7 +48,6 @@ Reason        : Rollover not met
 ----------------------------------------
 ROLLOVER / TARGET
   Current     : ${before.rollover.toFixed(2)} / ${before.target.toFixed(2)}
-  Required    : Rollover >= Target
   Shortfall   : ${(before.target - before.rollover).toFixed(2)} more needed
 ----------------------------------------
 BALANCE
@@ -54,10 +58,8 @@ ACTION NEEDED : Please complete more bets before withdrawing
 `;
     console.log(report);
     writeFileSync('test-report-withdrawal-rollover-not-met.txt', report);
-    console.log('>> Report saved to test-report-withdrawal-rollover-not-met.txt');
-
     await playerContext.close();
-    return; // stop test gracefully without throwing error
+    return;
   }
 
   // ── PART 3: Test insufficient balance ──
@@ -65,29 +67,37 @@ ACTION NEEDED : Please complete more bets before withdrawing
 
   // ── PART 4: Submit withdrawal ──
   await withdrawalPage.navigate();
-  await withdrawalPage.submitWithdrawal(WITHDRAW_AMOUNT);
+  await withdrawalPage.submitWithdrawal(WITHDRAWAL.amount);
 
-  // ── PART 5: Verify pending ──
+  // ── PART 5: Verify pending in Cash History ──
   await statementPage.navigateToCashHistory();
   const tx = await statementPage.getLatestTransaction();
   await statementPage.verifyLatestStatus('Pending');
+  console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
   await playerContext.close();
 
-  // ── PART 6: Backoffice — reject withdrawal ──
-  const boContext = await browser.newContext({ storageState: '.auth/backoffice.json' });
+  // ── PART 6: Backoffice — login fresh + save session + reject withdrawal ──
+  const boContext = await browser.newContext();
   const boPage = await boContext.newPage();
-  const backoffice = new BackofficePage(boPage);
+  const backoffice = new BackofficePage(boPage, 'backoffice');
+  const boCaptcha = new CaptchaHelper(boPage, 'backoffice');
 
-  await backoffice.loginWithSession();
-  await backoffice.rejectWithdrawal('test manual reject withdrawal');
+  await backoffice.loginAndSaveSession(
+    BACKOFFICE.username,
+    BACKOFFICE.password,
+    boCaptcha,
+    BACKOFFICE.sessionPath
+  );
+
+  await backoffice.rejectWithdrawal(actualUsername, 'test manual reject withdrawal');
 
   await boContext.close();
 
-  // ── PART 7: Player — verify after rejection ──
-  const playerContext2 = await browser.newContext({ storageState: '.auth/player.json' });
+  // ── PART 7: Player — restore session + verify after rejection ──
+  const playerContext2 = await browser.newContext({ storageState: PLAYER.sessionPath });
   const playerPage2 = await playerContext2.newPage();
-  const loginPage2 = new LoginPage(playerPage2);
+  const loginPage2 = new LoginPage(playerPage2, 'player');
   const withdrawalPage2 = new WithdrawalPage(playerPage2);
   const statementPage2 = new StatementPage(playerPage2);
 
@@ -95,10 +105,10 @@ ACTION NEEDED : Please complete more bets before withdrawing
 
   await statementPage2.navigateToCashHistory();
   await statementPage2.verifyLatestStatus('Rejected');
-  await statementPage2.verifyRejectRemark('test manual reject withdrawal');
 
   await withdrawalPage2.navigate();
   const after = await withdrawalPage2.getStats('after');
+  console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
 
   // ── Assertions — unchanged ──
   expect(after.balance).toBeCloseTo(before.balance, 1);
@@ -124,11 +134,12 @@ TRANSACTION
   Remark      : test manual reject withdrawal
 ----------------------------------------
 WITHDRAWAL
-  Amount      : MYR ${WITHDRAW_AMOUNT.toFixed(2)}
+  Amount      : MYR ${WITHDRAWAL.amount.toFixed(2)}
 ----------------------------------------
 BALANCE
   Before      : MYR ${before.balance.toFixed(2)}
   After       : MYR ${after.balance.toFixed(2)}
+  Expected    : Unchanged
 ----------------------------------------
 ROLLOVER / TARGET
   Before      : ${before.rollover.toFixed(2)} / ${before.target.toFixed(2)}

@@ -8,3 +8,5 @@ withdrawal-*.png
 test-results/
 playwright-report/
 test-report*.txt
+tests/ApprovePending.spec.js
+tests/BulkDeposit.spec.js

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { mkdirSync } from 'fs';
 
 export class LoginPage {
   constructor(page, testId = 'default') {
@@ -29,18 +30,32 @@ export class LoginPage {
     }
   }
 
-  async login(username, password, captchaHelper) {
+  async closeExtraTabs() {
+    const pages = this.page.context().pages();
+    for (const p of pages) {
+      if (p !== this.page) await p.close().catch(() => {});
+    }
+  }
+
+  // ── Login + save session + continue ──
+  async loginAndSaveSession(username, password, captchaHelper, sessionPath) {
+    await this.goto();
+    await this.page.waitForLoadState('domcontentloaded');
+    await this.page.waitForTimeout(1000);
+    await this.closeExtraTabs();
+    await this.closePopups();
+
     await this.loginLink.click();
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
 
     for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`>> [${this.testId}] Player login attempt ${attempt}...`);
+      console.log(`>> [${this.testId}] Login attempt ${attempt}...`);
 
       const captchaText = await captchaHelper.solve(this.captchaImg);
 
       if (captchaText.length !== 4) {
-        console.log(`>> Not 4 digits, refreshing...`);
+        console.log(`>> [${this.testId}] Not 4 digits, refreshing...`);
         await this.captchaImg.click();
         await this.page.waitForTimeout(1000);
         continue;
@@ -52,48 +67,46 @@ export class LoginPage {
 
       const stillVisible = await this.loginForm.isVisible().catch(() => false);
       if (!stillVisible) {
-        console.log(`>> [${this.testId}] Player login successful!`);
+        console.log(`>> [${this.testId}] Login successful ✅`);
         await this.page.waitForTimeout(1000);
+        await this.closeExtraTabs();
         await this.closePopups();
+
+        // Save session immediately
+        mkdirSync('.auth', { recursive: true });
+        await this.page.context().storageState({ path: sessionPath });
+        console.log(`>> [${this.testId}] Session saved to ${sessionPath} ✅`);
         return;
       }
 
-      console.log(`>> Captcha wrong, retrying...`);
+      console.log(`>> [${this.testId}] Captcha wrong, retrying...`);
       await this.captchaImg.click();
       await this.page.waitForTimeout(1000);
     }
 
-    throw new Error('Player login failed after 3 attempts');
+    throw new Error(`[${this.testId}] Login failed after 3 attempts`);
   }
 
+  // ── Restore existing session ──
   async loginWithSession() {
-    await this.page.goto('https://stage-mem.linkv2.com/');
+    await this.goto();
     await this.page.waitForLoadState('domcontentloaded');
     await this.page.waitForTimeout(2000);
-
-    // Close any extra tabs
-    const context = this.page.context();
-    const pages = context.pages();
-    for (const p of pages) {
-      if (p !== this.page) {
-        await p.close().catch(() => {});
-      }
-    }
-
+    await this.closeExtraTabs();
     await this.closePopups();
 
     const loginVisible = await this.loginForm.isVisible().catch(() => false);
     if (loginVisible) {
-      throw new Error('Session expired — run: npx playwright test tests/auth.setup.js --headed');
+      throw new Error('Session expired — run auth setup again');
     }
 
     console.log(`>> [${this.testId}] Player session restored ✅`);
   }
 
+  // ── Get logged in username from navbar ──
   async getLoggedInUsername() {
     try {
       await this.page.waitForTimeout(1000);
-      // Get text from header area
       const allText = await this.page
         .locator('header, nav, .navbar, [class*="header"]')
         .first()

@@ -15,8 +15,7 @@ const BANK_CODE = '808';
 // MEMBER LIST — add users here
 // =============================
 const MEMBERS = [
-  { username: 'myrauto5', currency: 'MYR' },
-  { username: 'myrauto6', currency: 'MYR' },
+  { username: 'myrstagingtt1', currency: 'MYR' },
 ];
 
 // =============================

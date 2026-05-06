@@ -8,10 +8,6 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'setup',
-      testMatch: '**/auth.setup.js',
-    },
-    {
       name: 'chromium',
       use: {
         ...devices['Desktop Chromium'],
@@ -20,7 +16,6 @@ export default defineConfig({
         video: 'on',
         trace: 'on',
       },
-      dependencies: ['setup'],
       testIgnore: '**/CreateMemberAndSaveSession.spec.js',
     },
     {
@@ -33,7 +28,6 @@ export default defineConfig({
         video: 'on',
         trace: 'on',
       },
-      // no dependencies — runs standalone
     },
   ],
 });

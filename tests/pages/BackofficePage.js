@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { mkdirSync } from 'fs';
 
 export class BackofficePage {
   constructor(page, testId = 'default') {
@@ -20,14 +21,16 @@ export class BackofficePage {
     const context = this.page.context();
     const pages = context.pages();
     for (const p of pages) {
-      if (p !== this.page) {
-        await p.close().catch(() => {});
-      }
+      if (p !== this.page) await p.close().catch(() => {});
     }
   }
 
-  async login(username, password, captchaHelper) {
+  // ── Login + save session + continue ──
+  async loginAndSaveSession(username, password, captchaHelper, sessionPath) {
     await this.goto();
+    await this.page.waitForLoadState('domcontentloaded');
+    await this.page.waitForTimeout(1000);
+
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
 
@@ -49,18 +52,23 @@ export class BackofficePage {
 
       const stillOnLogin = this.page.url().includes('/login');
       if (!stillOnLogin) {
-        console.log(`>> [${this.testId}] Backoffice login successful!`);
+        console.log(`>> [${this.testId}] Backoffice login successful ✅`);
+
+        mkdirSync('.auth', { recursive: true });
+        await this.page.context().storageState({ path: sessionPath });
+        console.log(`>> [${this.testId}] Session saved to ${sessionPath} ✅`);
         return;
       }
 
-      console.log(`>> Backoffice captcha wrong, retrying...`);
+      console.log(`>> [${this.testId}] Captcha wrong, retrying...`);
       await this.captchaImg.click();
       await this.page.waitForTimeout(1000);
     }
 
-    throw new Error('Backoffice login failed after 3 attempts');
+    throw new Error(`[${this.testId}] Backoffice login failed after 3 attempts`);
   }
 
+  // ── Restore existing session ──
   async loginWithSession() {
     await this.page.goto('https://stage-bo.linkv2.com/dashboard/home');
     await this.page.waitForLoadState('domcontentloaded');
@@ -69,82 +77,83 @@ export class BackofficePage {
 
     const isLoginPage = this.page.url().includes('/login');
     if (isLoginPage) {
-      throw new Error('BO Session expired — run: npx playwright test tests/auth.setup.js --headed');
+      throw new Error('BO Session expired — run auth setup again');
     }
 
     console.log(`>> [${this.testId}] Backoffice session restored ✅`);
   }
 
   async getMemberOutstandingBalance(username) {
-  await this.closeExtraTabs();
-
-  // Navigate to Member Account
-  await this.page.locator('a').filter({ hasText: 'Members' }).click();
-  await this.page.getByRole('link', { name: 'Member Account' }).click();
-  await this.page.waitForLoadState('domcontentloaded');
-  await this.page.waitForTimeout(1000);
-
-  // Search player
-  await this.page.getByRole('textbox', { name: 'Username' }).fill(`x9048_${username}`);
-  await this.page.getByRole('button', { name: 'Search' }).click();
-  await this.page.waitForTimeout(2000);
-  await this.closeExtraTabs();
-
-  // Wait for data
-  await this.page.waitForSelector('text=Sport Total Outstanding Balance', { timeout: 10000 })
-    .catch(() => console.log('>> Data not found'));
-
-  // Screenshot
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await this.page.screenshot({ path: `member-account-${timestamp}.png`, fullPage: true });
-  console.log(`>> Screenshot saved: member-account-${timestamp}.png`);
-
-  // Parse value from full text e.g. "Sport Total Outstanding Balance: 5.00"
-  const getVal = async (labelText) => {
-  try {
-    // Get the parent container that has both label and value
-    const el = this.page.getByText(labelText).last();
-    const parent = el.locator('..');
-    const fullText = await parent.innerText();
-    console.log(`>> "${labelText}" parent text: "${fullText}"`);
-    // Extract last number in the text
-    const numbers = fullText.match(/[\d,]+\.\d+/g);
-    return numbers ? parseFloat(numbers[numbers.length - 1].replace(/,/g, '')) : 0;
-  } catch {
-    return 0;
-  }
-};
-
-  const sport   = await getVal('Sport Total Outstanding Balance:');
-  const casino  = await getVal('Live Casino Total Outstanding Balance:');
-  const lottery = await getVal('Lottery Total Outstanding Balance:');
-  const games   = await getVal('Games Total Outstanding Balance:');
-  const p2p     = await getVal('P2P Total Outstanding Balance:');
-  const total   = sport + casino + lottery + games + p2p;
-
-  console.log(`>> Outstanding — Sport: ${sport}, Casino: ${casino}, Lottery: ${lottery}, Games: ${games}, P2P: ${p2p}, Total: ${total}`);
-
-  // Go directly to Cash Deposit List
-  await this.page.goto('https://stage-bo.linkv2.com/dashboard/cash/deposit-list', {
-    waitUntil: 'domcontentloaded'
-  });
-  await this.page.waitForTimeout(1000);
-  await this.closeExtraTabs();
-  console.log(`>> Navigated to Cash Deposit List: ${this.page.url()}`);
-
-  return { sport, casino, lottery, games, p2p, total };
-}
-
-  async approveDeposit(comment = 'test manual approve') {
     await this.closeExtraTabs();
-    console.log(`>> Current URL: ${this.page.url()}`);
 
-    // Only navigate if not already on deposit list
+    // Navigate to Member Account
+    await this.page.locator('a').filter({ hasText: 'Members' }).click();
+    await this.page.getByRole('link', { name: 'Member Account' }).click();
+    await this.page.waitForLoadState('domcontentloaded');
+    await this.page.waitForTimeout(1000);
+
+    // Search player
+    await this.page.getByRole('textbox', { name: 'Username' }).fill(`x9048_${username}`);
+    await this.page.getByRole('button', { name: 'Search' }).click();
+    await this.page.waitForTimeout(2000);
+    await this.closeExtraTabs();
+
+    // Wait for data
+    await this.page.waitForSelector('text=Sport Total Outstanding Balance', { timeout: 10000 })
+      .catch(() => console.log('>> Outstanding data not found'));
+
+    // Screenshot
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    await this.page.screenshot({ path: `member-account-${timestamp}.png`, fullPage: true });
+    console.log(`>> Screenshot saved: member-account-${timestamp}.png`);
+
+    // Parse outstanding values
+    const getVal = async (labelText) => {
+      try {
+        const el = this.page.getByText(labelText).last();
+        const parent = el.locator('..');
+        const fullText = await parent.innerText();
+        console.log(`>> "${labelText}" parent text: "${fullText}"`);
+        const numbers = fullText.match(/[\d,]+\.\d+/g);
+        return numbers ? parseFloat(numbers[numbers.length - 1].replace(/,/g, '')) : 0;
+      } catch {
+        return 0;
+      }
+    };
+
+    const sport   = await getVal('Sport Total Outstanding Balance:');
+    const casino  = await getVal('Live Casino Total Outstanding Balance:');
+    const lottery = await getVal('Lottery Total Outstanding Balance:');
+    const games   = await getVal('Games Total Outstanding Balance:');
+    const p2p     = await getVal('P2P Total Outstanding Balance:');
+    const total   = sport + casino + lottery + games + p2p;
+
+    console.log(`>> Outstanding — Sport: ${sport}, Casino: ${casino}, Lottery: ${lottery}, Games: ${games}, P2P: ${p2p}, Total: ${total}`);
+
+    // Go directly to Cash Deposit List
+    await this.page.goto('https://stage-bo.linkv2.com/dashboard/cash/deposit-list', {
+      waitUntil: 'domcontentloaded'
+    });
+    await this.page.waitForTimeout(1000);
+    await this.closeExtraTabs();
+    console.log(`>> Navigated to Cash Deposit List: ${this.page.url()}`);
+
+    return { sport, casino, lottery, games, p2p, total };
+  }
+
+  async approveDeposit(username, comment = 'test manual approve') {
+    await this.closeExtraTabs();
+
     if (!this.page.url().includes('deposit-list')) {
       await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
       await this.page.getByRole('link', { name: 'Cash Deposit List' }).click();
     }
-    console.log('>> On Cash Deposit List');
+
+    // Search by username
+    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.getByRole('button', { name: 'Search' }).click();
+    await this.page.waitForTimeout(1000);
+    console.log(`>> Searching deposit for: x9048_${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest deposit');
@@ -157,15 +166,19 @@ export class BackofficePage {
     console.log('>> Deposit approved ✅');
   }
 
-  async rejectDeposit(comment = 'test manual reject') {
+  async rejectDeposit(username, comment = 'test manual reject') {
     await this.closeExtraTabs();
-    console.log(`>> Current URL: ${this.page.url()}`);
 
     if (!this.page.url().includes('deposit-list')) {
       await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
       await this.page.getByRole('link', { name: 'Cash Deposit List' }).click();
     }
-    console.log('>> On Cash Deposit List');
+
+    // Search by username
+    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.getByRole('button', { name: 'Search' }).click();
+    await this.page.waitForTimeout(1000);
+    console.log(`>> Searching deposit for: x9048_${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest deposit');
@@ -178,12 +191,17 @@ export class BackofficePage {
     console.log('>> Deposit rejected ✅');
   }
 
-  async approveWithdrawal(comment = 'test manual approve withdrawal') {
+  async approveWithdrawal(username, comment = 'test manual approve withdrawal') {
     await this.closeExtraTabs();
 
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();
-    console.log('>> On Cash Withdraw List');
+
+    // Search by username
+    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.getByRole('button', { name: 'Search' }).click();
+    await this.page.waitForTimeout(1000);
+    console.log(`>> Searching withdrawal for: x9048_${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest withdrawal');
@@ -196,12 +214,17 @@ export class BackofficePage {
     console.log('>> Withdrawal approved ✅');
   }
 
-  async rejectWithdrawal(comment = 'test manual reject withdrawal') {
+  async rejectWithdrawal(username, comment = 'test manual reject withdrawal') {
     await this.closeExtraTabs();
 
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();
-    console.log('>> On Cash Withdraw List');
+
+    // Search by username
+    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.getByRole('button', { name: 'Search' }).click();
+    await this.page.waitForTimeout(1000);
+    console.log(`>> Searching withdrawal for: x9048_${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest withdrawal');
