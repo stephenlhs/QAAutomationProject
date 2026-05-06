@@ -1,22 +1,7 @@
 import { test } from '@playwright/test';
 import { CaptchaHelper } from './helpers/CaptchaHelper.js';
 import { BackofficePage } from './pages/BackofficePage.js';
-
-// =============================
-// CONFIGURATION
-// =============================
-const INITIAL_PASSWORD = '1234ssss';
-const NEW_PASSWORD = 'ssss1234';
-const BO_USERNAME = 'stephen@mv1';
-const BO_PASSWORD = 'qwert123';
-const BANK_CODE = '808';
-
-// =============================
-// MEMBER LIST — add users here
-// =============================
-const MEMBERS = [
-  { username: 'myrstagingtt1', currency: 'MYR' },
-];
+import { MEMBER_SETUP, MEMBERS } from './config.js';
 
 // =============================
 // HELPER: Generate unique bank account number
@@ -80,8 +65,8 @@ async function createMember(page, username, currency = 'MYR') {
 
   console.log(`>> [${username}] Creating member with currency: ${currency}...`);
 
-  await page.getByRole('textbox', { name: 'Password must contain 8 - 15' }).fill(INITIAL_PASSWORD);
-  await page.locator('input[name="ConfirmPassword"]').fill(INITIAL_PASSWORD);
+  await page.getByRole('textbox', { name: 'Password must contain 8 - 15' }).fill(MEMBER_SETUP.initialPassword);
+  await page.locator('input[name="ConfirmPassword"]').fill(MEMBER_SETUP.initialPassword);
   await page.locator('select[name="Currency"]').selectOption(currency);
 
   await page.getByRole('button', { name: 'Submit' }).click();
@@ -125,13 +110,14 @@ async function updateBankAccount(page, username) {
   await page.getByTitle('Update Bank Account').first().click();
   await page.waitForTimeout(1000);
 
+  // Fill bank details with retry for duplicate number
   let bankUpdated = false;
   for (let attempt = 1; attempt <= 5; attempt++) {
     const accountNumber = generateBankAccountNumber();
     console.log(`>> [${username}] Trying account number: ${accountNumber} (attempt ${attempt})`);
 
     await page.locator('input[name="txtfullname"]').fill(username);
-    await page.locator('select[name="bank"]').selectOption(BANK_CODE);
+    await page.locator('select[name="bank"]').selectOption(MEMBER_SETUP.bankCode);
     await page.waitForTimeout(500);
 
     await page.locator('input[type="text"]').nth(4).clear();
@@ -142,6 +128,7 @@ async function updateBankAccount(page, username) {
       await defaultCheckbox.check();
     }
 
+    // Use stable submit locator instead of dynamic modal ID
     await page.locator('.modal.in .modal-footer .btn-primary, .modal.show .modal-footer .btn-primary')
       .filter({ hasText: 'Submit' })
       .click();
@@ -184,7 +171,7 @@ async function loginAndChangePassword(browser, username) {
     await page.getByRole('link', { name: ' Login' }).click();
     await page.waitForTimeout(500);
     await page.getByRole('textbox', { name: 'Username' }).fill(username);
-    await page.getByRole('textbox', { name: 'Password' }).fill(INITIAL_PASSWORD);
+    await page.getByRole('textbox', { name: 'Password' }).fill(MEMBER_SETUP.initialPassword);
 
     let loggedIn = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -215,7 +202,7 @@ async function loginAndChangePassword(browser, username) {
       await page.waitForTimeout(1000);
     }
 
-    if (!loggedIn) throw new Error('Could not login');
+    if (!loggedIn) throw new Error('Could not login with initial password');
 
     await closeExtraTabs(page);
     await closePopups(page);
@@ -225,16 +212,16 @@ async function loginAndChangePassword(browser, username) {
     await page.goto('https://stage-mem.linkv2.com/user/account');
     await page.waitForTimeout(1500);
 
-    await page.locator('#txtOldPassword').fill(INITIAL_PASSWORD);
-    await page.locator('#txtNewPassword').fill(NEW_PASSWORD);
-    await page.locator('#txtConfirmPassword').fill(NEW_PASSWORD);
+    await page.locator('#txtOldPassword').fill(MEMBER_SETUP.initialPassword);
+    await page.locator('#txtNewPassword').fill(MEMBER_SETUP.newPassword);
+    await page.locator('#txtConfirmPassword').fill(MEMBER_SETUP.newPassword);
     await page.getByRole('button', { name: 'Change Password' }).click();
     await page.waitForTimeout(1000);
 
     const okBtn = page.getByRole('button', { name: 'OK' });
     if (await okBtn.isVisible().catch(() => false)) await okBtn.click();
 
-    console.log(`>> [${username}] Password changed to ${NEW_PASSWORD} ✅`);
+    console.log(`>> [${username}] Password changed to ${MEMBER_SETUP.newPassword} ✅`);
 
   } catch (err) {
     console.log(`>> [${username}] Error: ${err.message}`);
@@ -254,7 +241,7 @@ test('create members setup', async ({ browser }) => {
   const boCaptcha = new CaptchaHelper(boPage, 'create-member-bo');
   const backoffice = new BackofficePage(boPage, 'create-member-bo');
 
-  await backoffice.login(BO_USERNAME, BO_PASSWORD, boCaptcha);
+  await backoffice.login(MEMBER_SETUP.boUsername, MEMBER_SETUP.boPassword, boCaptcha);
   console.log('>> Backoffice login successful ✅');
 
   // ── PART 2: Create each member ──
@@ -284,7 +271,7 @@ test('create members setup', async ({ browser }) => {
   console.log('>> SETUP COMPLETE');
   console.log('>> =============================');
   MEMBERS.forEach(m => {
-    console.log(`>>   ✅ ${m.username} (${m.currency}) — password: ${NEW_PASSWORD}`);
+    console.log(`>>   ✅ ${m.username} (${m.currency}) — password: ${MEMBER_SETUP.newPassword}`);
   });
   console.log('>> =============================\n');
 });

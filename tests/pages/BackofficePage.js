@@ -25,6 +25,45 @@ export class BackofficePage {
     }
   }
 
+  // ── Login only (no session saving) ──
+  async login(username, password, captchaHelper) {
+    await this.goto();
+    await this.page.waitForLoadState('domcontentloaded');
+    await this.page.waitForTimeout(1000);
+
+    await this.usernameInput.fill(username);
+    await this.passwordInput.fill(password);
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      console.log(`>> [${this.testId}] Backoffice login attempt ${attempt}...`);
+
+      const captchaText = await captchaHelper.solve(this.captchaImg);
+
+      if (captchaText.length !== 4) {
+        await this.captchaImg.click();
+        await this.page.waitForTimeout(1000);
+        continue;
+      }
+
+      await this.captchaInput.fill(captchaText);
+      await this.loginButton.click();
+      await this.page.waitForTimeout(1500);
+      await this.page.getByText('× Close').click().catch(() => {});
+
+      const stillOnLogin = this.page.url().includes('/login');
+      if (!stillOnLogin) {
+        console.log(`>> [${this.testId}] Backoffice login successful ✅`);
+        return;
+      }
+
+      console.log(`>> [${this.testId}] Captcha wrong, retrying...`);
+      await this.captchaImg.click();
+      await this.page.waitForTimeout(1000);
+    }
+
+    throw new Error(`[${this.testId}] Backoffice login failed after 3 attempts`);
+  }
+
   // ── Login + save session + continue ──
   async loginAndSaveSession(username, password, captchaHelper, sessionPath) {
     await this.goto();
