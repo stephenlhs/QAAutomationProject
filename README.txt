@@ -274,6 +274,35 @@ Backoffice accounts with Google Authenticator enabled are handled automatically.
 
 ---
 
+---
+
+## Google Authenticator Setup for New BO Accounts
+
+When a new BO account is created, the system may force GA setup before accessing BO.
+The script handles this automatically if twoFASecret is provided in .env.
+
+Steps to setup GA for a new account:
+
+1. Login to BO manually with the new account
+2. Go to Profile > Google Authenticator
+3. Copy the text code shown below the QR code
+   Example: GE3EOQKNIRKEKWCX
+
+4. Add to .env:
+   STAGING_BO_2FA_SECRET=GE3EOQKNIRKEKWCX
+
+5. Scan QR code with Google Authenticator app on your phone
+6. Enter the 6-digit code shown in the app to verify
+
+7. Script will now auto-generate 2FA codes on every login
+   No manual intervention needed!
+
+Note:
+- Each account has a unique secret key
+- Secret key is found in Profile > Google Authenticator page
+- If secret key changes (re-setup GA), update .env accordingly
+- System clock must be accurate for TOTP codes to work
+
 ## Reports
 
 After each test run, a report file is generated:
