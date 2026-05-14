@@ -241,7 +241,7 @@ test('create members setup', async ({ browser }) => {
   const boCaptcha = new CaptchaHelper(boPage, 'create-member-bo');
   const backoffice = new BackofficePage(boPage, 'create-member-bo');
 
-  await backoffice.login(MEMBER_SETUP.boUsername, MEMBER_SETUP.boPassword, boCaptcha);
+  await backoffice.login(MEMBER_SETUP.boUsername, MEMBER_SETUP.boPassword, boCaptcha, MEMBER_SETUP.twoFASecret);
   console.log('>> Backoffice login successful ✅');
 
   // ── PART 2: Create each member ──

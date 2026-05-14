@@ -64,7 +64,6 @@ export class BackofficePage {
       await this.captchaInput.fill(captchaText);
       await this.loginButton.click();
       await this.page.waitForTimeout(1500);
-      await this.page.getByText('× Close').click().catch(() => {});
 
       // ── Handle 2FA if prompt appears ──
       const twoFAVisible = await this.page.getByRole('textbox', { name: '2FA Code' })
