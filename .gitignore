@@ -1,5 +1,6 @@
 .env
 .auth/
+.claude/
 node_modules/
 captcha*.png
 captcha-answer*.txt

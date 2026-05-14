@@ -1,5 +1,21 @@
 import { expect } from '@playwright/test';
 import { mkdirSync } from 'fs';
+import * as OTPAuth from 'otpauth';
+
+// =============================
+// HELPER: Generate 2FA code
+// =============================
+function generate2FACode(secret) {
+  const totp = new OTPAuth.TOTP({
+    secret: OTPAuth.Secret.fromBase32(secret),
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30
+  });
+  const code = totp.generate();
+  console.log(`>> 2FA Code generated: ${code}`);
+  return code;
+}
 
 export class BackofficePage {
   constructor(page, testId = 'default') {
@@ -26,7 +42,7 @@ export class BackofficePage {
   }
 
   // ── Login only (no session saving) ──
-  async login(username, password, captchaHelper) {
+  async login(username, password, captchaHelper, twoFASecret = '') {
     await this.goto();
     await this.page.waitForLoadState('domcontentloaded');
     await this.page.waitForTimeout(1000);
@@ -49,6 +65,22 @@ export class BackofficePage {
       await this.loginButton.click();
       await this.page.waitForTimeout(1500);
       await this.page.getByText('× Close').click().catch(() => {});
+
+      // ── Handle 2FA if prompt appears ──
+      const twoFAVisible = await this.page.getByRole('textbox', { name: '2FA Code' })
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
+
+      if (twoFAVisible) {
+        console.log(`>> [${this.testId}] 2FA prompt detected...`);
+        if (!twoFASecret) throw new Error('2FA required but no secret provided in config');
+        const code = generate2FACode(twoFASecret);
+        await this.page.getByRole('textbox', { name: '2FA Code' }).fill(code);
+        await this.page.getByRole('button', { name: 'Authenticate' }).click();
+        await this.page.waitForTimeout(1500);
+        await this.page.getByText('Ok').click().catch(() => {});
+        console.log(`>> [${this.testId}] 2FA authenticated ✅`);
+      }
 
       const stillOnLogin = this.page.url().includes('/login');
       if (!stillOnLogin) {
@@ -65,7 +97,7 @@ export class BackofficePage {
   }
 
   // ── Login + save session + continue ──
-  async loginAndSaveSession(username, password, captchaHelper, sessionPath) {
+  async loginAndSaveSession(username, password, captchaHelper, sessionPath, twoFASecret = '') {
     await this.goto();
     await this.page.waitForLoadState('domcontentloaded');
     await this.page.waitForTimeout(1000);
@@ -87,12 +119,31 @@ export class BackofficePage {
       await this.captchaInput.fill(captchaText);
       await this.loginButton.click();
       await this.page.waitForTimeout(1500);
-      await this.page.getByText('× Close').click().catch(() => {});
+
+      // ── Handle 2FA if prompt appears ──
+      const twoFAVisible = await this.page.getByRole('textbox', { name: '2FA Code' })
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
+
+      if (twoFAVisible) {
+        console.log(`>> [${this.testId}] 2FA prompt detected...`);
+        if (!twoFASecret) throw new Error('2FA required but no secret provided in config');
+        const code = generate2FACode(twoFASecret);
+        console.log(`>> [${this.testId}] Filling 2FA code: ${code}`);
+        await this.page.getByRole('textbox', { name: '2FA Code' }).fill(code);
+        await this.page.waitForTimeout(500);
+        await this.page.getByRole('button', { name: 'Authenticate' }).click();
+        await this.page.waitForTimeout(2000);
+        await this.page.getByText('Ok').click().catch(() => {});
+        await this.page.waitForTimeout(1000);
+        console.log(`>> [${this.testId}] 2FA authenticated ✅`);
+      }
+
+      //await this.page.getByText('× Close').click().catch(() => {});
 
       const stillOnLogin = this.page.url().includes('/login');
       if (!stillOnLogin) {
         console.log(`>> [${this.testId}] Backoffice login successful ✅`);
-
         mkdirSync('.auth', { recursive: true });
         await this.page.context().storageState({ path: sessionPath });
         console.log(`>> [${this.testId}] Session saved to ${sessionPath} ✅`);
@@ -188,7 +239,6 @@ export class BackofficePage {
       await this.page.getByRole('link', { name: 'Cash Deposit List' }).click();
     }
 
-    // Search by username
     await this.page.locator('#txtUserName').fill(`x9048_${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);
@@ -213,7 +263,6 @@ export class BackofficePage {
       await this.page.getByRole('link', { name: 'Cash Deposit List' }).click();
     }
 
-    // Search by username
     await this.page.locator('#txtUserName').fill(`x9048_${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);
@@ -236,7 +285,6 @@ export class BackofficePage {
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();
 
-    // Search by username
     await this.page.locator('#txtUserName').fill(`x9048_${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);
@@ -259,7 +307,6 @@ export class BackofficePage {
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();
 
-    // Search by username
     await this.page.locator('#txtUserName').fill(`x9048_${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);

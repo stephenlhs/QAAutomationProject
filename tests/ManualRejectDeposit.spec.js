@@ -56,7 +56,8 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
     BACKOFFICE.username,
     BACKOFFICE.password,
     boCaptcha,
-    BACKOFFICE.sessionPath
+    BACKOFFICE.sessionPath,
+    BACKOFFICE.twoFASecret // pass secret here
   );
 
   await backoffice.rejectDeposit(actualUsername, 'test manual reject');

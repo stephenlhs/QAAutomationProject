@@ -1,0 +1,14 @@
+[     325ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[     410ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[     449ms] [LOG] false @ :2
+[     488ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[     556ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[    1122ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[   30474ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   60623ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   90666ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  120714ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  150764ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  180821ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  210869ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  240915ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0

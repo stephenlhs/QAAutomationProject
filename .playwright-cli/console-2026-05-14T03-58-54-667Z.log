@@ -1,0 +1,70 @@
+[     129ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[     213ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[     233ms] [LOG] false @ :2
+[     255ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[     336ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[     837ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[   30264ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   60300ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   86417ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[   86443ms] [LOG] false @ :2
+[   86460ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[   86462ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   86516ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[   87091ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[   91992ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[   92009ms] [LOG] false @ :2
+[   92024ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[   92029ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   92090ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[   92602ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[   96654ms] [LOG] Shell version: 1.3.9 @ https://common-static.prerelease-env.biz/apps/shell/static/js/index.e1a76018.js:0
+[   99954ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ https://common-static.prerelease-env.biz/gs2c/common/v1/games-html5/games/vs/vs20olympx/desktop/build.js?key=5bb03df7c6cc70fe23214a7ddf81ce3e:301
+[  122073ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  152126ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  182191ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  182512ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  182512ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  182513ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  182513ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  182514ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  182514ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  182515ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  182515ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  182515ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  182515ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  182516ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  182516ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  182562ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  182563ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  187640ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/play/mx?game=vs20olympx&tech=&product=:0
+[  187640ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  212244ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  213956ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/user/statement:0
+[  213956ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  213981ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[  213997ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/user/statement:0
+[  213997ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  214046ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  214111ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[  214121ms] [LOG] false @ :2
+[  214156ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[  214699ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[  216771ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/user/statement#/mode=detail&date=2026-05-14&type=1:0
+[  216771ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  220597ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/user/withdrawal:0
+[  220597ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  220615ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[  220625ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/user/withdrawal:0
+[  220625ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  220659ms] [LOG] false @ :2
+[  220675ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  220693ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[  220788ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[  221308ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[  239584ms] [ERROR] Access to fetch at 'https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png' from origin 'https://stage-mem.linkv2.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://stage-mem.linkv2.com/user/withdrawal:0
+[  239584ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://stage-serviceapi.linkv2.com/upload/UploadedFiles/crypto-images/20220215/642250190bef4b7586c2a0555301842a_logo.png:0
+[  250755ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  280832ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  310891ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[  340961ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0

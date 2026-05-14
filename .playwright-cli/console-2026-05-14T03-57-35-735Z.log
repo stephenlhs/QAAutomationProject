@@ -1,0 +1,37 @@
+[     441ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[     528ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[     538ms] [LOG] false @ :2
+[     553ms] [WARNING] Swiper Loop Warning: The number of slides is not enough for loop mode, it will be disabled and not function properly. You need to add more slides (or make duplicates) or lower the values of slidesPerView and slidesPerGroup parameters @ https://stage-mem.linkv2.com/Themes/998asia/Scripts/swiper-bundle.min.js?v=20260513.1208:12
+[    3405ms] [ERROR] {time: 1778731059139, level: 50, message: Script error., source: , line: 0} @ https://stage-mem.linkv2.com/dist/js/vendors.b0998f2ae5e880445258.js:1
+[    3406ms] Uncaught Error: User object should have one of the keys [avatar_url, email, name]
+    at setUser (https://platform.livechatman.com/packs/js/sdk.js:299:13349)
+    at <anonymous> (:0:414)
+    at c (https://stage-mem.linkv2.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js:0:9404)
+    at E (https://platform.livechatman.com/packs/js/sdk.js:294:1417)
+    at loaded (https://platform.livechatman.com/packs/js/sdk.js:299:9174)
+    at window.onmessage (https://platform.livechatman.com/packs/js/sdk.js:299:7428)
+[    5447ms] [WARNING] Swiper Loop Warning: The number of slides is not enough for loop mode, it will be disabled and not function properly. You need to add more slides (or make duplicates) or lower the values of slidesPerView and slidesPerGroup parameters @ https://stage-mem.linkv2.com/Themes/998asia/Scripts/swiper-bundle.min.js?v=20260513.1208:12
+[   24009ms] [LOG] needActive: false @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[   24009ms] [LOG] needActive: false @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[   24406ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[   24453ms] [LOG] false @ :2
+[   24466ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   24506ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[   24587ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[   25682ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[   27343ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel?gsessionid=uuZdyKRCAVmayj55SxS7Kt_9ORKsn7nIEZUuS3kz11GUGjvMw6J8hw&VER=8&database=projects%2Fpush-staging-a72f4%2Fdatabases%2F(default)&RID=rpc&SID=3t6TStAd6BvFxb8KquGRWg&AID=0&CI=0&TYPE=xmlhttp&zx=xxovjusncovg&t=1:0
+[   30324ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel?gsessionid=uuZdyKRCAVmayj55SxS7Kt_9ORKsn7nIEZUuS3kz11GUGjvMw6J8hw&VER=8&database=projects%2Fpush-staging-a72f4%2Fdatabases%2F(default)&RID=rpc&SID=3t6TStAd6BvFxb8KquGRWg&AID=4&CI=1&TYPE=xmlhttp&zx=fyz685vrh7iy&t=1:0
+[   30325ms] [WARNING] [2026-05-14T03:58:06.059Z]  @firebase/firestore: Firestore (10.14.1): WebChannelConnection RPC 'Listen' stream 0x12f22f37 transport errored: An @ https://stage-mem.linkv2.com/dist/js/vendors.b0998f2ae5e880445258.js:1
+[   54544ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   71556ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[   71594ms] [LOG] false @ :2
+[   71617ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[   71621ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   71661ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[   72301ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0
+[   75267ms] [LOG] {os: Object, browser: Object} @ https://stage-mem.linkv2.com/Scripts/bundle/portal/lib.min.js:24
+[   75290ms] [LOG] false @ :2
+[   75308ms] [LOG] init pk progress @ https://stage-mem.linkv2.com/dist/js/198.d68c33efd56d1b34e257.js:0
+[   75315ms] [ERROR] Failed to load resource: the server responded with a status of 405 () @ https://stage-mem.linkv2.com/gooff.json:0
+[   75360ms] [LOG] {Code: -2, Message: not found(-2), Metadata: null} @ https://stage-mem.linkv2.com/dist/js/main.0ab99abe0c93a0c9e074.js:0
+[   75896ms] [LOG] Connect to store success! @ https://stage-mem.linkv2.com/dist/js/142.a840de50174c96ecb54b.js:0

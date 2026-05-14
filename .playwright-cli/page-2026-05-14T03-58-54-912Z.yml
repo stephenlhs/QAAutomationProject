@@ -1,0 +1,347 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link:
+          - /url: /sport
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "" [ref=e8] [cursor=pointer]:
+            - /url: /user/account#dailycheckin
+            - generic [ref=e9]: 
+          - link "" [ref=e10] [cursor=pointer]:
+            - /url: /user/friend-feature
+            - generic [ref=e11]: 
+          - link:
+            - /url: /user/account#levelingtab
+          - link [ref=e12] [cursor=pointer]:
+            - /url: /user/account#pkprogramtab
+          - generic [ref=e13]: Hi, automatemyr
+          - generic [ref=e14]: MYR 206.14
+          - generic [ref=e15]: GP 1
+          - link [ref=e16] [cursor=pointer]:
+            - /url: /page/redeem
+        - list [ref=e17]:
+          - listitem [ref=e18]:
+            - button "" [ref=e19] [cursor=pointer]:
+              - generic [ref=e20]: 
+            - text: 
+          - listitem [ref=e21]:
+            - link "" [ref=e22] [cursor=pointer]:
+              - /url: /user/message
+              - generic [ref=e23]: 
+          - listitem [ref=e24]:
+            - link "" [ref=e25] [cursor=pointer]:
+              - /url: javascript:void(0)
+              - generic [ref=e26]: 
+    - generic [ref=e27]:
+      - list [ref=e29]:
+        - listitem [ref=e30]:
+          - link "" [ref=e31] [cursor=pointer]:
+            - /url: /user/deposit
+            - generic [ref=e32]: 
+        - listitem [ref=e33]:
+          - link "" [ref=e34] [cursor=pointer]:
+            - /url: /user/withdrawal
+            - generic [ref=e35]: 
+        - listitem [ref=e36]:
+          - link "" [ref=e37] [cursor=pointer]:
+            - /url: /user/statement
+            - generic [ref=e38]: 
+        - listitem [ref=e39]:
+          - link "" [ref=e40] [cursor=pointer]:
+            - /url: /user/mybets
+            - generic [ref=e41]: 
+        - listitem [ref=e42]:
+          - link "" [ref=e43] [cursor=pointer]:
+            - /url: /user/account
+            - generic [ref=e44]: 
+        - listitem [ref=e45]:
+          - link "" [ref=e46] [cursor=pointer]:
+            - /url: /user/announcements
+            - generic [ref=e47]: 
+        - listitem [ref=e48]:
+          - link "" [ref=e49] [cursor=pointer]:
+            - /url: /user/claim-treasure
+            - generic [ref=e50]: 
+      - generic [ref=e51]:
+        - generic [ref=e53] [cursor=pointer]: 
+        - list [ref=e54]:
+          - listitem [ref=e55]:
+            - link "" [ref=e56] [cursor=pointer]:
+              - /url: /user/account#luckydraw
+              - generic [ref=e57]: 
+          - listitem [ref=e58]:
+            - link "" [ref=e59] [cursor=pointer]:
+              - /url: /sport
+              - generic [ref=e60]: 
+          - text: 
+          - listitem [ref=e61]:
+            - link "" [ref=e62] [cursor=pointer]:
+              - /url: /sport
+              - generic [ref=e63]: 
+          - listitem [ref=e64]:
+            - link "" [ref=e65] [cursor=pointer]:
+              - /url: /live-casino
+              - generic [ref=e66]: 
+          - listitem [ref=e67]:
+            - link "" [ref=e68] [cursor=pointer]:
+              - /url: /e-game
+              - generic [ref=e69]: 
+          - listitem [ref=e70]:
+            - link "" [ref=e71] [cursor=pointer]:
+              - /url: /lottery
+              - generic [ref=e72]: 
+          - listitem [ref=e73]:
+            - link "" [ref=e74] [cursor=pointer]:
+              - /url: /cock-fight
+              - generic [ref=e75]: 
+          - listitem [ref=e76]:
+            - link "" [ref=e77] [cursor=pointer]:
+              - /url: /p2p
+              - generic [ref=e78]: 
+          - listitem [ref=e79]:
+            - link "" [ref=e80] [cursor=pointer]:
+              - /url: /user/promotion
+              - generic [ref=e81]: 
+          - listitem [ref=e82]:
+            - link "" [ref=e83] [cursor=pointer]:
+              - /url: /user/account#invitefriend
+              - generic [ref=e84]: 
+          - listitem [ref=e85]:
+            - link "" [ref=e86] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e87]: 
+          - listitem [ref=e88]:
+            - link "" [ref=e89] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e90]: 
+  - generic [ref=e93]:
+    - generic [ref=e95]:
+      - generic [ref=e97]: 
+      - generic [ref=e99]:
+        - generic [ref=e100]: 
+        - textbox "Search" [ref=e101]
+    - generic [ref=e102]:
+      - link "New Play Now" [ref=e107] [cursor=pointer]:
+        - /url: /lobby/aig
+        - generic: New
+        - generic [ref=e108]: Play Now
+      - link "Hot Play Now" [ref=e113] [cursor=pointer]:
+        - /url: /lobby/fc
+        - generic: Hot
+        - generic [ref=e114]: Play Now
+      - link "New Play Now" [ref=e119] [cursor=pointer]:
+        - /url: /play/dpt?game=mylucky6_instant
+        - generic: New
+        - generic [ref=e120]: Play Now
+      - link "Promo Play Now" [ref=e125] [cursor=pointer]:
+        - /url: /lobby/mx
+        - generic: Promo
+        - generic [ref=e126]: Play Now
+      - link "Hot Play Now" [ref=e131] [cursor=pointer]:
+        - /url: /lobby/bng
+        - generic: Hot
+        - generic [ref=e132]: Play Now
+      - link "Promo Play Now" [ref=e137] [cursor=pointer]:
+        - /url: /play/dpt?game=crash
+        - generic: Promo
+        - generic [ref=e138]: Play Now
+      - link "Hot Play Now" [ref=e143] [cursor=pointer]:
+        - /url: /play/dpt
+        - generic: Hot
+        - generic [ref=e144]: Play Now
+      - link "Play Now" [ref=e149] [cursor=pointer]:
+        - /url: /lobby/ygr
+        - generic [ref=e150]: Play Now
+      - link "Play Now" [ref=e155] [cursor=pointer]:
+        - /url: /lobby/besoft
+        - generic [ref=e156]: Play Now
+      - link "New Play Now" [ref=e161] [cursor=pointer]:
+        - /url: /lobby/rgs
+        - generic: New
+        - generic [ref=e162]: Play Now
+      - link "Play Now" [ref=e167] [cursor=pointer]:
+        - /url: /play/ace333
+        - generic [ref=e168]: Play Now
+      - link "New Play Now" [ref=e173] [cursor=pointer]:
+        - /url: /lobby/spribe
+        - generic: New
+        - generic [ref=e174]: Play Now
+      - link "Play Now" [ref=e179] [cursor=pointer]:
+        - /url: /lobby/mimi
+        - generic [ref=e180]: Play Now
+      - link "Play Now" [ref=e185] [cursor=pointer]:
+        - /url: /lobby/g5g
+        - generic [ref=e186]: Play Now
+      - link "Promo Play Now" [ref=e191] [cursor=pointer]:
+        - /url: /lobby/es
+        - generic: Promo
+        - generic [ref=e192]: Play Now
+      - link "Promo Play Now" [ref=e197] [cursor=pointer]:
+        - /url: /lobby/ap
+        - generic: Promo
+        - generic [ref=e198]: Play Now
+      - link "Play Now" [ref=e203] [cursor=pointer]:
+        - /url: /lobby/ps
+        - generic [ref=e204]: Play Now
+      - link "Play Now" [ref=e209] [cursor=pointer]:
+        - /url: /lobby/spade
+        - generic [ref=e210]: Play Now
+      - link "Play Now" [ref=e215] [cursor=pointer]:
+        - /url: /lobby/fs
+        - generic [ref=e216]: Play Now
+      - link "Play Now" [ref=e221] [cursor=pointer]:
+        - /url: /lobby/jiligames
+        - generic [ref=e222]: Play Now
+      - link "Play Now" [ref=e227] [cursor=pointer]:
+        - /url: /lobby/png
+        - generic [ref=e228]: Play Now
+      - link "Promo Play Now" [ref=e233] [cursor=pointer]:
+        - /url: /lobby/mg
+        - generic: Promo
+        - generic [ref=e234]: Play Now
+      - link "Hot Play Now" [ref=e239] [cursor=pointer]:
+        - /url: /lobby/rg
+        - generic: Hot
+        - generic [ref=e240]: Play Now
+      - link "Play Now" [ref=e245] [cursor=pointer]:
+        - /url: /lobby/hacksaw
+        - generic [ref=e246]: Play Now
+      - link "Play Now" [ref=e251] [cursor=pointer]:
+        - /url: /lobby/nlc
+        - generic [ref=e252]: Play Now
+      - link "Play Now" [ref=e257] [cursor=pointer]:
+        - /url: /lobby/cq9
+        - generic [ref=e258]: Play Now
+      - link "Play Now" [ref=e263] [cursor=pointer]:
+        - /url: /play/918kiss
+        - generic [ref=e264]: Play Now
+      - link "Play Now" [ref=e269] [cursor=pointer]:
+        - /url: /play/megah5
+        - generic [ref=e270]: Play Now
+      - link "Play Now" [ref=e275] [cursor=pointer]:
+        - /url: /lobby/habanero
+        - generic [ref=e276]: Play Now
+      - link "Play Now" [ref=e281] [cursor=pointer]:
+        - /url: /lobby/joker
+        - generic [ref=e282]: Play Now
+      - link "Play Now" [ref=e287] [cursor=pointer]:
+        - /url: /lobby/betsoft
+        - generic [ref=e288]: Play Now
+      - link "Play Now" [ref=e293] [cursor=pointer]:
+        - /url: /lobby/askmebet
+        - generic [ref=e294]: Play Now
+      - link "Play Now" [ref=e299] [cursor=pointer]:
+        - /url: /lobby/rtg
+        - generic [ref=e300]: Play Now
+      - link "Play Now" [ref=e305] [cursor=pointer]:
+        - /url: /lobby/better
+        - generic [ref=e306]: Play Now
+      - link "New Play Now" [ref=e311] [cursor=pointer]:
+        - /url: /lobby/iloveu
+        - generic: New
+        - generic [ref=e312]: Play Now
+      - link "New Play Now" [ref=e317] [cursor=pointer]:
+        - /url: /lobby/evo888
+        - generic: New
+        - generic [ref=e318]: Play Now
+      - link "Promo Play Now" [ref=e323] [cursor=pointer]:
+        - /url: /play/v8-poker
+        - generic: Promo
+        - generic [ref=e324]: Play Now
+      - link "Play Now" [ref=e329] [cursor=pointer]:
+        - /url: /lobby/ns
+        - generic [ref=e330]: Play Now
+      - link "Play Now" [ref=e335] [cursor=pointer]:
+        - /url: /lobby/skywind
+        - generic [ref=e336]: Play Now
+      - link "Play Now" [ref=e341] [cursor=pointer]:
+        - /url: /lobby/netent
+        - generic [ref=e342]: Play Now
+      - link "Play Now" [ref=e347] [cursor=pointer]:
+        - /url: /lobby/ygg
+        - generic [ref=e348]: Play Now
+      - link "Play Now" [ref=e353] [cursor=pointer]:
+        - /url: /lobby/apollo
+        - generic [ref=e354]: Play Now
+      - link "Play Now" [ref=e359] [cursor=pointer]:
+        - /url: /play/simple-play
+        - generic [ref=e360]: Play Now
+      - link "Play Now" [ref=e365] [cursor=pointer]:
+        - /url: /lobby/fun
+        - generic [ref=e366]: Play Now
+      - link "Hot Play Now" [ref=e371] [cursor=pointer]:
+        - /url: /lobby/gfg
+        - generic: Hot
+        - generic [ref=e372]: Play Now
+      - link "Play Now" [ref=e377] [cursor=pointer]:
+        - /url: /lobby/cg
+        - generic [ref=e378]: Play Now
+      - link "Play Now" [ref=e383] [cursor=pointer]:
+        - /url: /lobby/oge
+        - generic [ref=e384]: Play Now
+      - link "Play Now" [ref=e389] [cursor=pointer]:
+        - /url: /lobby/smartsoft
+        - generic [ref=e390]: Play Now
+      - link "Play Now" [ref=e395] [cursor=pointer]:
+        - /url: /lobby/dragongaming
+        - generic [ref=e396]: Play Now
+      - link "Play Now" [ref=e401] [cursor=pointer]:
+        - /url: /lobby/r88
+        - generic [ref=e402]: Play Now
+      - link "Play Now" [ref=e407] [cursor=pointer]:
+        - /url: /lobby/t1
+        - generic [ref=e408]: Play Now
+      - link "Play Now" [ref=e413] [cursor=pointer]:
+        - /url: /play/jdb
+        - generic [ref=e414]: Play Now
+      - link "Play Now" [ref=e419] [cursor=pointer]:
+        - /url: /play/kingmaker
+        - generic [ref=e420]: Play Now
+      - link "Play Now" [ref=e425] [cursor=pointer]:
+        - /url: /lobby/dt
+        - generic [ref=e426]: Play Now
+      - link "Play Now" [ref=e431] [cursor=pointer]:
+        - /url: /lobby/virtual-tech
+        - generic [ref=e432]: Play Now
+      - link "Play Now" [ref=e437] [cursor=pointer]:
+        - /url: /lobby/pgs
+        - generic [ref=e438]: Play Now
+      - link "Play Now" [ref=e443] [cursor=pointer]:
+        - /url: /lobby/live22
+        - generic [ref=e444]: Play Now
+      - link "Play Now" [ref=e449] [cursor=pointer]:
+        - /url: /lobby/mario
+        - generic [ref=e450]: Play Now
+      - link "Play Now" [ref=e455] [cursor=pointer]:
+        - /url: /lobby/ds
+        - generic [ref=e456]: Play Now
+      - link "New Play Now" [ref=e461] [cursor=pointer]:
+        - /url: /lobby/ibex
+        - generic: New
+        - generic [ref=e462]: Play Now
+      - link "New Play Now" [ref=e467] [cursor=pointer]:
+        - /url: /lobby/hotdog
+        - generic: New
+        - generic [ref=e468]: Play Now
+      - link "New Play Now" [ref=e473] [cursor=pointer]:
+        - /url: /lobby/crowdplay
+        - generic: New
+        - generic [ref=e474]: Play Now
+      - link "New Play Now" [ref=e479] [cursor=pointer]:
+        - /url: /lobby/uu
+        - generic: New
+        - generic [ref=e480]: Play Now
+      - link "New Play Now" [ref=e485] [cursor=pointer]:
+        - /url: /lobby/playteche
+        - generic: New
+        - generic [ref=e486]: Play Now
+      - link "New Play Now" [ref=e491] [cursor=pointer]:
+        - /url: /lobby/hermez
+        - generic: New
+        - generic [ref=e492]: Play Now
+      - link "New Play Now" [ref=e497] [cursor=pointer]:
+        - /url: /lobby/mega888
+        - generic: New
+        - generic [ref=e498]: Play Now

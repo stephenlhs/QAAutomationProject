@@ -56,7 +56,8 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
     BACKOFFICE.username,
     BACKOFFICE.password,
     boCaptcha,
-    BACKOFFICE.sessionPath
+    BACKOFFICE.sessionPath,
+    BACKOFFICE.twoFASecret // pass secret here
   );
 
   const outstanding = await backoffice.getMemberOutstandingBalance(actualUsername);

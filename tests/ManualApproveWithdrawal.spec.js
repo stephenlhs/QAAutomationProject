@@ -87,7 +87,8 @@ ACTION NEEDED : Please complete more bets before withdrawing
     BACKOFFICE.username,
     BACKOFFICE.password,
     boCaptcha,
-    BACKOFFICE.sessionPath
+    BACKOFFICE.sessionPath,
+    BACKOFFICE.twoFASecret // pass secret here
   );
 
   await backoffice.approveWithdrawal(actualUsername, 'test manual approve withdrawal');
