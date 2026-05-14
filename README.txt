@@ -1,6 +1,7 @@
 # QA Automation Project
 
-Automated testing suite for deposit and withdrawal flows using Playwright.
+Automated testing suite for deposit, withdrawal and game flows using Playwright.
+Supports multiple environments: Staging, UAT and Production.
 
 ---
 
@@ -55,48 +56,71 @@ Open PowerShell as Administrator and run:
 ### Step 5 - Install Python dependencies
   pip install ddddocr Pillow
 
-### Step 6 - Create environment file
-Create a .env file in the project root with the following:
-  ANTHROPIC_API_KEY=your-key-here
-  TELEGRAM_BOT_TOKEN=your-token-here
-  TELEGRAM_CHAT_ID=your-chat-id-here
+### Step 6 - Install OTPAuth for 2FA support
+  npm install otpauth
 
-### Step 7 - Create auth folder
+### Step 7 - Create environment file
+Copy .env.example to .env and fill in your values:
+  copy .env.example .env
+
+Edit .env with your credentials:
+  TEST_ENV=staging
+
+  STAGING_PLAYER_USERNAME=your-player-username
+  STAGING_PLAYER_PASSWORD=your-player-password
+  STAGING_BO_USERNAME=your-bo-username
+  STAGING_BO_PASSWORD=your-bo-password
+  STAGING_BO_2FA_SECRET=your-2fa-secret-if-enabled
+
+  UAT_PLAYER_USERNAME=
+  UAT_PLAYER_PASSWORD=
+  UAT_BO_USERNAME=
+  UAT_BO_PASSWORD=
+  UAT_BO_2FA_SECRET=
+
+  PROD_PLAYER_USERNAME=
+  PROD_PLAYER_PASSWORD=
+  PROD_BO_USERNAME=
+  PROD_BO_PASSWORD=
+  PROD_BO_2FA_SECRET=
+
+### Step 8 - Create auth folder
   mkdir .auth
+
+---
+
+## Environments
+
+  Environment   Playsite                        Backoffice
+  -----------------------------------------------------------------------
+  Staging       https://stage-mem.linkv2.com/   https://stage-bo.linkv2.com/login
+  UAT           https://mem2.linkv2.com/#        https://ag-uat.linkv2.com/login
+  Production    https://998hihi.com/             https://bo.v2hotel.com/login
+
+Run on specific environment:
+  # Staging (default)
+  npx playwright test --headed
+
+  # UAT
+  $env:TEST_ENV="uat"; npx playwright test --headed
+
+  # Production
+  $env:TEST_ENV="prod"; npx playwright test --headed
 
 ---
 
 ## Configuration
 
-All credentials and test settings are centralized in tests/config.js.
-Update this file to change player, backoffice agent, deposit or withdrawal settings.
+All credentials and test settings are in tests/config.js
+Update .env file only — never hardcode credentials in config.js
 
-  // tests/config.js
-
-  export const PLAYER = {
-    username: 'automatemyr',
-    password: 'ssss1234',
-    sessionPath: '.auth/player.json',
-  };
-
-  export const BACKOFFICE = {
-    username: 'stephen@mv1',
-    password: 'qwert123',
-    sessionPath: '.auth/backoffice.json',
-  };
-
-  export const DEPOSIT = {
-    amount: 50,
-    rolloverMultiplier: 1,
-    bankName: 'C zh test - zh test all',
-    packageName: 'Stephen Turnover Package',
-  };
-
-  export const WITHDRAWAL = {
-    amount: 10,
-  };
-
-To change player or agent: update config.js only. All spec files will pick up the change automatically.
+  PLAYER        - Player site login credentials per environment
+  BACKOFFICE    - Backoffice login credentials + 2FA secret per environment
+  DEPOSIT       - Deposit amount, bank name, package name per environment
+  WITHDRAWAL    - Withdrawal amount
+  MEMBER_SETUP  - Member creation settings per environment
+  MEMBERS       - List of test members per environment
+  URLS          - Environment URLs (auto-selected based on TEST_ENV)
 
 ---
 
@@ -106,23 +130,26 @@ QAAutomationProject/
 ├── tests/
 │   ├── pages/                              Page Object Model classes
 │   │   ├── LoginPage.js                    Player site login + session management
-│   │   ├── BackofficePage.js               Backoffice login + approve/reject actions
+│   │   ├── BackofficePage.js               Backoffice login (with 2FA) + approve/reject
 │   │   ├── DepositPage.js                  Deposit flow actions
 │   │   ├── WithdrawalPage.js               Withdrawal flow actions
 │   │   └── StatementPage.js                Cash history verification
 │   ├── helpers/
-│   │   └── CaptchaHelper.js                Auto captcha solver
-│   ├── config.js                           Centralized credentials and test settings
+│   │   └── CaptchaHelper.js                Auto captcha solver via ddddocr
+│   ├── config.js                           Centralized config (reads from .env)
 │   ├── CreateMemberAndSaveSession.spec.js  Create members + bank account + change password
 │   ├── ManualApproveDeposit.spec.js        Deposit approve test
 │   ├── ManualRejectDeposit.spec.js         Deposit reject test
 │   ├── ManualApproveWithdrawal.spec.js     Withdrawal approve test
-│   └── ManualRejectWithdrawal.spec.js      Withdrawal reject test
+│   ├── ManualRejectWithdrawal.spec.js      Withdrawal reject test
+│   └── SlotGame.spec.js                    Slot game manual play + statement verify
 ├── .auth/                                  Saved login sessions (not in git)
-├── captcha-server.js                       Local captcha solving server
+├── .env                                    Environment credentials (not in git)
+├── .env.example                            Environment template (safe to share)
+├── captcha-server.js                       Local captcha solving server (port 3333)
 ├── solve_captcha.py                        Python captcha OCR script
 ├── playwright.config.js                    Playwright configuration
-└── .env                                    Environment variables (not in git)
+└── README.txt                              This file
 
 ---
 
@@ -133,39 +160,37 @@ Open a terminal and keep it running throughout all tests:
   node captcha-server.js
 
 ### Step 2 - Create members (first time only)
-To create new test members, update MEMBERS array in CreateMemberAndSaveSession.spec.js:
-  const MEMBERS = [
-    { username: 'automyr1', currency: 'MYR' },
-    { username: 'automyr2', currency: 'MYR' },
-  ];
-
-Then run:
+Update MEMBERS array in tests/config.js then run:
   npx playwright test tests/CreateMemberAndSaveSession.spec.js --headed --project=member-setup
 
 This will:
-  - Create member in backoffice
-  - Update bank account
+  - Check username availability in backoffice
+  - Create member with specified currency
+  - Update bank account (unique account number generated)
   - Login to playsite and change password
 
 ### Step 3 - Run individual tests
-Open a second terminal and run:
+Open a second terminal:
 
-Manual Approve Deposit:
+  Manual Approve Deposit:
   npx playwright test tests/ManualApproveDeposit.spec.js --headed
 
-Manual Reject Deposit:
+  Manual Reject Deposit:
   npx playwright test tests/ManualRejectDeposit.spec.js --headed
 
-Manual Approve Withdrawal:
+  Manual Approve Withdrawal:
   npx playwright test tests/ManualApproveWithdrawal.spec.js --headed
 
-Manual Reject Withdrawal:
+  Manual Reject Withdrawal:
   npx playwright test tests/ManualRejectWithdrawal.spec.js --headed
 
-Run all tests:
+  Slot Game (manual play + verify):
+  npx playwright test tests/SlotGame.spec.js --headed
+
+  Run all tests:
   npx playwright test --headed
 
-### Step 4 - View test report
+### Step 4 - View HTML report
   npx playwright show-report
 
 ---
@@ -173,42 +198,39 @@ Run all tests:
 ## Test Flow
 
 ### Deposit Tests
-  1. Player logs in first time + session saved
-  2. Check balance + rollover/target before
+  1. Player logs in fresh + session saved (captcha solved once)
+  2. Check balance + rollover/target BEFORE
   3. Submit deposit (Bank Transfer)
   4. Verify transaction status = Pending in Cash History
-  5. Backoffice logs in fresh + session saved
+  5. Backoffice logs in fresh + session saved (with 2FA if enabled)
   6. Check player outstanding balance in Member Account
-  7. Search player in Cash Deposit List
-  8. Approve / Reject deposit
+  7. Search player in Cash Deposit/Withdraw List
+  8. Approve / Reject transaction
   9. Player restores saved session (no captcha needed)
-  10. Verify balance + rollover/target after
+  10. Verify balance + rollover/target AFTER
   11. Assert values match expected
   12. Generate test report
 
 ### Withdrawal Tests
-  1. Player logs in first time + session saved
-  2. Check balance + rollover/target before
-  3. Verify rollover >= target (must be met)
+  1. Player logs in fresh + session saved
+  2. Check balance + rollover/target BEFORE
+  3. Verify rollover >= target (must be met, else generate report and stop)
   4. Test insufficient balance error
   5. Submit withdrawal
-  6. Verify transaction status = Pending in Cash History
-  7. Backoffice logs in fresh + session saved
-  8. Search player in Cash Withdraw List
-  9. Approve / Reject withdrawal
-  10. Player restores saved session (no captcha needed)
-  11. Verify balance + rollover/target after
-  12. Assert values match expected
-  13. Generate test report
+  6. Verify transaction status = Pending
+  7. Backoffice approves/rejects
+  8. Player restores session
+  9. Verify balance + rollover/target AFTER
+  10. Generate test report
+
 
 ### Create Member Flow
-  1. Backoffice logs in
+  1. Backoffice logs in (with 2FA if enabled)
   2. Check username availability
   3. Create member with currency
-  4. Update bank account (unique account number generated)
-  5. Login to playsite with initial password
-  6. Change password to new password
-  7. Context closed (no session saved)
+  4. Update bank account (unique number: 12344321XXXYYY)
+  5. Login to playsite with initial password (1234ssss)
+  6. Change password to new password (ssss1234)
 
 ---
 
@@ -225,13 +247,30 @@ Run all tests:
   - Balance decreases by withdrawal amount
   - Rollover/Target resets to 0/0
 
-### Withdrawal Reject
+### Withdrawal/Deposit Reject
   - Balance unchanged
   - Rollover/Target unchanged
 
-### Deposit Reject
-  - Balance unchanged
-  - Rollover/Target unchanged
+---
+
+## 2FA (Google Authenticator) Support
+
+Backoffice accounts with Google Authenticator enabled are handled automatically.
+
+  1. Add the 2FA secret key to .env:
+     STAGING_BO_2FA_SECRET=your-secret-key
+
+  2. Find your secret key:
+     - Login to BO
+     - Go to Profile > Google Authenticator
+     - Copy the text code shown below the QR code
+
+  3. The script auto-generates the 6-digit code during login
+     No manual intervention needed!
+
+  Accounts without 2FA:
+  - Leave STAGING_BO_2FA_SECRET empty in .env
+  - Script will skip 2FA automatically
 
 ---
 
@@ -265,13 +304,20 @@ HTML report with screenshots and videos:
 ### ddddocr not found
   pip install ddddocr Pillow
 
+### otpauth not found
+  npm install otpauth
+
 ### Git not recognized
   Download and install Git from https://git-scm.com/download/win
 
 ### Session expired error
-No longer needed - each test logs in fresh automatically.
-Just make sure captcha server is running:
+  Each test logs in fresh automatically
+  Just make sure captcha server is running:
   node captcha-server.js
+
+### 2FA code rejected
+  - Make sure secret key in .env matches the one in BO Profile > Google Authenticator
+  - Make sure your system clock is correct (TOTP is time-based)
 
 ---
 
@@ -294,9 +340,11 @@ Run specific project:
   -----------------------------------------------------------------------
   Playwright        Browser automation
   Node.js           Runtime environment
-  Python            Captcha OCR processing
+  Python            Captcha OCR + game automation
   ddddocr           Captcha recognition
+  otpauth           2FA TOTP code generation
   Page Object Model Test architecture pattern
   config.js         Centralized test configuration
+  dotenv            Environment variable management
 
 ---
