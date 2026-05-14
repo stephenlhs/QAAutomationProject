@@ -5,7 +5,6 @@ export class WithdrawalPage {
   constructor(page) {
     this.page = page;
 
-    this.withdrawalLink = page.getByRole('link', { name: ' Withdrawal' });
     this.amountInput = page.getByRole('textbox');
     this.submitButton = page.getByRole('button', { name: 'Submit' });
     this.confirmYesButton = page.getByRole('button', { name: 'Yes' });
@@ -14,27 +13,11 @@ export class WithdrawalPage {
     this.balanceDisplay = page.locator('text=/MYR \\d+\\.\\d+/');
   }
 
- async navigate() {
-  // Close any popups first
-  const closeSelectors = ['text=x', '.fa.fa-times', 'text=×'];
-  for (const selector of closeSelectors) {
-    const el = this.page.locator(selector).first();
-    if (await el.isVisible().catch(() => false)) {
-      await el.click().catch(() => {});
-      await this.page.waitForTimeout(300);
-    }
+  async navigate() {
+    await this.page.goto(`${URLS.playsite}user/withdrawal`);
+    await this.page.waitForTimeout(1500);
+    console.log('>> Navigated to Withdrawal page');
   }
-
-  await this.withdrawalLink.click();
-  await this.page.waitForURL(/withdrawal/, { timeout: 10000 });
-  await this.page.waitForTimeout(1500);
-}
-
-  async getUsername() {
-  const usernameEl = this.page.locator('text=/Hi,/').locator('..').locator('generic').last();
-  const username = await usernameEl.innerText().catch(() => USERNAME);
-  return username.trim();
-}
 
   async getStats(label = 'stats') {
     await this.page.screenshot({ path: `withdrawal-${label}.png` });

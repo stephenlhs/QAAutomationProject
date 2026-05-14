@@ -3,25 +3,30 @@ import 'dotenv/config';
 const ENV = process.env.TEST_ENV || 'staging';
 
 // =============================
-// URLS
+// URLS + ENV SETTINGS
 // =============================
 export const URLS = {
   staging: {
     playsite: 'https://stage-mem.linkv2.com/',
     backoffice: 'https://stage-bo.linkv2.com/login',
     memberPrefix: 'x9048_',
+    popupCloseSelectors: ['text=x', '.fa.fa-times', 'text=×', '.card__box-close'],
   },
   uat: {
     playsite: 'https://mem2.linkv2.com/#',
     backoffice: 'https://ag-uat.linkv2.com/login',
     memberPrefix: '',
+    popupCloseSelectors: ['text=x', '.fa.fa-times', 'text=×'],
   },
   prod: {
     playsite: 'https://998hihi.com/',
     backoffice: 'https://bo.v2hotel.com/login',
     memberPrefix: '',
+    popupCloseSelectors: ['text=x', '.fa.fa-times', 'text=×'],
   },
 }[ENV];
+
+export const ENV_NAME = ENV;
 
 // =============================
 // PLAYER CONFIG

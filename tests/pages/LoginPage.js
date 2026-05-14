@@ -1,4 +1,3 @@
-import { expect } from '@playwright/test';
 import { mkdirSync } from 'fs';
 import { URLS } from '../config.js';
 
@@ -16,14 +15,12 @@ export class LoginPage {
     this.loginForm = page.locator('#login-form');
   }
 
-  // In goto() method:
   async goto() {
     await this.page.goto(URLS.playsite);
   }
 
   async closePopups() {
-    const closeSelectors = ['text=x', '.fa.fa-times', 'text=×'];
-    for (const selector of closeSelectors) {
+    for (const selector of URLS.popupCloseSelectors) {
       const el = this.page.locator(selector).first();
       if (await el.isVisible().catch(() => false)) {
         await el.click().catch(() => {});
@@ -39,7 +36,7 @@ export class LoginPage {
     }
   }
 
-  // ── Login + save session + continue ──
+  // ── Login + save session ──
   async loginAndSaveSession(username, password, captchaHelper, sessionPath) {
     await this.goto();
     await this.page.waitForLoadState('domcontentloaded');
@@ -74,7 +71,6 @@ export class LoginPage {
         await this.closeExtraTabs();
         await this.closePopups();
 
-        // Save session immediately
         mkdirSync('.auth', { recursive: true });
         await this.page.context().storageState({ path: sessionPath });
         console.log(`>> [${this.testId}] Session saved to ${sessionPath} ✅`);
@@ -105,7 +101,7 @@ export class LoginPage {
     console.log(`>> [${this.testId}] Player session restored ✅`);
   }
 
-  // ── Get logged in username from navbar ──
+  // ── Get logged in username ──
   async getLoggedInUsername() {
     try {
       await this.page.waitForTimeout(1000);

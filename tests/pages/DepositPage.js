@@ -1,11 +1,11 @@
 import { expect } from '@playwright/test';
+import { URLS, DEPOSIT } from '../config.js';
 
 export class DepositPage {
   constructor(page) {
     this.page = page;
 
-    this.depositLink = page.getByRole('link', { name: ' Deposit' });
-    this.packageButton = page.getByRole('button', { name: 'Stephen Turnover Package' });
+    this.packageButton = page.getByRole('button', { name: DEPOSIT.packageName });
     this.methodDropdown = page.getByRole('combobox').nth(1);
     this.bankDropdown = page.getByText('Please Choose▼');
     this.amountInput = page.locator('#txtAmountBank');
@@ -16,8 +16,8 @@ export class DepositPage {
   }
 
   async navigate() {
-    await this.depositLink.click();
-    await this.page.waitForURL(/deposit/, { timeout: 8000 });
+    await this.page.goto(`${URLS.playsite}user/deposit`);
+    await this.page.waitForTimeout(1500);
     await this.closePopup.click().catch(() => {});
     console.log('>> Navigated to Deposit page');
   }

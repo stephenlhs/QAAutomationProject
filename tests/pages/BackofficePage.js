@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { mkdirSync } from 'fs';
 import * as OTPAuth from 'otpauth';
-import { URLS } from '../config.js';
+import { URLS, ENV_NAME } from '../config.js';
 
 // =============================
 // HELPER: Generate 2FA code
@@ -20,19 +20,18 @@ function generate2FACode(secret) {
 
 export class BackofficePage {
   constructor(page, testId = 'default') {
-  this.page = page;
-  this.testId = testId;
-  this.boBase = URLS.backoffice.replace('/login', '');
-  this.memberPrefix = URLS.memberPrefix ?? '';  // fallback to empty string
+    this.page = page;
+    this.testId = testId;
+    this.boBase = URLS.backoffice.replace('/login', '');
+    this.memberPrefix = URLS.memberPrefix ?? '';
 
-  this.usernameInput = page.getByRole('textbox', { name: 'Username' });
-  this.passwordInput = page.getByRole('textbox', { name: 'Password' });
-  this.captchaInput = page.getByRole('textbox', { name: 'Captcha' });
-  this.captchaImg = page.getByRole('img');
-  this.loginButton = page.getByRole('button', { name: 'Login' });
-}
+    this.usernameInput = page.getByRole('textbox', { name: 'Username' });
+    this.passwordInput = page.getByRole('textbox', { name: 'Password' });
+    this.captchaInput = page.getByRole('textbox', { name: 'Captcha' });
+    this.captchaImg = page.getByRole('img');
+    this.loginButton = page.getByRole('button', { name: 'Login' });
+  }
 
-  // In goto() method:
   async goto() {
     await this.page.goto(URLS.backoffice);
   }
@@ -99,7 +98,7 @@ export class BackofficePage {
     throw new Error(`[${this.testId}] Backoffice login failed after 3 attempts`);
   }
 
-  // ── Login + save session + continue ──
+  // ── Login + save session ──
   async loginAndSaveSession(username, password, captchaHelper, sessionPath, twoFASecret = '') {
     await this.goto();
     await this.page.waitForLoadState('domcontentloaded');
@@ -142,8 +141,6 @@ export class BackofficePage {
         console.log(`>> [${this.testId}] 2FA authenticated ✅`);
       }
 
-      //await this.page.getByText('× Close').click().catch(() => {});
-
       const stillOnLogin = this.page.url().includes('/login');
       if (!stillOnLogin) {
         console.log(`>> [${this.testId}] Backoffice login successful ✅`);
@@ -163,8 +160,7 @@ export class BackofficePage {
 
   // ── Restore existing session ──
   async loginWithSession() {
-    const BO_BASE = URLS.backoffice.replace('/login', '');
-    await this.page.goto(`${BO_BASE}/dashboard/home`);
+    await this.page.goto(`${this.boBase}/dashboard/home`);
     await this.page.waitForLoadState('domcontentloaded');
     await this.page.waitForTimeout(1000);
     await this.closeExtraTabs();
@@ -179,6 +175,12 @@ export class BackofficePage {
 
   async getMemberOutstandingBalance(username) {
     await this.closeExtraTabs();
+
+    // Only staging has member outstanding balance feature
+    if (ENV_NAME !== 'staging') {
+      console.log(`>> [${ENV_NAME}] Skipping outstanding balance check`);
+      return { sport: 0, casino: 0, lottery: 0, games: 0, p2p: 0, total: 0 };
+    }
 
     // Navigate to Member Account
     await this.page.locator('a').filter({ hasText: 'Members' }).click();
@@ -225,8 +227,7 @@ export class BackofficePage {
     console.log(`>> Outstanding — Sport: ${sport}, Casino: ${casino}, Lottery: ${lottery}, Games: ${games}, P2P: ${p2p}, Total: ${total}`);
 
     // Go directly to Cash Deposit List
-    const BO_BASE = URLS.backoffice.replace('/login', '');
-    await this.page.goto(`${BO_BASE}/dashboard/cash/deposit-list`, {
+    await this.page.goto(`${this.boBase}/dashboard/cash/deposit-list`, {
       waitUntil: 'domcontentloaded'
     });
     await this.page.waitForTimeout(1000);

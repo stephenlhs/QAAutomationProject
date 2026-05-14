@@ -1,19 +1,15 @@
 import { expect } from '@playwright/test';
+import { URLS } from '../config.js';
 
 export class StatementPage {
   constructor(page) {
     this.page = page;
-
-    this.statementLink = page.getByRole('link', { name: ' Statement' });
-    this.transactionsLink = page.getByRole('link', { name: ' Transactions' });
-    this.cashHistoryTab = page.getByText('Cash History');
   }
 
   async navigateToCashHistory() {
-    await this.statementLink.click();
-    await this.transactionsLink.click();
-    await this.cashHistoryTab.click();
+    await this.page.goto(`${URLS.playsite}user/cash-history`);
     await this.page.waitForTimeout(1500);
+    console.log('>> Navigated to Cash History page');
   }
 
   async getLatestTransaction() {
