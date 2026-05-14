@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 import { CaptchaHelper } from './helpers/CaptchaHelper.js';
 import { BackofficePage } from './pages/BackofficePage.js';
-import { MEMBER_SETUP, MEMBERS } from './config.js';
+import { URLS, MEMBER_SETUP, MEMBERS } from './config.js';
 
 // =============================
 // HELPER: Generate unique bank account number
@@ -42,7 +42,7 @@ async function closeExtraTabs(page) {
 async function createMember(page, username, currency = 'MYR') {
   console.log(`>> [${username}] Checking availability...`);
 
-  await page.goto('https://stage-bo.linkv2.com/dashboard/cash/cash-member/create-compact');
+  await page.goto(`${URLS.backoffice.replace('/login', '')}/dashboard/cash/cash-member/create-compact`);
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
 
@@ -84,7 +84,7 @@ async function createMember(page, username, currency = 'MYR') {
 async function updateBankAccount(page, username) {
   console.log(`>> [${username}] Updating bank account...`);
 
-  await page.goto('https://stage-bo.linkv2.com/dashboard/cash/cash-member/list-compact');
+  await page.goto(`${URLS.backoffice.replace('/login', '')}/dashboard/cash/cash-member/list-compact`);
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
 
@@ -162,7 +162,7 @@ async function loginAndChangePassword(browser, username) {
 
   try {
     // ── Step 1: Login with initial password ──
-    await page.goto('https://stage-mem.linkv2.com/');
+    await page.goto(URLS.playsite);
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
     await closeExtraTabs(page);
@@ -209,7 +209,7 @@ async function loginAndChangePassword(browser, username) {
 
     // ── Step 2: Change password ──
     console.log(`>> [${username}] Changing password...`);
-    await page.goto('https://stage-mem.linkv2.com/user/account');
+    await page.goto(`${URLS.playsite}user/account`);
     await page.waitForTimeout(1500);
 
     await page.locator('#txtOldPassword').fill(MEMBER_SETUP.initialPassword);

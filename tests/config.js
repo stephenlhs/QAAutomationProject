@@ -9,14 +9,17 @@ export const URLS = {
   staging: {
     playsite: 'https://stage-mem.linkv2.com/',
     backoffice: 'https://stage-bo.linkv2.com/login',
+    memberPrefix: 'x9048_',
   },
   uat: {
     playsite: 'https://mem2.linkv2.com/#',
     backoffice: 'https://ag-uat.linkv2.com/login',
+    memberPrefix: '',
   },
   prod: {
     playsite: 'https://998hihi.com/',
     backoffice: 'https://bo.v2hotel.com/login',
+    memberPrefix: '',
   },
 }[ENV];
 

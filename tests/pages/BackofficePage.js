@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { mkdirSync } from 'fs';
 import * as OTPAuth from 'otpauth';
+import { URLS } from '../config.js';
 
 // =============================
 // HELPER: Generate 2FA code
@@ -19,18 +20,21 @@ function generate2FACode(secret) {
 
 export class BackofficePage {
   constructor(page, testId = 'default') {
-    this.page = page;
-    this.testId = testId;
+  this.page = page;
+  this.testId = testId;
+  this.boBase = URLS.backoffice.replace('/login', '');
+  this.memberPrefix = URLS.memberPrefix ?? '';  // fallback to empty string
 
-    this.usernameInput = page.getByRole('textbox', { name: 'Username' });
-    this.passwordInput = page.getByRole('textbox', { name: 'Password' });
-    this.captchaInput = page.getByRole('textbox', { name: 'Captcha' });
-    this.captchaImg = page.getByRole('img');
-    this.loginButton = page.getByRole('button', { name: 'Login' });
-  }
+  this.usernameInput = page.getByRole('textbox', { name: 'Username' });
+  this.passwordInput = page.getByRole('textbox', { name: 'Password' });
+  this.captchaInput = page.getByRole('textbox', { name: 'Captcha' });
+  this.captchaImg = page.getByRole('img');
+  this.loginButton = page.getByRole('button', { name: 'Login' });
+}
 
+  // In goto() method:
   async goto() {
-    await this.page.goto('https://stage-bo.linkv2.com/login');
+    await this.page.goto(URLS.backoffice);
   }
 
   async closeExtraTabs() {
@@ -159,7 +163,8 @@ export class BackofficePage {
 
   // ── Restore existing session ──
   async loginWithSession() {
-    await this.page.goto('https://stage-bo.linkv2.com/dashboard/home');
+    const BO_BASE = URLS.backoffice.replace('/login', '');
+    await this.page.goto(`${BO_BASE}/dashboard/home`);
     await this.page.waitForLoadState('domcontentloaded');
     await this.page.waitForTimeout(1000);
     await this.closeExtraTabs();
@@ -182,7 +187,7 @@ export class BackofficePage {
     await this.page.waitForTimeout(1000);
 
     // Search player
-    await this.page.getByRole('textbox', { name: 'Username' }).fill(`x9048_${username}`);
+    await this.page.getByRole('textbox', { name: 'Username' }).fill(`${this.memberPrefix}${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(2000);
     await this.closeExtraTabs();
@@ -220,7 +225,8 @@ export class BackofficePage {
     console.log(`>> Outstanding — Sport: ${sport}, Casino: ${casino}, Lottery: ${lottery}, Games: ${games}, P2P: ${p2p}, Total: ${total}`);
 
     // Go directly to Cash Deposit List
-    await this.page.goto('https://stage-bo.linkv2.com/dashboard/cash/deposit-list', {
+    const BO_BASE = URLS.backoffice.replace('/login', '');
+    await this.page.goto(`${BO_BASE}/dashboard/cash/deposit-list`, {
       waitUntil: 'domcontentloaded'
     });
     await this.page.waitForTimeout(1000);
@@ -238,10 +244,10 @@ export class BackofficePage {
       await this.page.getByRole('link', { name: 'Cash Deposit List' }).click();
     }
 
-    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.locator('#txtUserName').fill(`${this.memberPrefix}${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);
-    console.log(`>> Searching deposit for: x9048_${username}`);
+    console.log(`>> Searching deposit for: ${this.memberPrefix}${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest deposit');
@@ -262,10 +268,10 @@ export class BackofficePage {
       await this.page.getByRole('link', { name: 'Cash Deposit List' }).click();
     }
 
-    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.locator('#txtUserName').fill(`${this.memberPrefix}${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);
-    console.log(`>> Searching deposit for: x9048_${username}`);
+    console.log(`>> Searching deposit for: ${this.memberPrefix}${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest deposit');
@@ -284,10 +290,10 @@ export class BackofficePage {
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();
 
-    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.locator('#txtUserName').fill(`${this.memberPrefix}${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);
-    console.log(`>> Searching withdrawal for: x9048_${username}`);
+    console.log(`>> Searching withdrawal for: ${this.memberPrefix}${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest withdrawal');
@@ -306,10 +312,10 @@ export class BackofficePage {
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();
 
-    await this.page.locator('#txtUserName').fill(`x9048_${username}`);
+    await this.page.locator('#txtUserName').fill(`${this.memberPrefix}${username}`);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(1000);
-    console.log(`>> Searching withdrawal for: x9048_${username}`);
+    console.log(`>> Searching withdrawal for: ${this.memberPrefix}${username}`);
 
     await this.page.getByTitle('Edit').first().click();
     console.log('>> Opened latest withdrawal');

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { URLS } from '../config.js';
 
 export class WithdrawalPage {
   constructor(page) {

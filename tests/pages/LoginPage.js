@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { mkdirSync } from 'fs';
+import { URLS } from '../config.js';
 
 export class LoginPage {
   constructor(page, testId = 'default') {
@@ -15,8 +16,9 @@ export class LoginPage {
     this.loginForm = page.locator('#login-form');
   }
 
+  // In goto() method:
   async goto() {
-    await this.page.goto('https://stage-mem.linkv2.com/');
+    await this.page.goto(URLS.playsite);
   }
 
   async closePopups() {
