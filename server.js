@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 4000;
@@ -36,6 +37,24 @@ const server = createServer((req, res) => {
     const html = readFileSync(join(__dirname, 'index.html'), 'utf-8');
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(html);
+    return;
+  }
+
+  // ── Captcha status proxy (server-side check so ngrok works) ──
+  if (req.method === 'GET' && url.pathname === '/captcha-status') {
+    let responded = false;
+    const reply = (online) => {
+      if (responded) return;
+      responded = true;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ online }));
+    };
+    const probe = http.get('http://localhost:3333/health', (r) => {
+      r.resume();
+      reply(r.statusCode === 200);
+    });
+    probe.on('error', () => reply(false));
+    probe.setTimeout(2000, () => { probe.destroy(); reply(false); });
     return;
   }
 

@@ -28,6 +28,13 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200); res.end(); return;
   }
 
+  // ── Health check (used by QA Dashboard to show online status) ──
+  if (req.method === 'GET' && req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
   if (req.method === 'GET' && req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(fs.readFileSync('captcha-helper.html'));
@@ -84,5 +91,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Captcha helper running at http://localhost:${PORT}`);
+  console.log(`>> Captcha Server running at http://localhost:${PORT}`);
 });

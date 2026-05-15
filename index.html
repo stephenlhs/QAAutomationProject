@@ -15,18 +15,8 @@
       padding: 24px;
     }
 
-    .header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .header h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: #63b3ed;
-      margin-bottom: 6px;
-    }
-
+    .header { text-align: center; margin-bottom: 32px; }
+    .header h1 { font-size: 28px; font-weight: 700; color: #63b3ed; margin-bottom: 6px; }
     .header p { color: #718096; font-size: 14px; }
 
     .container {
@@ -54,11 +44,7 @@
     }
 
     /* Environment */
-    .env-selector {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
+    .env-selector { display: flex; gap: 8px; margin-bottom: 20px; }
 
     .env-btn {
       flex: 1;
@@ -97,22 +83,11 @@
     .section { margin-bottom: 20px; }
 
     /* Input fields */
-    .input-group {
-      margin-bottom: 10px;
-    }
+    .input-group { margin-bottom: 10px; }
 
-    .input-label {
-      font-size: 11px;
-      color: #718096;
-      margin-bottom: 4px;
-      display: block;
-    }
+    .input-label { font-size: 11px; color: #718096; margin-bottom: 4px; display: block; }
 
-    .input-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
+    .input-row { display: flex; gap: 8px; align-items: center; }
 
     .input-field {
       flex: 1;
@@ -139,11 +114,7 @@
     /* Member inputs */
     .member-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 
-    .member-row {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
+    .member-row { display: flex; gap: 6px; align-items: center; }
 
     .member-row input {
       flex: 2;
@@ -206,7 +177,7 @@
       transition: all 0.2s;
     }
 
-    .test-item:hover { border-color: #48bb78; }
+    .test-item:hover  { border-color: #48bb78; }
     .test-item.running { border-color: #ecc94b; background: #1a180f; }
     .test-item.passed  { border-color: #48bb78; background: #0d1f1a; }
     .test-item.failed  { border-color: #fc8181; background: #1f0d0d; }
@@ -246,11 +217,7 @@
     .run-btn.stop:hover { background: #c53030; }
 
     /* Stats */
-    .stats-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 16px;
-    }
+    .stats-row { display: flex; gap: 8px; margin-top: 16px; }
 
     .stat-box {
       flex: 1;
@@ -318,11 +285,7 @@
       line-height: 2.2;
     }
 
-    .divider {
-      border: none;
-      border-top: 1px solid #2d3748;
-      margin: 16px 0;
-    }
+    .divider { border: none; border-top: 1px solid #2d3748; margin: 16px 0; }
   </style>
 </head>
 <body>
@@ -337,7 +300,7 @@
   <!-- ── Left Panel ── -->
   <div style="display: flex; flex-direction: column; gap: 16px;">
 
-    <!-- Environment -->
+    <!-- Environment + Captcha Status -->
     <div class="panel">
       <h2>Environment</h2>
       <div class="env-selector">
@@ -541,15 +504,12 @@
 
   function removeMember(btn) {
     const list = document.getElementById('memberList');
-    if (list.children.length > 1) {
-      btn.parentElement.remove();
-    }
+    if (list.children.length > 1) btn.parentElement.remove();
   }
 
   function getMembers() {
-    const rows = document.querySelectorAll('#memberList .member-row');
     const members = [];
-    rows.forEach(row => {
+    document.querySelectorAll('#memberList .member-row').forEach(row => {
       const username = row.querySelector('input').value.trim();
       const currency = row.querySelector('select').value;
       if (username) members.push({ username, currency });
@@ -584,18 +544,18 @@
     item.className = `test-item ${state}`;
 
     const states = {
-      idle:    { badge: 'Idle',    badgeClass: 'idle',    btnText: '▶ Run', btnClass: 'start', fn: () => runTest(test) },
-      running: { badge: 'Running', badgeClass: 'running', btnText: '■ Stop', btnClass: 'stop', fn: () => stopTest(test) },
-      passed:  { badge: 'Passed',  badgeClass: 'passed',  btnText: '▶ Run', btnClass: 'start', fn: () => runTest(test) },
-      failed:  { badge: 'Failed',  badgeClass: 'failed',  btnText: '▶ Run', btnClass: 'start', fn: () => runTest(test) },
+      idle:    { badge: 'Idle',    badgeClass: 'idle',    btnText: '▶ Run',  btnClass: 'start', fn: () => runTest(test) },
+      running: { badge: 'Running', badgeClass: 'running', btnText: '■ Stop', btnClass: 'stop',  fn: () => stopTest(test) },
+      passed:  { badge: 'Passed',  badgeClass: 'passed',  btnText: '▶ Run',  btnClass: 'start', fn: () => runTest(test) },
+      failed:  { badge: 'Failed',  badgeClass: 'failed',  btnText: '▶ Run',  btnClass: 'start', fn: () => runTest(test) },
     };
 
     const s = states[state];
     badge.textContent = s.badge;
-    badge.className = `status-badge ${s.badgeClass}`;
-    btn.textContent = s.btnText;
-    btn.className = `run-btn ${s.btnClass}`;
-    btn.onclick = s.fn;
+    badge.className   = `status-badge ${s.badgeClass}`;
+    btn.textContent   = s.btnText;
+    btn.className     = `run-btn ${s.btnClass}`;
+    btn.onclick       = s.fn;
   }
 
   function updateStats(result) {
@@ -641,7 +601,7 @@
           if (!line.startsWith('data: ')) continue;
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.type === 'done') break;
+            if (data.type === 'done')    break;
             if (data.type === 'success') { setTestState(test, 'passed'); updateStats('passed'); }
             if (data.type === 'fail')    { setTestState(test, 'failed'); updateStats('failed'); }
             addLog(data.type, data.msg);
@@ -666,16 +626,22 @@
     addLog('err', '>> Test stopped by user');
   }
 
-  // ── Captcha server status ──
+  // ── Captcha server status (proxied through server so ngrok works) ──
   async function checkCaptchaServer() {
     const dot  = document.getElementById('serverDot');
     const text = document.getElementById('serverText');
     try {
-      await fetch('http://localhost:3333/health', { signal: AbortSignal.timeout(2000) });
-      dot.className  = 'dot online';
-      text.textContent = 'Captcha Server Online';
+      const res  = await fetch('/captcha-status', { signal: AbortSignal.timeout(3000) });
+      const data = await res.json();
+      if (data.online) {
+        dot.className    = 'dot online';
+        text.textContent = 'Captcha Server Online';
+      } else {
+        dot.className    = 'dot';
+        text.textContent = 'Captcha Server Offline — run: node captcha-server.js';
+      }
     } catch {
-      dot.className  = 'dot';
+      dot.className    = 'dot';
       text.textContent = 'Captcha Server Offline — run: node captcha-server.js';
     }
   }
