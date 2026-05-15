@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Automation Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #63b3ed;
+      margin-bottom: 6px;
+    }
+
+    .header p { color: #718096; font-size: 14px; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+    }
+
+    .panel {
+      background: #1a1d2e;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .panel h2 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    /* Environment */
+    .env-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .env-btn {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      background: #0f1117;
+      color: #a0aec0;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .env-btn:hover { border-color: #63b3ed; color: #63b3ed; }
+    .env-btn.active { background: #2b6cb0; border-color: #63b3ed; color: white; font-weight: 600; }
+
+    /* Server status */
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 12px;
+      color: #a0aec0;
+    }
+
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #fc8181; flex-shrink: 0; }
+    .dot.online { background: #68d391; }
+
+    /* Section divider */
+    .section { margin-bottom: 20px; }
+
+    /* Input fields */
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    .input-label {
+      font-size: 11px;
+      color: #718096;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .input-field {
+      flex: 1;
+      padding: 7px 10px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 13px;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    .input-field:focus { border-color: #63b3ed; }
+
+    .currency-tag {
+      font-size: 11px;
+      color: #718096;
+      background: #2d3748;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    /* Member inputs */
+    .member-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+
+    .member-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .member-row input {
+      flex: 2;
+      padding: 6px 10px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .member-row input:focus { border-color: #63b3ed; }
+
+    .member-row select {
+      flex: 1;
+      padding: 6px 8px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #fc8181;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 4px;
+    }
+
+    .add-member-btn {
+      width: 100%;
+      padding: 6px;
+      background: transparent;
+      border: 1px dashed #2d3748;
+      border-radius: 6px;
+      color: #718096;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .add-member-btn:hover { border-color: #63b3ed; color: #63b3ed; }
+
+    /* Test list */
+    .test-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .test-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .test-item:hover { border-color: #48bb78; }
+    .test-item.running { border-color: #ecc94b; background: #1a180f; }
+    .test-item.passed  { border-color: #48bb78; background: #0d1f1a; }
+    .test-item.failed  { border-color: #fc8181; background: #1f0d0d; }
+
+    .test-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+    .test-info { flex: 1; min-width: 0; }
+    .test-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .test-desc { font-size: 11px; color: #718096; margin-top: 1px; }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .status-badge.idle    { background: #2d3748; color: #a0aec0; }
+    .status-badge.running { background: #744210; color: #ecc94b; }
+    .status-badge.passed  { background: #1c4532; color: #68d391; }
+    .status-badge.failed  { background: #742a2a; color: #fc8181; }
+
+    .run-btn {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .run-btn.start { background: #276749; color: white; }
+    .run-btn.start:hover { background: #2f855a; }
+    .run-btn.stop  { background: #9b2c2c; color: white; }
+    .run-btn.stop:hover { background: #c53030; }
+
+    /* Stats */
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .stat-box {
+      flex: 1;
+      padding: 10px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-num { font-size: 22px; font-weight: 700; }
+    .stat-num.total  { color: #63b3ed; }
+    .stat-num.passed { color: #68d391; }
+    .stat-num.failed { color: #fc8181; }
+    .stat-label { font-size: 11px; color: #718096; margin-top: 2px; }
+
+    /* Output panel */
+    .output-panel { display: flex; flex-direction: column; height: 680px; }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .output-title { font-size: 12px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .clear-btn {
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 1px solid #2d3748;
+      background: transparent;
+      color: #718096;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .clear-btn:hover { color: #e2e8f0; border-color: #4a5568; }
+
+    .output-log {
+      flex: 1;
+      background: #0a0c12;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-y: auto;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .log-line { display: block; }
+    .log-line.info    { color: #90cdf4; }
+    .log-line.log     { color: #e2e8f0; }
+    .log-line.err     { color: #fc8181; }
+    .log-line.success { color: #68d391; font-weight: 700; font-size: 14px; }
+    .log-line.fail    { color: #fc8181; font-weight: 700; font-size: 14px; }
+
+    .placeholder {
+      color: #4a5568;
+      text-align: center;
+      margin-top: 100px;
+      font-size: 13px;
+      line-height: 2.2;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #2d3748;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>QA Automation Dashboard</h1>
+  <p>iGaming Platform — Playwright Test Runner</p>
+</div>
+
+<div class="container">
+
+  <!-- ── Left Panel ── -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+
+    <!-- Environment -->
+    <div class="panel">
+      <h2>Environment</h2>
+      <div class="env-selector">
+        <button class="env-btn active" onclick="setEnv('staging', this)">Staging</button>
+        <button class="env-btn" onclick="setEnv('uat', this)">UAT</button>
+        <button class="env-btn" onclick="setEnv('prod', this)">Prod</button>
+      </div>
+
+      <h2>Captcha Server</h2>
+      <div class="server-status">
+        <div class="dot" id="serverDot"></div>
+        <span id="serverText">Checking...</span>
+      </div>
+    </div>
+
+    <!-- Deposit Settings -->
+    <div class="panel">
+      <h2>Deposit Settings</h2>
+      <div class="input-group">
+        <label class="input-label">Deposit Amount</label>
+        <div class="input-row">
+          <span class="currency-tag">MYR</span>
+          <input type="number" class="input-field" id="depositAmount" value="50" min="1" placeholder="50">
+        </div>
+      </div>
+
+      <hr class="divider">
+      <h2>Tests — Deposit</h2>
+      <div class="test-list">
+        <div class="test-item" id="item-approve-deposit">
+          <div class="test-icon">💰</div>
+          <div class="test-info">
+            <div class="test-name">Approve Deposit</div>
+            <div class="test-desc">Submit + BO approve + verify balance</div>
+          </div>
+          <span class="status-badge idle" id="badge-approve-deposit">Idle</span>
+          <button class="run-btn start" id="btn-approve-deposit" onclick="runTest('approve-deposit')">▶ Run</button>
+        </div>
+
+        <div class="test-item" id="item-reject-deposit">
+          <div class="test-icon">🚫</div>
+          <div class="test-info">
+            <div class="test-name">Reject Deposit</div>
+            <div class="test-desc">Submit + BO reject + verify unchanged</div>
+          </div>
+          <span class="status-badge idle" id="badge-reject-deposit">Idle</span>
+          <button class="run-btn start" id="btn-reject-deposit" onclick="runTest('reject-deposit')">▶ Run</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Withdrawal Settings -->
+    <div class="panel">
+      <h2>Withdrawal Settings</h2>
+      <div class="input-group">
+        <label class="input-label">Withdrawal Amount</label>
+        <div class="input-row">
+          <span class="currency-tag">MYR</span>
+          <input type="number" class="input-field" id="withdrawalAmount" value="10" min="1" placeholder="10">
+        </div>
+      </div>
+
+      <hr class="divider">
+      <h2>Tests — Withdrawal</h2>
+      <div class="test-list">
+        <div class="test-item" id="item-approve-withdrawal">
+          <div class="test-icon">💸</div>
+          <div class="test-info">
+            <div class="test-name">Approve Withdrawal</div>
+            <div class="test-desc">Submit + BO approve + verify balance</div>
+          </div>
+          <span class="status-badge idle" id="badge-approve-withdrawal">Idle</span>
+          <button class="run-btn start" id="btn-approve-withdrawal" onclick="runTest('approve-withdrawal')">▶ Run</button>
+        </div>
+
+        <div class="test-item" id="item-reject-withdrawal">
+          <div class="test-icon">❌</div>
+          <div class="test-info">
+            <div class="test-name">Reject Withdrawal</div>
+            <div class="test-desc">Submit + BO reject + verify unchanged</div>
+          </div>
+          <span class="status-badge idle" id="badge-reject-withdrawal">Idle</span>
+          <button class="run-btn start" id="btn-reject-withdrawal" onclick="runTest('reject-withdrawal')">▶ Run</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Member Settings -->
+    <div class="panel">
+      <h2>Member Settings</h2>
+      <div class="member-list" id="memberList">
+        <div class="member-row">
+          <input type="text" placeholder="Username e.g. gaplay1" value="gaplay1">
+          <select>
+            <option value="MYR">MYR</option>
+            <option value="IDR">IDR</option>
+            <option value="USD">USD</option>
+            <option value="THB">THB</option>
+            <option value="VND">VND</option>
+          </select>
+          <button class="remove-btn" onclick="removeMember(this)">✕</button>
+        </div>
+      </div>
+      <button class="add-member-btn" onclick="addMember()">+ Add Member</button>
+
+      <hr class="divider">
+      <h2>Tests — Members</h2>
+      <div class="test-list">
+        <div class="test-item" id="item-create-members">
+          <div class="test-icon">👤</div>
+          <div class="test-info">
+            <div class="test-name">Create Members</div>
+            <div class="test-desc">Create + bank account + change password</div>
+          </div>
+          <span class="status-badge idle" id="badge-create-members">Idle</span>
+          <button class="run-btn start" id="btn-create-members" onclick="runTest('create-members')">▶ Run</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other Tests -->
+    <div class="panel">
+      <h2>Other Tests</h2>
+      <div class="test-list">
+        <div class="test-item" id="item-slot-game">
+          <div class="test-icon">🎰</div>
+          <div class="test-info">
+            <div class="test-name">Slot Game</div>
+            <div class="test-desc">Navigate to game + manual play + verify</div>
+          </div>
+          <span class="status-badge idle" id="badge-slot-game">Idle</span>
+          <button class="run-btn start" id="btn-slot-game" onclick="runTest('slot-game')">▶ Run</button>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-num total" id="statTotal">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num passed" id="statPassed">0</div>
+          <div class="stat-label">Passed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num failed" id="statFailed">0</div>
+          <div class="stat-label">Failed</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right Panel — Output ── -->
+  <div class="panel output-panel">
+    <div class="output-header">
+      <div class="output-title">Test Output</div>
+      <button class="clear-btn" onclick="clearLog()">Clear</button>
+    </div>
+    <div class="output-log" id="outputLog">
+      <div class="placeholder">
+        Select a test and click ▶ Run to start<br>
+        Make sure captcha server is running first<br><br>
+        <code style="color:#4a5568">node captcha-server.js</code>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentEnv = 'staging';
+  let stats = { total: 0, passed: 0, failed: 0 };
+
+  // ── Environment ──
+  function setEnv(env, btn) {
+    currentEnv = env;
+    document.querySelectorAll('.env-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    addLog('info', `>> Environment switched to: ${env.toUpperCase()}`);
+  }
+
+  // ── Member rows ──
+  function addMember() {
+    const list = document.getElementById('memberList');
+    const row = document.createElement('div');
+    row.className = 'member-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Username e.g. gaplay3">
+      <select>
+        <option value="MYR">MYR</option>
+        <option value="IDR">IDR</option>
+        <option value="USD">USD</option>
+        <option value="THB">THB</option>
+        <option value="VND">VND</option>
+      </select>
+      <button class="remove-btn" onclick="removeMember(this)">✕</button>
+    `;
+    list.appendChild(row);
+  }
+
+  function removeMember(btn) {
+    const list = document.getElementById('memberList');
+    if (list.children.length > 1) {
+      btn.parentElement.remove();
+    }
+  }
+
+  function getMembers() {
+    const rows = document.querySelectorAll('#memberList .member-row');
+    const members = [];
+    rows.forEach(row => {
+      const username = row.querySelector('input').value.trim();
+      const currency = row.querySelector('select').value;
+      if (username) members.push({ username, currency });
+    });
+    return JSON.stringify(members);
+  }
+
+  // ── Log output ──
+  function addLog(type, msg) {
+    const log = document.getElementById('outputLog');
+    const placeholder = log.querySelector('.placeholder');
+    if (placeholder) placeholder.remove();
+
+    const line = document.createElement('span');
+    line.className = `log-line ${type}`;
+    line.textContent = msg;
+    log.appendChild(line);
+    log.appendChild(document.createElement('br'));
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function clearLog() {
+    document.getElementById('outputLog').innerHTML = '<div class="placeholder">Output cleared. Run a test to see output.</div>';
+  }
+
+  // ── Test state ──
+  function setTestState(test, state) {
+    const item  = document.getElementById(`item-${test}`);
+    const badge = document.getElementById(`badge-${test}`);
+    const btn   = document.getElementById(`btn-${test}`);
+
+    item.className = `test-item ${state}`;
+
+    const states = {
+      idle:    { badge: 'Idle',    badgeClass: 'idle',    btnText: '▶ Run', btnClass: 'start', fn: () => runTest(test) },
+      running: { badge: 'Running', badgeClass: 'running', btnText: '■ Stop', btnClass: 'stop', fn: () => stopTest(test) },
+      passed:  { badge: 'Passed',  badgeClass: 'passed',  btnText: '▶ Run', btnClass: 'start', fn: () => runTest(test) },
+      failed:  { badge: 'Failed',  badgeClass: 'failed',  btnText: '▶ Run', btnClass: 'start', fn: () => runTest(test) },
+    };
+
+    const s = states[state];
+    badge.textContent = s.badge;
+    badge.className = `status-badge ${s.badgeClass}`;
+    btn.textContent = s.btnText;
+    btn.className = `run-btn ${s.btnClass}`;
+    btn.onclick = s.fn;
+  }
+
+  function updateStats(result) {
+    stats.total++;
+    if (result === 'passed') stats.passed++;
+    else stats.failed++;
+    document.getElementById('statTotal').textContent  = stats.total;
+    document.getElementById('statPassed').textContent = stats.passed;
+    document.getElementById('statFailed').textContent = stats.failed;
+  }
+
+  // ── Run test ──
+  async function runTest(test) {
+    const depositAmount    = document.getElementById('depositAmount')?.value;
+    const withdrawalAmount = document.getElementById('withdrawalAmount')?.value;
+    const members          = getMembers();
+
+    setTestState(test, 'running');
+    addLog('info', `\n>> ═══════════════════════════════════`);
+    addLog('info', `>> Running: ${test} [${currentEnv.toUpperCase()}]`);
+    addLog('info', `>> ═══════════════════════════════════`);
+
+    try {
+      const response = await fetch('/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ test, env: currentEnv, depositAmount, withdrawalAmount, members }),
+      });
+
+      const reader  = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'done') break;
+            if (data.type === 'success') { setTestState(test, 'passed'); updateStats('passed'); }
+            if (data.type === 'fail')    { setTestState(test, 'failed'); updateStats('failed'); }
+            addLog(data.type, data.msg);
+          } catch {}
+        }
+      }
+    } catch (err) {
+      addLog('err', `>> Error: ${err.message}`);
+      setTestState(test, 'failed');
+      updateStats('failed');
+    }
+  }
+
+  // ── Stop test ──
+  async function stopTest(test) {
+    await fetch('/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ test }),
+    });
+    setTestState(test, 'idle');
+    addLog('err', '>> Test stopped by user');
+  }
+
+  // ── Captcha server status ──
+  async function checkCaptchaServer() {
+    const dot  = document.getElementById('serverDot');
+    const text = document.getElementById('serverText');
+    try {
+      await fetch('http://localhost:3333/health', { signal: AbortSignal.timeout(2000) });
+      dot.className  = 'dot online';
+      text.textContent = 'Captcha Server Online';
+    } catch {
+      dot.className  = 'dot';
+      text.textContent = 'Captcha Server Offline — run: node captcha-server.js';
+    }
+  }
+
+  checkCaptchaServer();
+  setInterval(checkCaptchaServer, 5000);
+</script>
+
+</body>
+</html>

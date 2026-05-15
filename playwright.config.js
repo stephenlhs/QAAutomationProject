@@ -15,6 +15,8 @@ export default defineConfig({
         screenshot: 'on',
         video: 'on',
         trace: 'on',
+        // ── Fix viewport to full HD ──
+        viewport: { width: 1920, height: 1080 },
       },
       testIgnore: '**/CreateMemberAndSaveSession.spec.js',
     },
@@ -27,6 +29,7 @@ export default defineConfig({
         screenshot: 'on',
         video: 'on',
         trace: 'on',
+        viewport: { width: 1920, height: 1080 },
       },
     },
   ],

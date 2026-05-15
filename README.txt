@@ -97,30 +97,61 @@ Edit .env with your credentials:
   UAT           https://mem2.linkv2.com/#        https://ag-uat.linkv2.com/login
   Production    https://998hihi.com/             https://bo.v2hotel.com/login
 
-Run on specific environment:
-  # Staging (default)
-  npx playwright test --headed
+---
 
-  # UAT
-  $env:TEST_ENV="uat"; npx playwright test --headed
+## Running Tests
 
-  # Production
-  $env:TEST_ENV="prod"; npx playwright test --headed
+### Option 1 - QA Dashboard (Recommended)
+Double-click start-dashboard.bat in the project root.
+
+This will automatically:
+  1. Start captcha server (port 3333)
+  2. Start dashboard server (port 4000)
+  3. Open browser at http://localhost:4000
+
+From the dashboard you can:
+  - Select environment (Staging / UAT / Prod)
+  - Set deposit amount for deposit tests
+  - Set withdrawal amount for withdrawal tests
+  - Add/remove members for create member test
+  - Click Run button for any test
+  - See live output in real time
+  - Track pass/fail count per session
+
+### Option 2 - Command Line
+Open two terminals:
+
+Terminal 1 - Start captcha server (keep running):
+  node captcha-server.js
+
+Terminal 2 - Run tests:
+
+  Staging (default):
+  npx playwright test tests/ManualApproveDeposit.spec.js --headed
+
+  UAT:
+  $env:TEST_ENV="uat"; npx playwright test tests/ManualApproveDeposit.spec.js --headed
+
+  Production:
+  $env:TEST_ENV="prod"; npx playwright test tests/ManualApproveDeposit.spec.js --headed
+
+### View HTML report
+  npx playwright show-report
 
 ---
 
 ## Configuration
 
-All credentials and test settings are in tests/config.js
-Update .env file only — never hardcode credentials in config.js
+All credentials are stored in .env file (never committed to git).
+Test settings are in tests/config.js.
 
   PLAYER        - Player site login credentials per environment
   BACKOFFICE    - Backoffice login credentials + 2FA secret per environment
-  DEPOSIT       - Deposit amount, bank name, package name per environment
-  WITHDRAWAL    - Withdrawal amount
+  DEPOSIT       - Deposit amount (overridable from dashboard), bank name, package name
+  WITHDRAWAL    - Withdrawal amount (overridable from dashboard)
   MEMBER_SETUP  - Member creation settings per environment
-  MEMBERS       - List of test members per environment
-  URLS          - Environment URLs (auto-selected based on TEST_ENV)
+  MEMBERS       - List of test members (overridable from dashboard)
+  URLS          - Environment URLs + member prefix + popup selectors
 
 ---
 
@@ -148,50 +179,11 @@ QAAutomationProject/
 ├── .env.example                            Environment template (safe to share)
 ├── captcha-server.js                       Local captcha solving server (port 3333)
 ├── solve_captcha.py                        Python captcha OCR script
+├── server.js                               QA Dashboard web server (port 4000)
+├── index.html                              QA Dashboard UI
+├── start-dashboard.bat                     One-click launcher for dashboard
 ├── playwright.config.js                    Playwright configuration
 └── README.txt                              This file
-
----
-
-## Running Tests
-
-### Step 1 - Start captcha server
-Open a terminal and keep it running throughout all tests:
-  node captcha-server.js
-
-### Step 2 - Create members (first time only)
-Update MEMBERS array in tests/config.js then run:
-  npx playwright test tests/CreateMemberAndSaveSession.spec.js --headed --project=member-setup
-
-This will:
-  - Check username availability in backoffice
-  - Create member with specified currency
-  - Update bank account (unique account number generated)
-  - Login to playsite and change password
-
-### Step 3 - Run individual tests
-Open a second terminal:
-
-  Manual Approve Deposit:
-  npx playwright test tests/ManualApproveDeposit.spec.js --headed
-
-  Manual Reject Deposit:
-  npx playwright test tests/ManualRejectDeposit.spec.js --headed
-
-  Manual Approve Withdrawal:
-  npx playwright test tests/ManualApproveWithdrawal.spec.js --headed
-
-  Manual Reject Withdrawal:
-  npx playwright test tests/ManualRejectWithdrawal.spec.js --headed
-
-  Slot Game (manual play + verify):
-  npx playwright test tests/SlotGame.spec.js --headed
-
-  Run all tests:
-  npx playwright test --headed
-
-### Step 4 - View HTML report
-  npx playwright show-report
 
 ---
 
@@ -203,8 +195,8 @@ Open a second terminal:
   3. Submit deposit (Bank Transfer)
   4. Verify transaction status = Pending in Cash History
   5. Backoffice logs in fresh + session saved (with 2FA if enabled)
-  6. Check player outstanding balance in Member Account
-  7. Search player in Cash Deposit/Withdraw List
+  6. Check player outstanding balance in Member Account (staging only)
+  7. Search player in Cash Deposit List
   8. Approve / Reject transaction
   9. Player restores saved session (no captcha needed)
   10. Verify balance + rollover/target AFTER
@@ -223,7 +215,6 @@ Open a second terminal:
   9. Verify balance + rollover/target AFTER
   10. Generate test report
 
-
 ### Create Member Flow
   1. Backoffice logs in (with 2FA if enabled)
   2. Check username availability
@@ -231,6 +222,16 @@ Open a second terminal:
   4. Update bank account (unique number: 12344321XXXYYY)
   5. Login to playsite with initial password (1234ssss)
   6. Change password to new password (ssss1234)
+
+### Slot Game Test
+  1. Player logs in fresh
+  2. Record balance + rollover BEFORE
+  3. Navigate to game (Pragmatic — Sweet Bonanza 1000)
+  4. Pause — player plays manually
+  5. Press ENTER to resume automation
+  6. Record balance + rollover AFTER
+  7. Check statement for bet details
+  8. Generate test report
 
 ---
 
@@ -274,34 +275,33 @@ Backoffice accounts with Google Authenticator enabled are handled automatically.
 
 ---
 
----
-
 ## Google Authenticator Setup for New BO Accounts
 
 When a new BO account is created, the system may force GA setup before accessing BO.
-The script handles this automatically if twoFASecret is provided in .env.
 
 Steps to setup GA for a new account:
 
-1. Login to BO manually with the new account
-2. Go to Profile > Google Authenticator
-3. Copy the text code shown below the QR code
-   Example: GE3EOQKNIRKEKWCX
+  1. Login to BO manually with the new account
+  2. Go to Profile > Google Authenticator
+  3. Copy the text code shown below the QR code
+     Example: GE3EOQKNIRKEKWCX
 
-4. Add to .env:
-   STAGING_BO_2FA_SECRET=GE3EOQKNIRKEKWCX
+  4. Add to .env:
+     STAGING_BO_2FA_SECRET=GE3EOQKNIRKEKWCX
 
-5. Scan QR code with Google Authenticator app on your phone
-6. Enter the 6-digit code shown in the app to verify
+  5. Scan QR code with Google Authenticator app on your phone
+  6. Enter the 6-digit code shown in the app to verify
 
-7. Script will now auto-generate 2FA codes on every login
-   No manual intervention needed!
+  7. Script will now auto-generate 2FA codes on every login
+     No manual intervention needed!
 
-Note:
-- Each account has a unique secret key
-- Secret key is found in Profile > Google Authenticator page
-- If secret key changes (re-setup GA), update .env accordingly
-- System clock must be accurate for TOTP codes to work
+  Note:
+  - Each account has a unique secret key
+  - Secret key is found in Profile > Google Authenticator page
+  - If secret key changes (re-setup GA), update .env accordingly
+  - System clock must be accurate for TOTP codes to work
+
+---
 
 ## Reports
 
@@ -325,10 +325,15 @@ HTML report with screenshots and videos:
 ### PowerShell execution policy error
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
-### Port 3333 already in use
+### Port 3333 already in use (captcha server)
   netstat -ano | findstr :3333
   taskkill /PID <PID number> /F
   node captcha-server.js
+
+### Port 4000 already in use (dashboard server)
+  netstat -ano | findstr :4000
+  taskkill /PID <PID number> /F
+  node server.js
 
 ### ddddocr not found
   pip install ddddocr Pillow
@@ -339,14 +344,23 @@ HTML report with screenshots and videos:
 ### Git not recognized
   Download and install Git from https://git-scm.com/download/win
 
+### Player username is undefined
+  Make sure .env file exists with correct credentials:
+  copy .env.example .env
+  Then fill in your credentials in .env
+
 ### Session expired error
   Each test logs in fresh automatically
-  Just make sure captcha server is running:
-  node captcha-server.js
+  Just make sure captcha server is running
 
 ### 2FA code rejected
-  - Make sure secret key in .env matches the one in BO Profile > Google Authenticator
+  - Make sure secret key in .env matches BO Profile > Google Authenticator
   - Make sure your system clock is correct (TOTP is time-based)
+
+### Environment not switching
+  Check for leftover env variable in terminal:
+  echo $env:TEST_ENV
+  Remove-Item Env:TEST_ENV
 
 ---
 
@@ -357,10 +371,6 @@ HTML report with screenshots and videos:
   chromium        Runs all tests except CreateMemberAndSaveSession
   member-setup    Runs CreateMemberAndSaveSession only (no dependencies)
 
-Run specific project:
-  npx playwright test tests/CreateMemberAndSaveSession.spec.js --headed --project=member-setup
-  npx playwright test tests/ManualApproveDeposit.spec.js --headed
-
 ---
 
 ## Tech Stack
@@ -369,11 +379,13 @@ Run specific project:
   -----------------------------------------------------------------------
   Playwright        Browser automation
   Node.js           Runtime environment
-  Python            Captcha OCR + game automation
+  Python            Captcha OCR
   ddddocr           Captcha recognition
   otpauth           2FA TOTP code generation
   Page Object Model Test architecture pattern
   config.js         Centralized test configuration
   dotenv            Environment variable management
+  server.js         QA Dashboard web server
+  index.html        QA Dashboard UI
 
 ---

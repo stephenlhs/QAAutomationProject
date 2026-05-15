@@ -78,19 +78,19 @@ export const BACKOFFICE = {
 // =============================
 export const DEPOSIT = {
   staging: {
-    amount: 50,
+    amount: parseFloat(process.env.CUSTOM_DEPOSIT_AMOUNT) || 50,
     rolloverMultiplier: 1,
     bankName: 'C zh test - zh test all',
     packageName: 'Stephen Turnover Package',
   },
   uat: {
-    amount: 50,
+    amount: parseFloat(process.env.CUSTOM_DEPOSIT_AMOUNT) || 50,
     rolloverMultiplier: 1,
     bankName: 'your-uat-bank-name',
     packageName: 'your-uat-package-name',
   },
   prod: {
-    amount: 50,
+    amount: parseFloat(process.env.CUSTOM_DEPOSIT_AMOUNT) || 50,
     rolloverMultiplier: 1,
     bankName: 'your-prod-bank-name',
     packageName: 'your-prod-package-name',
@@ -101,7 +101,7 @@ export const DEPOSIT = {
 // WITHDRAWAL CONFIG
 // =============================
 export const WITHDRAWAL = {
-  amount: 10,
+  amount: parseFloat(process.env.CUSTOM_WITHDRAWAL_AMOUNT) || 10,
 };
 
 // =============================
@@ -138,16 +138,22 @@ export const MEMBER_SETUP = {
 // MEMBER LIST
 // =============================
 export const MEMBERS = {
-  staging: [
-    { username: 'gaplay1', currency: 'MYR' },
-    { username: 'gaplay2', currency: 'MYR' },
-  ],
-  uat: [
-    { username: 'uat-member1', currency: 'MYR' },
-    { username: 'uat-member2', currency: 'MYR' },
-  ],
-  prod: [
-    { username: 'prod-member1', currency: 'MYR' },
-    { username: 'prod-member2', currency: 'MYR' },
-  ],
+  staging: process.env.CUSTOM_MEMBERS
+    ? JSON.parse(process.env.CUSTOM_MEMBERS)
+    : [
+        { username: 'gaplay1', currency: 'MYR' },
+        { username: 'gaplay2', currency: 'MYR' },
+      ],
+  uat: process.env.CUSTOM_MEMBERS
+    ? JSON.parse(process.env.CUSTOM_MEMBERS)
+    : [
+        { username: 'uat-member1', currency: 'MYR' },
+        { username: 'uat-member2', currency: 'MYR' },
+      ],
+  prod: process.env.CUSTOM_MEMBERS
+    ? JSON.parse(process.env.CUSTOM_MEMBERS)
+    : [
+        { username: 'prod-member1', currency: 'MYR' },
+        { username: 'prod-member2', currency: 'MYR' },
+      ],
 }[ENV];
