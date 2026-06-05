@@ -11,3 +11,9 @@ playwright-report/
 test-report*.txt
 tests/ApprovePending.spec.js
 tests/BulkDeposit.spec.js
+
+# New additions
+reports/
+.screenshots-tmp/
+*.report-tmp-*.json
+playwright-report/

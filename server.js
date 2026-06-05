@@ -1,20 +1,20 @@
 import { createServer } from 'http';
 import { spawn } from 'child_process';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
+import { writeReport } from './report-writer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = 4000;
 
-const TESTS = {
-  'approve-deposit':    'tests/ManualApproveDeposit.spec.js',
-  'reject-deposit':     'tests/ManualRejectDeposit.spec.js',
-  'approve-withdrawal': 'tests/ManualApproveWithdrawal.spec.js',
-  'reject-withdrawal':  'tests/ManualRejectWithdrawal.spec.js',
-  'create-members':     'tests/CreateMemberAndSaveSession.spec.js',
-  'slot-game':          'tests/SlotGame.spec.js',
+const TEST_FILES = {
+  'approve-deposit':    'ManualApproveDeposit.spec.js',
+  'reject-deposit':     'ManualRejectDeposit.spec.js',
+  'approve-withdrawal': 'ManualApproveWithdrawal.spec.js',
+  'reject-withdrawal':  'ManualRejectWithdrawal.spec.js',
+  'create-members':     'CreateMemberAndSaveSession.spec.js',
 };
 
 const activeProcesses = {};
@@ -40,7 +40,7 @@ const server = createServer((req, res) => {
     return;
   }
 
-  // ── Captcha status proxy (server-side check so ngrok works) ──
+  // ── Captcha status proxy ──
   if (req.method === 'GET' && url.pathname === '/captcha-status') {
     let responded = false;
     const reply = (online) => {
@@ -58,19 +58,131 @@ const server = createServer((req, res) => {
     return;
   }
 
+  // ── Config (exposes API key to frontend — local only) ──
+  if (req.method === 'GET' && url.pathname === '/config') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ apiKey: process.env.ANTHROPIC_API_KEY || '' }));
+    return;
+  }
+
+  // ── List reports ──
+  if (req.method === 'GET' && url.pathname === '/reports') {
+    try {
+      const reportsDir = join(__dirname, 'reports');
+      const result = {};
+      for (const env of ['staging', 'uat', 'prod']) {
+        const envDir = join(reportsDir, env);
+        try {
+          const files = readdirSync(envDir)
+            .filter(f => f.endsWith('.xlsx'))
+            .map(f => {
+              const fullPath = join(envDir, f);
+              const { size, mtime } = statSync(fullPath);
+              return { name: f, env, size, modified: mtime.toISOString() };
+            })
+            .sort((a, b) => new Date(b.modified) - new Date(a.modified));
+          result[env] = files;
+        } catch {
+          result[env] = [];
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // ── Delete a report ──
+  if ((req.method === 'DELETE' || req.method === 'POST') && url.pathname === '/reports/delete') {
+    const env  = url.searchParams.get('env');
+    const file = url.searchParams.get('file');
+    if (!env || !file || file.includes('..') || !file.endsWith('.xlsx')) {
+      res.writeHead(400); res.end(); return;
+    }
+    const filePath = join(__dirname, 'reports', env, file);
+    try {
+      unlinkSync(filePath);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    } catch {
+      res.writeHead(404); res.end();
+    }
+    return;
+  }
+
+  // ── Download a report ──
+  if (req.method === 'GET' && url.pathname.startsWith('/reports/download')) {
+    const env  = url.searchParams.get('env');
+    const file = url.searchParams.get('file');
+    if (!env || !file || file.includes('..') || !file.endsWith('.xlsx')) {
+      res.writeHead(400); res.end(); return;
+    }
+    const filePath = join(__dirname, 'reports', env, file);
+    try {
+      const data = readFileSync(filePath);
+      res.writeHead(200, {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="${file}"`,
+      });
+      res.end(data);
+    } catch {
+      res.writeHead(404); res.end();
+    }
+    return;
+  }
+
+  // ── Preview report (returns summary JSON) ──
+  if (req.method === 'GET' && url.pathname === '/reports/preview') {
+    const env  = url.searchParams.get('env');
+    const file = url.searchParams.get('file');
+    if (!env || !file || file.includes('..') || !file.endsWith('.xlsx')) {
+      res.writeHead(400); res.end(); return;
+    }
+    const filePath = join(__dirname, 'reports', env, file);
+    const pyScript = join(__dirname, 'read-report.py');
+    let responded = false;
+    const py = spawn('python', [pyScript, filePath], {
+      shell: false,
+      env: { ...process.env, PYTHONUTF8: '1' },
+    });
+    let out = '';
+    let err = '';
+    py.stdout.on('data', d => { out += d.toString(); });
+    py.stderr.on('data', d => { err += d.toString(); });
+    py.on('close', code => {
+      if (responded) return;
+      responded = true;
+      if (code === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(out);
+      } else {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.trim() }));
+      }
+    });
+    return;
+  }
+
   // ── Run test ──
   if (req.method === 'POST' && url.pathname === '/run') {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
-      const { test, env, depositAmount, withdrawalAmount, members } = JSON.parse(body);
+      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword } = JSON.parse(body);
 
-      const testFile = TESTS[test];
-      if (!testFile) {
+      const fileName = TEST_FILES[test];
+      if (!fileName) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unknown test' }));
         return;
       }
+
+      const testFile = `tests/${env}/${fileName}`;
+      const isCreateMembers = test === 'create-members';
+      const project = isCreateMembers ? `${env}-member-setup` : env;
 
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -88,36 +200,61 @@ const server = createServer((req, res) => {
       send({ type: 'info', msg: `>> Time: ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}` });
       send({ type: 'info', msg: '>> ─────────────────────────────────' });
 
-      const isCreateMembers = test === 'create-members';
       const args = [
         'playwright', 'test', testFile, '--headed',
-        ...(isCreateMembers ? ['--project=member-setup'] : []),
+        `--project=${project}`,
       ];
 
       const customEnv = { ...process.env, TEST_ENV: env };
-      if (depositAmount)    customEnv.CUSTOM_DEPOSIT_AMOUNT    = depositAmount;
-      if (withdrawalAmount) customEnv.CUSTOM_WITHDRAWAL_AMOUNT = withdrawalAmount;
-      if (members)          customEnv.CUSTOM_MEMBERS           = members;
+      if (depositAmount)        customEnv.CUSTOM_DEPOSIT_AMOUNT    = depositAmount;
+      if (withdrawalAmount)     customEnv.CUSTOM_WITHDRAWAL_AMOUNT = withdrawalAmount;
+      if (members)              customEnv.CUSTOM_MEMBERS           = members;
+      if (customPlayerUsername) customEnv.CUSTOM_PLAYER_USERNAME   = customPlayerUsername;
+      if (customPlayerPassword) customEnv.CUSTOM_PLAYER_PASSWORD   = customPlayerPassword;
+
+      const startTime = Date.now();
+      const logLines  = [];   // ← collect all output for the report
 
       const proc = spawn('npx', args, { env: customEnv, shell: true });
       activeProcesses[test] = proc;
 
       proc.stdout.on('data', data => {
         data.toString().split('\n').forEach(line => {
-          if (line.trim()) send({ type: 'log', msg: line });
+          const clean = line.replace(/\x1B\[[0-9;]*m/g, '').trim();
+          if (clean) { send({ type: 'log', msg: clean }); logLines.push(clean); }
         });
       });
 
       proc.stderr.on('data', data => {
         data.toString().split('\n').forEach(line => {
-          if (line.trim()) send({ type: 'err', msg: line });
+          const clean = line.replace(/\x1B\[[0-9;]*m/g, '').trim();
+          if (clean) { send({ type: 'err', msg: clean }); logLines.push(`[ERR] ${clean}`); }
         });
       });
 
-      proc.on('close', code => {
+      proc.on('close', async (code) => {
         delete activeProcesses[test];
+        const result = code === 0 ? 'passed' : 'failed';
+        const durationMs = Date.now() - startTime;
+
         send({ type: 'info', msg: '>> ─────────────────────────────────' });
-        send({ type: code === 0 ? 'success' : 'fail', msg: code === 0 ? '>> TEST PASSED' : '>> TEST FAILED' });
+        send({ type: result === 'passed' ? 'success' : 'fail',
+               msg: result === 'passed' ? '>> TEST PASSED' : '>> TEST FAILED' });
+
+        // ── Write Excel report ──
+        try {
+          const reportPath = await writeReport({
+            testName: test, env, result, durationMs,
+            depositAmount, withdrawalAmount, members,
+            logLines,
+          });
+          const reportFile = reportPath.split(/[/\\]/).pop();
+          send({ type: 'info', msg: `>> Report saved: reports/${env}/${reportFile}` });
+          send({ type: 'report', env, file: reportFile });
+        } catch (err) {
+          send({ type: 'err', msg: `>> Report write failed: ${err.message}` });
+        }
+
         send({ type: 'done', msg: 'done' });
         res.end();
       });

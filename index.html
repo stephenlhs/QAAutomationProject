@@ -3,652 +3,1852 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QA Automation Dashboard</title>
+  <title>QA Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg:        #080b10;
+      --surface:   #0e1218;
+      --surface2:  #141920;
+      --surface3:  #1b2230;
+      --border:    #1e2a38;
+      --border2:   #263040;
+      --text:      #c9d4e0;
+      --text-dim:  #5a6a7e;
+      --text-faint:#2e3d50;
+      --accent:    #3b8ee8;
+      --accent-dim:#1a3a5c;
+      --green:     #34d399;
+      --green-dim: #0d2e22;
+      --red:       #f87171;
+      --red-dim:   #2e0f0f;
+      --amber:     #fbbf24;
+      --amber-dim: #2e200a;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
-      min-height: 100vh;
-      padding: 24px;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
-    .header { text-align: center; margin-bottom: 32px; }
-    .header h1 { font-size: 28px; font-weight: 700; color: #63b3ed; margin-bottom: 6px; }
-    .header p { color: #718096; font-size: 14px; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 24px;
-    }
-
-    .panel {
-      background: #1a1d2e;
-      border: 1px solid #2d3748;
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .panel h2 {
-      font-size: 12px;
-      font-weight: 600;
-      color: #718096;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 12px;
-    }
-
-    /* Environment */
-    .env-selector { display: flex; gap: 8px; margin-bottom: 20px; }
-
-    .env-btn {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid #2d3748;
-      border-radius: 8px;
-      background: #0f1117;
-      color: #a0aec0;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-    }
-
-    .env-btn:hover { border-color: #63b3ed; color: #63b3ed; }
-    .env-btn.active { background: #2b6cb0; border-color: #63b3ed; color: white; font-weight: 600; }
-
-    /* Server status */
-    .server-status {
+    /* ── Header ── */
+    .header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: #0f1117;
-      border: 1px solid #2d3748;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-size: 12px;
-      color: #a0aec0;
+      padding: 0 20px;
+      height: 48px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #fc8181; flex-shrink: 0; }
-    .dot.online { background: #68d391; }
-
-    /* Section divider */
-    .section { margin-bottom: 20px; }
-
-    /* Input fields */
-    .input-group { margin-bottom: 10px; }
-
-    .input-label { font-size: 11px; color: #718096; margin-bottom: 4px; display: block; }
-
-    .input-row { display: flex; gap: 8px; align-items: center; }
-
-    .input-field {
-      flex: 1;
-      padding: 7px 10px;
-      background: #0f1117;
-      border: 1px solid #2d3748;
-      border-radius: 6px;
-      color: #e2e8f0;
-      font-size: 13px;
-      outline: none;
-      transition: border 0.2s;
-    }
-
-    .input-field:focus { border-color: #63b3ed; }
-
-    .currency-tag {
-      font-size: 11px;
-      color: #718096;
-      background: #2d3748;
-      padding: 4px 8px;
-      border-radius: 4px;
-    }
-
-    /* Member inputs */
-    .member-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-
-    .member-row { display: flex; gap: 6px; align-items: center; }
-
-    .member-row input {
-      flex: 2;
-      padding: 6px 10px;
-      background: #0f1117;
-      border: 1px solid #2d3748;
-      border-radius: 6px;
-      color: #e2e8f0;
-      font-size: 12px;
-      outline: none;
-    }
-
-    .member-row input:focus { border-color: #63b3ed; }
-
-    .member-row select {
-      flex: 1;
-      padding: 6px 8px;
-      background: #0f1117;
-      border: 1px solid #2d3748;
-      border-radius: 6px;
-      color: #e2e8f0;
-      font-size: 12px;
-      outline: none;
-    }
-
-    .remove-btn {
-      background: none;
-      border: none;
-      color: #fc8181;
-      cursor: pointer;
-      font-size: 16px;
-      padding: 0 4px;
-    }
-
-    .add-member-btn {
-      width: 100%;
-      padding: 6px;
-      background: transparent;
-      border: 1px dashed #2d3748;
-      border-radius: 6px;
-      color: #718096;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .add-member-btn:hover { border-color: #63b3ed; color: #63b3ed; }
-
-    /* Test list */
-    .test-list { display: flex; flex-direction: column; gap: 8px; }
-
-    .test-item {
+    .logo {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
-      background: #0f1117;
-      border: 1px solid #2d3748;
-      border-radius: 8px;
-      transition: all 0.2s;
+      margin-right: 32px;
     }
-
-    .test-item:hover  { border-color: #48bb78; }
-    .test-item.running { border-color: #ecc94b; background: #1a180f; }
-    .test-item.passed  { border-color: #48bb78; background: #0d1f1a; }
-    .test-item.failed  { border-color: #fc8181; background: #1f0d0d; }
-
-    .test-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
-    .test-info { flex: 1; min-width: 0; }
-    .test-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
-    .test-desc { font-size: 11px; color: #718096; margin-top: 1px; }
-
-    .status-badge {
-      font-size: 10px;
-      padding: 2px 7px;
-      border-radius: 4px;
-      font-weight: 600;
-      flex-shrink: 0;
-    }
-
-    .status-badge.idle    { background: #2d3748; color: #a0aec0; }
-    .status-badge.running { background: #744210; color: #ecc94b; }
-    .status-badge.passed  { background: #1c4532; color: #68d391; }
-    .status-badge.failed  { background: #742a2a; color: #fc8181; }
-
-    .run-btn {
-      padding: 5px 12px;
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: var(--accent);
       border-radius: 6px;
-      border: none;
-      font-size: 12px;
-      font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .logo-text {
+      font-size: 13px; font-weight: 700;
+      color: var(--text); letter-spacing: 0.02em; white-space: nowrap;
+    }
+    .logo-text span { color: var(--text-dim); font-weight: 400; }
+
+    .nav-tabs { display: flex; height: 100%; }
+    .nav-tab {
+      display: flex; align-items: center; gap: 7px;
+      padding: 0 18px;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-dim);
       cursor: pointer;
-      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap; user-select: none;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .captcha-pill {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 11.5px; font-family: var(--mono);
+      color: var(--text-dim);
+      transition: border-color 0.3s, color 0.3s;
+    }
+    .captcha-pill.online  { border-color: var(--green); color: var(--green); }
+    .captcha-pill.offline { border-color: var(--red);   color: var(--red); }
+    .pulse {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-faint); flex-shrink: 0;
+    }
+    .captcha-pill.online  .pulse { background: var(--green); animation: blink 2s infinite; }
+    .captcha-pill.offline .pulse { background: var(--red); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── Tab panels ── */
+    .tab-panel { flex: 1; overflow: hidden; display: none; }
+    .tab-panel.active { display: flex; }
+
+    /* ════════════════════════════
+       RUNNER TAB
+    ════════════════════════════ */
+    .runner-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    .env-bar {
+      display: flex; gap: 6px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
+    .env-chip {
+      flex: 1; padding: 6px 0;
+      border-radius: 6px; border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-size: 12px; font-weight: 600;
+      font-family: var(--mono);
+      cursor: pointer; text-align: center;
+      transition: all 0.15s; letter-spacing: 0.03em;
+    }
+    .env-chip:hover { border-color: var(--accent); color: var(--text); }
+    .env-chip.active.staging { background: #0d2140; border-color: var(--accent); color: var(--accent); }
+    .env-chip.active.uat     { background: #1a2e0d; border-color: #6ee7b7; color: #6ee7b7; }
+    .env-chip.active.prod    { background: #2e1a0d; border-color: var(--amber); color: var(--amber); }
 
-    .run-btn.start { background: #276749; color: white; }
-    .run-btn.start:hover { background: #2f855a; }
-    .run-btn.stop  { background: #9b2c2c; color: white; }
-    .run-btn.stop:hover { background: #c53030; }
-
-    /* Stats */
-    .stats-row { display: flex; gap: 8px; margin-top: 16px; }
-
-    .stat-box {
-      flex: 1;
-      padding: 10px;
-      background: #0f1117;
-      border: 1px solid #2d3748;
-      border-radius: 8px;
-      text-align: center;
+    .sidebar-scroll {
+      flex: 1; overflow-y: auto;
+      padding: 8px;
+      display: flex; flex-direction: column; gap: 4px;
     }
 
-    .stat-num { font-size: 22px; font-weight: 700; }
-    .stat-num.total  { color: #63b3ed; }
-    .stat-num.passed { color: #68d391; }
-    .stat-num.failed { color: #fc8181; }
-    .stat-label { font-size: 11px; color: #718096; margin-top: 2px; }
+    .section-hdr {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 8px 4px;
+      font-size: 10px; font-weight: 700;
+      font-family: var(--mono);
+      color: var(--text-faint);
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .section-hdr::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    .test-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px;
+      border-radius: 8px; border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .test-row:hover   { background: var(--surface2); border-color: var(--border); }
+    .test-row.selected{ background: var(--surface2); border-color: var(--border2); }
+    .test-row.running { background: var(--amber-dim); border-color: var(--amber); }
+    .test-row.passed  { background: var(--green-dim); border-color: var(--green); }
+    .test-row.failed  { background: var(--red-dim);   border-color: var(--red); }
+
+    .tr-icon {
+      width: 30px; height: 30px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; background: var(--surface3); flex-shrink: 0;
+    }
+    .tr-body { flex: 1; min-width: 0; }
+    .tr-name {
+      font-size: 12.5px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tr-desc {
+      font-size: 10.5px; color: var(--text-dim); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tr-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    .badge {
+      font-size: 9.5px; font-family: var(--mono); font-weight: 600;
+      padding: 2px 6px; border-radius: 4px; letter-spacing: 0.05em;
+    }
+    .badge.idle    { background: var(--surface3);  color: var(--text-dim); }
+    .badge.running { background: var(--amber-dim); color: var(--amber); }
+    .badge.passed  { background: var(--green-dim); color: var(--green); }
+    .badge.failed  { background: var(--red-dim);   color: var(--red); }
+
+    .icon-btn {
+      width: 26px; height: 26px; border-radius: 6px;
+      border: 1px solid var(--border2); background: var(--surface3);
+      color: var(--text-dim); font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .icon-btn:hover     { background: var(--surface2); color: var(--text); }
+    .icon-btn.run:hover { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+    .icon-btn.stop      { color: var(--amber); border-color: var(--amber); }
+
+    /* Config drawer */
+    .config-drawer {
+      border-top: 1px solid var(--border);
+      padding: 12px; background: var(--surface2);
+      flex-shrink: 0; display: none;
+    }
+    .config-drawer.open { display: block; }
+    .config-title {
+      font-size: 10px; font-weight: 700; font-family: var(--mono);
+      color: var(--text-faint); letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .field-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .field-label {
+      font-size: 11px; color: var(--text-dim);
+      white-space: nowrap; width: 88px; flex-shrink: 0;
+    }
+    .field-input {
+      flex: 1; padding: 5px 9px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 6px; color: var(--text);
+      font-size: 12px; font-family: var(--mono); outline: none;
+      transition: border-color 0.15s;
+    }
+    .field-input:focus { border-color: var(--accent); }
+    .field-tag {
+      font-size: 10px; font-family: var(--mono);
+      color: var(--text-dim); background: var(--surface3);
+      padding: 3px 7px; border-radius: 4px;
+    }
+
+    .member-rows { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+    .member-row-item { display: flex; gap: 6px; align-items: center; }
+    .member-row-item input {
+      flex: 2; padding: 5px 8px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 6px; color: var(--text);
+      font-size: 11.5px; font-family: var(--mono); outline: none;
+    }
+    .member-row-item input:focus { border-color: var(--accent); }
+    .member-row-item select {
+      flex: 1; padding: 5px 6px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 6px; color: var(--text);
+      font-size: 11px; font-family: var(--mono); outline: none;
+    }
+    .member-rm {
+      background: none; border: none;
+      color: var(--text-faint); cursor: pointer; font-size: 14px;
+      transition: color 0.15s; padding: 0 2px;
+    }
+    .member-rm:hover { color: var(--red); }
+    .add-row-btn {
+      width: 100%; padding: 5px;
+      background: transparent; border: 1px dashed var(--border2);
+      border-radius: 6px; color: var(--text-dim);
+      font-size: 11px; cursor: pointer;
+      transition: all 0.15s; margin-bottom: 10px;
+    }
+    .add-row-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .run-main-btn {
+      width: 100%; padding: 8px;
+      background: var(--accent); border: none; border-radius: 7px;
+      color: #fff; font-size: 13px; font-weight: 700;
+      font-family: var(--sans); cursor: pointer;
+      transition: opacity 0.15s; letter-spacing: 0.02em;
+    }
+    .run-main-btn:hover { opacity: 0.85; }
+    .run-main-btn.stop-mode { background: var(--red); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .stat-cell {
+      padding: 10px 0; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat-cell:last-child { border-right: none; }
+    .stat-num { font-size: 18px; font-weight: 700; font-family: var(--mono); }
+    .stat-num.t { color: var(--accent); }
+    .stat-num.p { color: var(--green); }
+    .stat-num.f { color: var(--red); }
+    .stat-lbl {
+      font-size: 9.5px; color: var(--text-faint);
+      font-family: var(--mono); letter-spacing: 0.08em;
+      text-transform: uppercase; margin-top: 1px;
+    }
 
     /* Output panel */
-    .output-panel { display: flex; flex-direction: column; height: 680px; }
-
-    .output-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
+    .output-panel {
+      display: flex; flex-direction: column;
+      overflow: hidden; background: var(--bg);
     }
-
-    .output-title { font-size: 12px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.08em; }
-
-    .clear-btn {
-      padding: 4px 12px;
-      border-radius: 6px;
-      border: 1px solid #2d3748;
-      background: transparent;
-      color: #718096;
-      font-size: 12px;
-      cursor: pointer;
+    .output-topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 16px; height: 40px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
     }
-
-    .clear-btn:hover { color: #e2e8f0; border-color: #4a5568; }
+    .output-label {
+      font-size: 11px; font-family: var(--mono);
+      color: var(--text-dim); letter-spacing: 0.06em;
+    }
+    .running-label { color: var(--amber); }
+    .passed-label  { color: var(--green); }
+    .failed-label  { color: var(--red); }
+    .tb-btn {
+      padding: 3px 10px; border-radius: 5px;
+      border: 1px solid var(--border2); background: transparent;
+      color: var(--text-dim); font-size: 11px; cursor: pointer;
+      font-family: var(--mono); transition: all 0.15s;
+      margin-left: auto;
+    }
+    .tb-btn:hover { color: var(--text); background: var(--surface2); }
 
     .output-log {
-      flex: 1;
-      background: #0a0c12;
-      border: 1px solid #2d3748;
+      flex: 1; padding: 16px 20px; overflow-y: auto;
+      font-family: var(--mono); font-size: 12px; line-height: 1.9;
+    }
+    .log-line         { display: block; }
+    .log-line.info    { color: #4a6fa5; }
+    .log-line.log     { color: var(--text); }
+    .log-line.err     { color: var(--red); }
+    .log-line.success { color: var(--green); font-weight: 600; font-size: 13px; }
+    .log-line.fail    { color: var(--red); font-weight: 600; font-size: 13px; }
+    .log-line.sep     { color: var(--text-faint); }
+
+    .output-empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; gap: 10px; color: var(--text-faint);
+    }
+    .output-empty-icon { font-size: 36px; opacity: 0.3; }
+    .output-empty-text { font-family: var(--mono); font-size: 12px; }
+    .output-empty-hint { font-size: 11px; opacity: 0.6; }
+
+    /* ════════════════════════════
+       CLAUDE TERMINAL TAB
+    ════════════════════════════ */
+    .terminal-layout {
+      display: grid; grid-template-columns: 200px 1fr;
+      height: 100%; overflow: hidden;
+    }
+    .t-sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow-y: auto; padding: 12px 10px; gap: 6px;
+    }
+    .t-section {
+      font-size: 9.5px; font-weight: 700; font-family: var(--mono);
+      color: var(--text-faint); letter-spacing: 0.12em;
+      text-transform: uppercase; margin: 6px 2px 2px;
+    }
+    .ctx-chip {
+      padding: 7px 10px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 7px; font-size: 11px;
+    }
+    .ctx-chip-val {
+      font-family: var(--mono); font-weight: 600; font-size: 12px;
+      color: var(--accent); display: block; margin-bottom: 1px;
+    }
+    .ctx-chip-lbl { color: var(--text-faint); font-size: 10px; }
+    .q-btn {
+      width: 100%; text-align: left;
+      padding: 7px 9px; background: var(--surface2);
+      border: 1px solid transparent; border-radius: 6px;
+      color: var(--text-dim); font-size: 11.5px; cursor: pointer;
+      transition: all 0.15s; line-height: 1.4;
+    }
+    .q-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface3); }
+
+    .t-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+    .chat-log {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .chat-msg { display: flex; flex-direction: column; gap: 5px; max-width: 80%; }
+    .chat-msg.user      { align-self: flex-end;   align-items: flex-end; }
+    .chat-msg.assistant { align-self: flex-start; align-items: flex-start; }
+    .msg-who {
+      font-size: 9.5px; font-family: var(--mono);
+      letter-spacing: 0.08em; color: var(--text-faint); text-transform: uppercase;
+    }
+    .msg-body {
+      padding: 11px 15px; border-radius: 10px;
+      font-size: 13px; line-height: 1.65;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .chat-msg.user .msg-body {
+      background: var(--accent-dim); border: 1px solid #1e4a80;
+      color: #9ec8f5; border-bottom-right-radius: 2px;
+    }
+    .chat-msg.assistant .msg-body {
+      background: var(--surface); border: 1px solid var(--border2);
+      color: var(--text); border-bottom-left-radius: 2px;
+    }
+    .msg-body.typing { color: var(--text-faint); font-style: italic; font-family: var(--mono); font-size: 12px; }
+
+    .trigger-card {
+      margin-top: 10px; background: var(--surface2);
+      border: 1px solid var(--accent-dim); border-left: 3px solid var(--accent);
+      border-radius: 8px; padding: 10px 12px; font-size: 12px;
+    }
+    .tc-row {
+      display: flex; justify-content: space-between;
+      padding: 3px 0; border-bottom: 1px solid var(--border);
+    }
+    .tc-row:last-of-type { border-bottom: none; }
+    .tc-row-k { color: var(--text-faint); font-family: var(--mono); font-size: 11px; }
+    .tc-row-v { color: var(--text); font-family: var(--mono); font-weight: 600; font-size: 11px; }
+    .tc-run {
+      margin-top: 10px; width: 100%;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 6px; padding: 7px; font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: var(--sans); transition: opacity 0.15s;
+    }
+    .tc-run:hover { opacity: 0.85; }
+
+    .chat-input-row {
+      border-top: 1px solid var(--border);
+      padding: 12px 16px; display: flex; gap: 10px;
+      flex-shrink: 0; background: var(--surface);
+    }
+    #claudeInput {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); padding: 9px 13px; border-radius: 8px;
+      font-size: 13px; font-family: var(--sans); outline: none;
+      resize: none; line-height: 1.5; min-height: 40px; max-height: 120px;
+      transition: border-color 0.15s;
+    }
+    #claudeInput:focus { border-color: var(--accent); }
+    #claudeInput::placeholder { color: var(--text-faint); }
+    .send-btn {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 8px; padding: 0 18px; font-size: 13px; font-weight: 700;
+      cursor: pointer; align-self: flex-end; height: 40px;
+      font-family: var(--sans); transition: opacity 0.15s;
+    }
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:disabled { background: var(--surface3); color: var(--text-faint); cursor: not-allowed; }
+
+    /* ════════════════════════════
+       REPORTS TAB
+    ════════════════════════════ */
+    .reports-layout {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; padding: 20px; gap: 16px;
+    }
+    .reports-topbar {
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .reports-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .reports-refresh {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid var(--border2); background: var(--surface2);
+      color: var(--text-dim); font-size: 12px; font-family: var(--mono);
+      cursor: pointer; transition: all 0.15s; margin-left: auto;
+    }
+    .reports-refresh:hover { color: var(--text); border-color: var(--accent); }
+
+    .renv-tabs { display: flex; gap: 6px; flex-shrink: 0; }
+    .renv-tab {
+      padding: 6px 18px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-dim); font-size: 12px; font-family: var(--mono);
+      font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em;
+    }
+    .renv-tab:hover { border-color: var(--border2); color: var(--text); }
+    .renv-tab.active.staging { background: #0d2140; border-color: var(--accent); color: var(--accent); }
+    .renv-tab.active.uat     { background: #1a2e0d; border-color: #6ee7b7; color: #6ee7b7; }
+    .renv-tab.active.prod    { background: #2e1a0d; border-color: var(--amber); color: var(--amber); }
+
+    .rstatus-tabs { display: flex; gap: 6px; flex-shrink: 0; }
+    .rstatus-tab {
+      padding: 5px 16px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-dim); font-size: 11px; font-family: var(--mono);
+      font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.06em;
+    }
+    .rstatus-tab:hover { border-color: var(--border2); color: var(--text); }
+    .rstatus-tab.active     { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+    .rstatus-tab.pass.active{ background: var(--green-dim); border-color: var(--green); color: var(--green); }
+    .rstatus-tab.fail.active{ background: var(--red-dim);   border-color: var(--red);   color: var(--red); }
+
+    .reports-table-wrap {
+      flex: 1; overflow-y: auto;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    }
+    .reports-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .reports-table th {
+      padding: 10px 16px; text-align: left;
+      font-size: 10px; font-weight: 700; font-family: var(--mono);
+      color: var(--text-faint); letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--surface2); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0;
+    }
+    .reports-table th.cb-col,
+    .reports-table td.cb-col { width: 36px; padding: 10px 12px; text-align: center; }
+
+    .reports-table td {
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      vertical-align: middle; color: var(--text);
+    }
+    .reports-table tr:last-child td { border-bottom: none; }
+    .reports-table tbody tr:hover td { background: var(--surface2); }
+    .reports-table tbody tr.selected td { background: #0d1e30; }
+    .reports-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    /* Checkbox styling */
+    .r-check {
+      width: 14px; height: 14px; cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    /* Bulk action bar */
+    .bulk-bar {
+      display: none;
+      align-items: center; gap: 12px;
+      padding: 8px 16px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
       border-radius: 8px;
-      padding: 16px;
-      overflow-y: auto;
-      font-family: 'Consolas', 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.8;
+      font-size: 12px; font-family: var(--mono);
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar-count { font-weight: 700; }
+    .bulk-del-btn {
+      padding: 4px 14px; border-radius: 5px;
+      border: 1px solid var(--red); background: var(--red-dim);
+      color: var(--red); font-size: 11px; font-family: var(--mono);
+      font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+      margin-left: auto;
+    }
+    .bulk-del-btn:hover { opacity: 0.8; }
+    .bulk-cancel-btn {
+      padding: 4px 14px; border-radius: 5px;
+      border: 1px solid var(--border2); background: transparent;
+      color: var(--text-dim); font-size: 11px; font-family: var(--mono);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .bulk-cancel-btn:hover { color: var(--text); }
+
+    .env-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-family: var(--mono); font-weight: 700;
+    }
+    .env-pill.staging { background: var(--accent-dim); color: var(--accent); }
+    .env-pill.uat     { background: #1a2e0d; color: #6ee7b7; }
+    .env-pill.prod    { background: var(--amber-dim); color: var(--amber); }
+
+    .result-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-family: var(--mono); font-weight: 700; letter-spacing: 0.05em;
+    }
+    .result-pill.pass { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+    .result-pill.fail { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red); }
+    .result-pill.unknown { background: var(--surface3); color: var(--text-dim); }
+
+    .dl-btn {
+      padding: 4px 12px; border-radius: 5px;
+      border: 1px solid var(--border2); background: var(--surface2);
+      color: var(--text-dim); font-size: 11px; font-family: var(--mono);
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .dl-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .dl-btn.del:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+    .reports-empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 60px 20px; gap: 8px; color: var(--text-faint);
+    }
+    .reports-empty-icon { font-size: 32px; opacity: 0.3; }
+    .reports-empty-text { font-family: var(--mono); font-size: 12px; }
+
+    .new-badge {
+      display: inline-block; margin-left: 8px;
+      padding: 1px 6px; background: var(--accent); color: #fff;
+      border-radius: 4px; font-size: 9px; font-weight: 700;
+      font-family: var(--mono); vertical-align: middle;
+      animation: popin 0.3s ease;
+    }
+    @keyframes popin { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
+    /* ════════════════════════════
+       PREVIEW MODAL
+    ════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      width: 560px; max-width: 95vw;
+      max-height: 85vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      animation: slideup 0.2s ease;
+    }
+    @keyframes slideup { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .modal-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .modal-close {
+      background: none; border: none;
+      color: var(--text-dim); font-size: 18px; cursor: pointer;
+      transition: color 0.15s; padding: 0 4px; line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 8px;
     }
 
-    .log-line { display: block; }
-    .log-line.info    { color: #90cdf4; }
-    .log-line.log     { color: #e2e8f0; }
-    .log-line.err     { color: #fc8181; }
-    .log-line.success { color: #68d391; font-weight: 700; font-size: 14px; }
-    .log-line.fail    { color: #fc8181; font-weight: 700; font-size: 14px; }
+    .modal-result-banner {
+      padding: 10px 16px; border-radius: 8px;
+      font-size: 14px; font-weight: 700; font-family: var(--mono);
+      margin-bottom: 4px; text-align: center; letter-spacing: 0.05em;
+    }
+    .modal-result-banner.pass { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+    .modal-result-banner.fail { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red); }
 
-    .placeholder {
-      color: #4a5568;
-      text-align: center;
-      margin-top: 100px;
-      font-size: 13px;
-      line-height: 2.2;
+    .modal-row {
+      display: flex; gap: 12px; align-items: baseline;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+    .modal-row:last-child { border-bottom: none; }
+    .modal-row-key {
+      font-size: 11px; font-family: var(--mono); color: var(--text-faint);
+      width: 130px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .modal-row-val {
+      font-size: 13px; font-family: var(--mono); color: var(--text); flex: 1;
+      word-break: break-all;
+    }
+    .modal-row-val.pass { color: var(--green); font-weight: 700; }
+    .modal-row-val.fail { color: var(--red);   font-weight: 700; }
+    .modal-row-val.env-staging { color: var(--accent); }
+    .modal-row-val.env-uat     { color: #6ee7b7; }
+    .modal-row-val.env-prod    { color: var(--amber); }
+
+    .modal-log-section {
+      margin-top: 4px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--text-dim); line-height: 1.7;
+      max-height: 180px; overflow-y: auto;
     }
 
-    .divider { border: none; border-top: 1px solid #2d3748; margin: 16px 0; }
+    .modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 8px;
+      flex-shrink: 0;
+    }
+    .modal-btn {
+      padding: 7px 18px; border-radius: 7px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      font-family: var(--sans); transition: opacity 0.15s;
+    }
+    .modal-btn.primary { background: var(--accent); color: #fff; border: none; }
+    .modal-btn.primary:hover { opacity: 0.85; }
+    .modal-btn.secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+    .modal-btn.secondary:hover { color: var(--text); border-color: var(--border2); background: var(--surface2); }
+
+    .modal-loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px; color: var(--text-faint);
+      font-family: var(--mono); font-size: 12px; gap: 10px;
+    }
   </style>
 </head>
 <body>
 
+<!-- ── Header ── -->
 <div class="header">
-  <h1>QA Automation Dashboard</h1>
-  <p>iGaming Platform — Playwright Test Runner</p>
+  <div class="logo">
+    <div class="logo-icon">&#9889;</div>
+    <div class="logo-text">QA Dashboard <span>/ iGaming</span></div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="runner">&#129514; Test Runner</div>
+    <div class="nav-tab" data-tab="terminal">&#129302; Claude Terminal</div>
+    <div class="nav-tab" data-tab="reports">&#128202; Reports</div>
+  </div>
+  <div class="captcha-pill offline" id="captchaPill">
+    <div class="pulse"></div>
+    <span id="captchaText">Checking...</span>
+  </div>
 </div>
 
-<div class="container">
+<!-- ════════════════════════════
+     RUNNER TAB
+════════════════════════════ -->
+<div class="tab-panel active" id="tab-runner">
+  <div class="runner-layout">
 
-  <!-- ── Left Panel ── -->
-  <div style="display: flex; flex-direction: column; gap: 16px;">
-
-    <!-- Environment + Captcha Status -->
-    <div class="panel">
-      <h2>Environment</h2>
-      <div class="env-selector">
-        <button class="env-btn active" onclick="setEnv('staging', this)">Staging</button>
-        <button class="env-btn" onclick="setEnv('uat', this)">UAT</button>
-        <button class="env-btn" onclick="setEnv('prod', this)">Prod</button>
+    <div class="sidebar">
+      <!-- Env -->
+      <div class="env-bar">
+        <button class="env-chip active staging" onclick="setEnv('staging', this)">STAGING</button>
+        <button class="env-chip uat"            onclick="setEnv('uat', this)">UAT</button>
+        <button class="env-chip prod"           onclick="setEnv('prod', this)">PROD</button>
       </div>
 
-      <h2>Captcha Server</h2>
-      <div class="server-status">
-        <div class="dot" id="serverDot"></div>
-        <span id="serverText">Checking...</span>
-      </div>
-    </div>
+      <!-- Test list -->
+      <div class="sidebar-scroll">
 
-    <!-- Deposit Settings -->
-    <div class="panel">
-      <h2>Deposit Settings</h2>
-      <div class="input-group">
-        <label class="input-label">Deposit Amount</label>
-        <div class="input-row">
-          <span class="currency-tag">MYR</span>
-          <input type="number" class="input-field" id="depositAmount" value="50" min="1" placeholder="50">
-        </div>
-      </div>
+        <div class="section-hdr">Deposit</div>
 
-      <hr class="divider">
-      <h2>Tests — Deposit</h2>
-      <div class="test-list">
-        <div class="test-item" id="item-approve-deposit">
-          <div class="test-icon">💰</div>
-          <div class="test-info">
-            <div class="test-name">Approve Deposit</div>
-            <div class="test-desc">Submit + BO approve + verify balance</div>
+        <div class="test-row" id="row-approve-deposit" onclick="selectTest('approve-deposit', this)">
+          <div class="tr-icon">&#128176;</div>
+          <div class="tr-body">
+            <div class="tr-name">Approve Deposit</div>
+            <div class="tr-desc">Submit &#8594; BO approve &#8594; verify balance</div>
           </div>
-          <span class="status-badge idle" id="badge-approve-deposit">Idle</span>
-          <button class="run-btn start" id="btn-approve-deposit" onclick="runTest('approve-deposit')">▶ Run</button>
-        </div>
-
-        <div class="test-item" id="item-reject-deposit">
-          <div class="test-icon">🚫</div>
-          <div class="test-info">
-            <div class="test-name">Reject Deposit</div>
-            <div class="test-desc">Submit + BO reject + verify unchanged</div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-approve-deposit">IDLE</span>
+            <button class="icon-btn run" id="btn-approve-deposit" title="Run"
+              onclick="event.stopPropagation(); handleRun('approve-deposit')">&#9654;</button>
           </div>
-          <span class="status-badge idle" id="badge-reject-deposit">Idle</span>
-          <button class="run-btn start" id="btn-reject-deposit" onclick="runTest('reject-deposit')">▶ Run</button>
         </div>
-      </div>
-    </div>
 
-    <!-- Withdrawal Settings -->
-    <div class="panel">
-      <h2>Withdrawal Settings</h2>
-      <div class="input-group">
-        <label class="input-label">Withdrawal Amount</label>
-        <div class="input-row">
-          <span class="currency-tag">MYR</span>
-          <input type="number" class="input-field" id="withdrawalAmount" value="10" min="1" placeholder="10">
-        </div>
-      </div>
-
-      <hr class="divider">
-      <h2>Tests — Withdrawal</h2>
-      <div class="test-list">
-        <div class="test-item" id="item-approve-withdrawal">
-          <div class="test-icon">💸</div>
-          <div class="test-info">
-            <div class="test-name">Approve Withdrawal</div>
-            <div class="test-desc">Submit + BO approve + verify balance</div>
+        <div class="test-row" id="row-reject-deposit" onclick="selectTest('reject-deposit', this)">
+          <div class="tr-icon">&#128683;</div>
+          <div class="tr-body">
+            <div class="tr-name">Reject Deposit</div>
+            <div class="tr-desc">Submit &#8594; BO reject &#8594; verify unchanged</div>
           </div>
-          <span class="status-badge idle" id="badge-approve-withdrawal">Idle</span>
-          <button class="run-btn start" id="btn-approve-withdrawal" onclick="runTest('approve-withdrawal')">▶ Run</button>
-        </div>
-
-        <div class="test-item" id="item-reject-withdrawal">
-          <div class="test-icon">❌</div>
-          <div class="test-info">
-            <div class="test-name">Reject Withdrawal</div>
-            <div class="test-desc">Submit + BO reject + verify unchanged</div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-reject-deposit">IDLE</span>
+            <button class="icon-btn run" id="btn-reject-deposit" title="Run"
+              onclick="event.stopPropagation(); handleRun('reject-deposit')">&#9654;</button>
           </div>
-          <span class="status-badge idle" id="badge-reject-withdrawal">Idle</span>
-          <button class="run-btn start" id="btn-reject-withdrawal" onclick="runTest('reject-withdrawal')">▶ Run</button>
         </div>
-      </div>
-    </div>
 
-    <!-- Member Settings -->
-    <div class="panel">
-      <h2>Member Settings</h2>
-      <div class="member-list" id="memberList">
-        <div class="member-row">
-          <input type="text" placeholder="Username e.g. gaplay1" value="gaplay1">
-          <select>
-            <option value="MYR">MYR</option>
-            <option value="IDR">IDR</option>
-            <option value="USD">USD</option>
-            <option value="THB">THB</option>
-            <option value="VND">VND</option>
-          </select>
-          <button class="remove-btn" onclick="removeMember(this)">✕</button>
-        </div>
-      </div>
-      <button class="add-member-btn" onclick="addMember()">+ Add Member</button>
+        <div class="section-hdr">Withdrawal</div>
 
-      <hr class="divider">
-      <h2>Tests — Members</h2>
-      <div class="test-list">
-        <div class="test-item" id="item-create-members">
-          <div class="test-icon">👤</div>
-          <div class="test-info">
-            <div class="test-name">Create Members</div>
-            <div class="test-desc">Create + bank account + change password</div>
+        <div class="test-row" id="row-approve-withdrawal" onclick="selectTest('approve-withdrawal', this)">
+          <div class="tr-icon">&#128184;</div>
+          <div class="tr-body">
+            <div class="tr-name">Approve Withdrawal</div>
+            <div class="tr-desc">Submit &#8594; BO approve &#8594; verify balance</div>
           </div>
-          <span class="status-badge idle" id="badge-create-members">Idle</span>
-          <button class="run-btn start" id="btn-create-members" onclick="runTest('create-members')">▶ Run</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Other Tests -->
-    <div class="panel">
-      <h2>Other Tests</h2>
-      <div class="test-list">
-        <div class="test-item" id="item-slot-game">
-          <div class="test-icon">🎰</div>
-          <div class="test-info">
-            <div class="test-name">Slot Game</div>
-            <div class="test-desc">Navigate to game + manual play + verify</div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-approve-withdrawal">IDLE</span>
+            <button class="icon-btn run" id="btn-approve-withdrawal" title="Run"
+              onclick="event.stopPropagation(); handleRun('approve-withdrawal')">&#9654;</button>
           </div>
-          <span class="status-badge idle" id="badge-slot-game">Idle</span>
-          <button class="run-btn start" id="btn-slot-game" onclick="runTest('slot-game')">▶ Run</button>
         </div>
+
+        <div class="test-row" id="row-reject-withdrawal" onclick="selectTest('reject-withdrawal', this)">
+          <div class="tr-icon">&#10060;</div>
+          <div class="tr-body">
+            <div class="tr-name">Reject Withdrawal</div>
+            <div class="tr-desc">Submit &#8594; BO reject &#8594; verify unchanged</div>
+          </div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-reject-withdrawal">IDLE</span>
+            <button class="icon-btn run" id="btn-reject-withdrawal" title="Run"
+              onclick="event.stopPropagation(); handleRun('reject-withdrawal')">&#9654;</button>
+          </div>
+        </div>
+
+        <div class="section-hdr">Members</div>
+
+        <div class="test-row" id="row-create-members" onclick="selectTest('create-members', this)">
+          <div class="tr-icon">&#128100;</div>
+          <div class="tr-body">
+            <div class="tr-name">Create Members</div>
+            <div class="tr-desc">Create &#8594; bank account &#8594; change password</div>
+          </div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-create-members">IDLE</span>
+            <button class="icon-btn run" id="btn-create-members" title="Run"
+              onclick="event.stopPropagation(); handleRun('create-members')">&#9654;</button>
+          </div>
+        </div>
+
+      </div><!-- end sidebar-scroll -->
+
+      <!-- Config drawer -->
+      <div class="config-drawer" id="configDrawer">
+        <div class="config-title" id="configTitle">CONFIG</div>
+        <div id="configFields"></div>
+        <button class="run-main-btn" id="runMainBtn" onclick="runSelectedTest()">&#9654; Run Test</button>
       </div>
 
-      <div class="stats-row">
-        <div class="stat-box">
-          <div class="stat-num total" id="statTotal">0</div>
-          <div class="stat-label">Total</div>
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat-cell">
+          <div class="stat-num t" id="statTotal">0</div>
+          <div class="stat-lbl">TOTAL</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-num passed" id="statPassed">0</div>
-          <div class="stat-label">Passed</div>
+        <div class="stat-cell">
+          <div class="stat-num p" id="statPassed">0</div>
+          <div class="stat-lbl">PASSED</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-num failed" id="statFailed">0</div>
-          <div class="stat-label">Failed</div>
+        <div class="stat-cell">
+          <div class="stat-num f" id="statFailed">0</div>
+          <div class="stat-lbl">FAILED</div>
+        </div>
+      </div>
+    </div><!-- end sidebar -->
+
+    <!-- Output -->
+    <div class="output-panel">
+      <div class="output-topbar">
+        <div class="output-label" id="outputLabel">OUTPUT</div>
+        <button class="tb-btn" onclick="clearLog()">clear</button>
+      </div>
+      <div class="output-log" id="outputLog">
+        <div class="output-empty">
+          <div class="output-empty-icon">&#9655;</div>
+          <div class="output-empty-text">No output yet</div>
+          <div class="output-empty-hint">Select a test from the sidebar and click Run</div>
         </div>
       </div>
     </div>
 
   </div>
+</div>
 
-  <!-- ── Right Panel — Output ── -->
-  <div class="panel output-panel">
-    <div class="output-header">
-      <div class="output-title">Test Output</div>
-      <button class="clear-btn" onclick="clearLog()">Clear</button>
+<!-- ════════════════════════════
+     CLAUDE TERMINAL TAB
+════════════════════════════ -->
+<div class="tab-panel" id="tab-terminal">
+  <div class="terminal-layout">
+    <div class="t-sidebar">
+      <div class="t-section">Context</div>
+      <div class="ctx-chip">
+        <span class="ctx-chip-val" id="ctx-env">Staging</span>
+        <span class="ctx-chip-lbl">environment</span>
+      </div>
+      <div class="ctx-chip">
+        <span class="ctx-chip-val" id="ctx-test">&#8212;</span>
+        <span class="ctx-chip-lbl">last test</span>
+      </div>
+      <div class="t-section">Quick</div>
+      <button class="q-btn" onclick="quickPrompt('Approve deposit on staging')">&#9654; Approve deposit &middot; staging</button>
+      <button class="q-btn" onclick="quickPrompt('Approve deposit on UAT')">&#9654; Approve deposit &middot; UAT</button>
+      <button class="q-btn" onclick="quickPrompt('Reject deposit on staging')">&#9654; Reject deposit &middot; staging</button>
+      <button class="q-btn" onclick="quickPrompt('Approve withdrawal on staging')">&#9654; Approve withdrawal &middot; staging</button>
+      <button class="q-btn" onclick="quickPrompt('Reject withdrawal on staging')">&#9654; Reject withdrawal &middot; staging</button>
+      <button class="q-btn" onclick="quickPrompt('Create members on staging')">&#9654; Create members &middot; staging</button>
+      <button class="q-btn" onclick="quickPromptDebug()">&#128269; Debug last failure</button>
+      <button class="q-btn" onclick="quickPrompt('Explain the approve deposit test flow step by step')">&#128218; Explain test flow</button>
     </div>
-    <div class="output-log" id="outputLog">
-      <div class="placeholder">
-        Select a test and click ▶ Run to start<br>
-        Make sure captcha server is running first<br><br>
-        <code style="color:#4a5568">node captcha-server.js</code>
+    <div class="t-main">
+      <div class="chat-log" id="chatLog">
+        <div class="chat-msg assistant">
+          <div class="msg-who">Claude</div>
+          <div class="msg-body">Hi! I am your QA assistant. I can:
+
+&#8226; Trigger any test on any environment &#8212; try "approve deposit on UAT"
+&#8226; Debug failures &#8212; paste log output and ask what went wrong
+&#8226; Answer questions about test flows and config
+
+What would you like to do?</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea id="claudeInput" placeholder="e.g. approve deposit on UAT  or  why did this test fail?" rows="1"
+          onkeydown="handleInputKey(event)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
       </div>
     </div>
   </div>
+</div>
 
+<!-- ════════════════════════════
+     REPORTS TAB
+════════════════════════════ -->
+<div class="tab-panel" id="tab-reports">
+  <div class="reports-layout">
+    <div class="reports-topbar">
+      <div class="reports-title">Test Reports</div>
+      <button class="reports-refresh" onclick="loadReports()">&#8635; Refresh</button>
+    </div>
+    <div class="renv-tabs">
+      <button class="renv-tab active staging" onclick="switchReportEnv('staging', this)">STAGING</button>
+      <button class="renv-tab uat"            onclick="switchReportEnv('uat', this)">UAT</button>
+      <button class="renv-tab prod"           onclick="switchReportEnv('prod', this)">PROD</button>
+    </div>
+    <div class="rstatus-tabs">
+      <button class="rstatus-tab active" onclick="switchReportStatus('all', this)">ALL</button>
+      <button class="rstatus-tab pass"   onclick="switchReportStatus('pass', this)">PASS</button>
+      <button class="rstatus-tab fail"   onclick="switchReportStatus('fail', this)">FAIL</button>
+    </div>
+    <div class="bulk-bar" id="bulkBar">
+      <span class="bulk-bar-count" id="bulkCount">0 selected</span>
+      <button class="bulk-cancel-btn" onclick="clearSelection()">&#10005; Clear</button>
+      <button class="bulk-del-btn" onclick="bulkDelete()">&#128465; Delete Selected</button>
+    </div>
+    <div class="reports-table-wrap" id="reportsTableWrap">
+      <div class="reports-empty">
+        <div class="reports-empty-icon">&#128194;</div>
+        <div class="reports-empty-text">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     PREVIEW MODAL
+════════════════════════════ -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal" style="width:400px;max-width:90vw;">
+    <div class="modal-header">
+      <div class="modal-title">Confirm Delete</div>
+    </div>
+    <div class="modal-body" style="padding:20px 24px;">
+      <div id="confirmMsg" style="font-size:13px;color:var(--text);line-height:1.6;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn secondary" onclick="confirmCancel()">Cancel</button>
+      <button class="modal-btn" style="background:var(--red);border:none;color:#fff;" onclick="confirmOk()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="previewOverlay" onclick="closePreview(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="previewTitle">Report Preview</div>
+      <button class="modal-close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" id="previewBody">
+      <div class="modal-loading">Loading...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn secondary" onclick="closeModal()">Close</button>
+      <button class="modal-btn primary" id="previewDlBtn" onclick="triggerDownload()">&#8659; Download</button>
+    </div>
+  </div>
 </div>
 
 <script>
-  let currentEnv = 'staging';
-  let stats = { total: 0, passed: 0, failed: 0 };
+// ════════════════════════════════════════════
+//  INIT — fetch API key from server
+// ════════════════════════════════════════════
+fetch('/config')
+  .then(function(r) { return r.json(); })
+  .then(function(d) { window.ANTHROPIC_API_KEY = d.apiKey || ''; })
+  .catch(function() { window.ANTHROPIC_API_KEY = ''; });
 
-  // ── Environment ──
-  function setEnv(env, btn) {
-    currentEnv = env;
-    document.querySelectorAll('.env-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    addLog('info', `>> Environment switched to: ${env.toUpperCase()}`);
-  }
-
-  // ── Member rows ──
-  function addMember() {
-    const list = document.getElementById('memberList');
-    const row = document.createElement('div');
-    row.className = 'member-row';
-    row.innerHTML = `
-      <input type="text" placeholder="Username e.g. gaplay3">
-      <select>
-        <option value="MYR">MYR</option>
-        <option value="IDR">IDR</option>
-        <option value="USD">USD</option>
-        <option value="THB">THB</option>
-        <option value="VND">VND</option>
-      </select>
-      <button class="remove-btn" onclick="removeMember(this)">✕</button>
-    `;
-    list.appendChild(row);
-  }
-
-  function removeMember(btn) {
-    const list = document.getElementById('memberList');
-    if (list.children.length > 1) btn.parentElement.remove();
-  }
-
-  function getMembers() {
-    const members = [];
-    document.querySelectorAll('#memberList .member-row').forEach(row => {
-      const username = row.querySelector('input').value.trim();
-      const currency = row.querySelector('select').value;
-      if (username) members.push({ username, currency });
-    });
-    return JSON.stringify(members);
-  }
-
-  // ── Log output ──
-  function addLog(type, msg) {
-    const log = document.getElementById('outputLog');
-    const placeholder = log.querySelector('.placeholder');
-    if (placeholder) placeholder.remove();
-
-    const line = document.createElement('span');
-    line.className = `log-line ${type}`;
-    line.textContent = msg;
-    log.appendChild(line);
-    log.appendChild(document.createElement('br'));
-    log.scrollTop = log.scrollHeight;
-  }
-
-  function clearLog() {
-    document.getElementById('outputLog').innerHTML = '<div class="placeholder">Output cleared. Run a test to see output.</div>';
-  }
-
-  // ── Test state ──
-  function setTestState(test, state) {
-    const item  = document.getElementById(`item-${test}`);
-    const badge = document.getElementById(`badge-${test}`);
-    const btn   = document.getElementById(`btn-${test}`);
-
-    item.className = `test-item ${state}`;
-
-    const states = {
-      idle:    { badge: 'Idle',    badgeClass: 'idle',    btnText: '▶ Run',  btnClass: 'start', fn: () => runTest(test) },
-      running: { badge: 'Running', badgeClass: 'running', btnText: '■ Stop', btnClass: 'stop',  fn: () => stopTest(test) },
-      passed:  { badge: 'Passed',  badgeClass: 'passed',  btnText: '▶ Run',  btnClass: 'start', fn: () => runTest(test) },
-      failed:  { badge: 'Failed',  badgeClass: 'failed',  btnText: '▶ Run',  btnClass: 'start', fn: () => runTest(test) },
-    };
-
-    const s = states[state];
-    badge.textContent = s.badge;
-    badge.className   = `status-badge ${s.badgeClass}`;
-    btn.textContent   = s.btnText;
-    btn.className     = `run-btn ${s.btnClass}`;
-    btn.onclick       = s.fn;
-  }
-
-  function updateStats(result) {
-    stats.total++;
-    if (result === 'passed') stats.passed++;
-    else stats.failed++;
-    document.getElementById('statTotal').textContent  = stats.total;
-    document.getElementById('statPassed').textContent = stats.passed;
-    document.getElementById('statFailed').textContent = stats.failed;
-  }
-
-  // ── Run test ──
-  async function runTest(test) {
-    const depositAmount    = document.getElementById('depositAmount')?.value;
-    const withdrawalAmount = document.getElementById('withdrawalAmount')?.value;
-    const members          = getMembers();
-
-    setTestState(test, 'running');
-    addLog('info', `\n>> ═══════════════════════════════════`);
-    addLog('info', `>> Running: ${test} [${currentEnv.toUpperCase()}]`);
-    addLog('info', `>> ═══════════════════════════════════`);
-
-    try {
-      const response = await fetch('/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ test, env: currentEnv, depositAmount, withdrawalAmount, members }),
-      });
-
-      const reader  = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === 'done')    break;
-            if (data.type === 'success') { setTestState(test, 'passed'); updateStats('passed'); }
-            if (data.type === 'fail')    { setTestState(test, 'failed'); updateStats('failed'); }
-            addLog(data.type, data.msg);
-          } catch {}
-        }
-      }
-    } catch (err) {
-      addLog('err', `>> Error: ${err.message}`);
-      setTestState(test, 'failed');
-      updateStats('failed');
+// ════════════════════════════════════════════
+//  TAB SWITCHING
+// ════════════════════════════════════════════
+document.querySelectorAll('.nav-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'reports') {
+      var b = tab.querySelector('.new-badge');
+      if (b) b.remove();
+      loadReports();
     }
-  }
+  });
+});
 
-  // ── Stop test ──
-  async function stopTest(test) {
-    await fetch('/stop', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ test }),
-    });
-    setTestState(test, 'idle');
-    addLog('err', '>> Test stopped by user');
-  }
-
-  // ── Captcha server status (proxied through server so ngrok works) ──
-  async function checkCaptchaServer() {
-    const dot  = document.getElementById('serverDot');
-    const text = document.getElementById('serverText');
-    try {
-      const res  = await fetch('/captcha-status', { signal: AbortSignal.timeout(3000) });
-      const data = await res.json();
-      if (data.online) {
-        dot.className    = 'dot online';
-        text.textContent = 'Captcha Server Online';
+// ════════════════════════════════════════════
+//  CAPTCHA STATUS
+// ════════════════════════════════════════════
+function checkCaptcha() {
+  var pill = document.getElementById('captchaPill');
+  var txt  = document.getElementById('captchaText');
+  fetch('/captcha-status', { signal: AbortSignal.timeout(3000) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.online) {
+        pill.className = 'captcha-pill online';
+        txt.textContent = 'Captcha Online';
       } else {
-        dot.className    = 'dot';
-        text.textContent = 'Captcha Server Offline — run: node captcha-server.js';
+        pill.className = 'captcha-pill offline';
+        txt.textContent = 'Captcha Offline';
       }
-    } catch {
-      dot.className    = 'dot';
-      text.textContent = 'Captcha Server Offline — run: node captcha-server.js';
-    }
+    })
+    .catch(function() {
+      pill.className = 'captcha-pill offline';
+      txt.textContent = 'Captcha Offline';
+    });
+}
+checkCaptcha();
+setInterval(checkCaptcha, 5000);
+
+// ════════════════════════════════════════════
+//  ENVIRONMENT
+// ════════════════════════════════════════════
+var currentEnv = 'staging';
+
+function setEnv(env, btn) {
+  currentEnv = env;
+  document.querySelectorAll('.env-chip').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('ctx-env').textContent = env.charAt(0).toUpperCase() + env.slice(1);
+  addLog('info', '>> Environment: ' + env.toUpperCase());
+}
+
+// ════════════════════════════════════════════
+//  TEST CONFIG DEFINITIONS
+// ════════════════════════════════════════════
+var TEST_CONFIG = {
+  'approve-deposit': {
+    label: 'Approve Deposit',
+    fields: [{ id: 'depositAmount', label: 'Deposit', type: 'number', def: '50', tag: 'MYR' }],
+    hasPlayer: true,
+  },
+  'reject-deposit': {
+    label: 'Reject Deposit',
+    fields: [{ id: 'depositAmount', label: 'Deposit', type: 'number', def: '50', tag: 'MYR' }],
+    hasPlayer: true,
+  },
+  'approve-withdrawal': {
+    label: 'Approve Withdrawal',
+    fields: [{ id: 'withdrawalAmount', label: 'Withdrawal', type: 'number', def: '10', tag: 'MYR' }],
+    hasPlayer: true,
+  },
+  'reject-withdrawal': {
+    label: 'Reject Withdrawal',
+    fields: [{ id: 'withdrawalAmount', label: 'Withdrawal', type: 'number', def: '10', tag: 'MYR' }],
+    hasPlayer: true,
+  },
+  'create-members': {
+    label: 'Create Members',
+    fields: [], hasMembers: true
+  }
+};
+
+var CURRENCIES = ['MYR','AFA','AUD','BBB','BDT','BRL','CNY','EUR','HKD','IDN','IDR','INR','IRR','JPY','KES','KHR','KRW','MMK','MXN','NPR','PGK','PHP','RUB','SGD','SGN','THB','TWD','USD','USDT','VND','ZAR'];
+
+function makeCurrencySelect() {
+  var opts = CURRENCIES.map(function(c) {
+    return '<option value="' + c + '"' + (c === 'MYR' ? ' selected' : '') + '>' + c + '</option>';
+  }).join('');
+  return '<select style="flex:1;padding:5px 6px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:11px;font-family:var(--mono);outline:none;">' + opts + '</select>';
+}
+
+var selectedTest = null;
+
+function selectTest(testId, rowEl) {
+  selectedTest = testId;
+  document.querySelectorAll('.test-row').forEach(function(r) { r.classList.remove('selected'); });
+  rowEl.classList.add('selected');
+
+  var cfg     = TEST_CONFIG[testId];
+  var drawer  = document.getElementById('configDrawer');
+  var title   = document.getElementById('configTitle');
+  var fields  = document.getElementById('configFields');
+  var runBtn  = document.getElementById('runMainBtn');
+
+  title.textContent = cfg.label.toUpperCase() + ' — CONFIG';
+  fields.innerHTML = '';
+
+  cfg.fields.forEach(function(f) {
+    var row = document.createElement('div');
+    row.className = 'field-row';
+    row.innerHTML = '<span class="field-label">' + f.label + '</span>'
+      + (f.tag ? '<span class="field-tag">' + f.tag + '</span>' : '')
+      + '<input class="field-input" type="' + f.type + '" id="cfg-' + f.id + '" value="' + f.def + '">';
+    fields.appendChild(row);
+  });
+
+  if (cfg.hasMembers) {
+    var ms = document.createElement('div');
+    ms.innerHTML = '<div class="member-rows" id="memberRows">'
+      + '<div class="member-row-item">'
+      + '<input type="text" placeholder="Username" value="gaplay1">'
+      + makeCurrencySelect()
+      + '<button class="member-rm" onclick="removeMemberRow(this)">&#10005;</button>'
+      + '</div></div>'
+      + '<button class="add-row-btn" onclick="addMemberRow()">+ Add Member</button>';
+    fields.appendChild(ms);
   }
 
-  checkCaptchaServer();
-  setInterval(checkCaptchaServer, 5000);
-</script>
+  if (cfg.hasPlayer) {
+    var ps = document.createElement('div');
+    ps.innerHTML = '<div style="margin-top:4px;margin-bottom:6px;font-size:9.5px;font-family:var(--mono);color:var(--text-faint);letter-spacing:0.1em;text-transform:uppercase;">Player Override <span style="color:var(--text-faint);font-weight:400;">(optional — leave blank to use default)</span></div>'
+      + '<div class="field-row"><span class="field-label">Username</span>'
+      + '<input class="field-input" type="text" id="cfg-customPlayerUsername" placeholder="default from config"></div>'
+      + '<div class="field-row"><span class="field-label">Password</span>'
+      + '<input class="field-input" type="password" id="cfg-customPlayerPassword" placeholder="default from config"></div>';
+    fields.appendChild(ps);
+  }
 
+  var state = rowEl.dataset.state || 'idle';
+  if (state === 'running') {
+    runBtn.textContent = '&#9632; Stop Test';
+    runBtn.className   = 'run-main-btn stop-mode';
+    runBtn.onclick     = function() { stopTest(testId); };
+  } else {
+    runBtn.textContent = '&#9654; Run Test';
+    runBtn.className   = 'run-main-btn';
+    runBtn.onclick     = runSelectedTest;
+  }
+
+  drawer.classList.add('open');
+}
+
+function addMemberRow() {
+  var rows = document.getElementById('memberRows');
+  if (!rows) return;
+  var div = document.createElement('div');
+  div.className = 'member-row-item';
+  div.innerHTML = '<input type="text" placeholder="Username">'
+    + makeCurrencySelect()
+    + '<button class="member-rm" onclick="removeMemberRow(this)">&#10005;</button>';
+  rows.appendChild(div);
+}
+
+function removeMemberRow(btn) {
+  var rows = document.getElementById('memberRows');
+  if (rows && rows.children.length > 1) btn.parentElement.remove();
+}
+
+function getConfigValues() {
+  var cfg = TEST_CONFIG[selectedTest];
+  if (!cfg) return {};
+  var vals = {};
+  cfg.fields.forEach(function(f) {
+    var el = document.getElementById('cfg-' + f.id);
+    if (el) vals[f.id] = el.value;
+  });
+  if (cfg.hasMembers) {
+    var members = [];
+    var rows = document.querySelectorAll('#memberRows .member-row-item');
+    rows.forEach(function(row) {
+      var u = row.querySelector('input').value.trim();
+      var c = row.querySelector('select').value;
+      if (u) members.push({ username: u, currency: c });
+    });
+    vals.members = JSON.stringify(members);
+  }
+  if (cfg.hasPlayer) {
+    var u = document.getElementById('cfg-customPlayerUsername');
+    var p = document.getElementById('cfg-customPlayerPassword');
+    if (u && u.value.trim()) vals.customPlayerUsername = u.value.trim();
+    if (p && p.value.trim()) vals.customPlayerPassword = p.value.trim();
+  }
+
+  return vals;
+}
+
+// ════════════════════════════════════════════
+//  RUN / STOP
+// ════════════════════════════════════════════
+var stats        = { total: 0, passed: 0, failed: 0 };
+var lastLogLines = [];
+
+function handleRun(testId) {
+  var row = document.getElementById('row-' + testId);
+  if (row && row.dataset.state === 'running') { stopTest(testId); return; }
+  if (row) selectTest(testId, row);
+  runTest(testId, getConfigValues());
+}
+
+function runSelectedTest() {
+  if (!selectedTest) return;
+  runTest(selectedTest, getConfigValues());
+}
+
+function runTest(testId, configVals) {
+  configVals = configVals || {};
+  setTestState(testId, 'running');
+  document.getElementById('ctx-test').textContent = testId;
+
+  var payload = {
+    test: testId, env: currentEnv,
+    depositAmount:        configVals.depositAmount,
+    withdrawalAmount:     configVals.withdrawalAmount,
+    members:              configVals.members,
+    customPlayerUsername: configVals.customPlayerUsername,
+    customPlayerPassword: configVals.customPlayerPassword,
+  };
+
+  setOutputLabel('RUNNING &#8212; ' + testId + ' [' + currentEnv.toUpperCase() + ']', 'running');
+  addLog('sep',  '&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;');
+  addLog('info', '>> ' + testId + '  env:' + currentEnv.toUpperCase() + '  ' + new Date().toLocaleTimeString('en-MY'));
+  addLog('sep',  '&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;');
+
+  fetch('/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function(response) {
+    var reader  = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer  = '';
+
+    function read() {
+      reader.read().then(function(result) {
+        if (result.done) return;
+        buffer += decoder.decode(result.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();
+        lines.forEach(function(line) {
+          if (!line.startsWith('data: ')) return;
+          try {
+            var data = JSON.parse(line.slice(6));
+            if (data.type === 'done') return;
+            if (data.type === 'success') {
+              setTestState(testId, 'passed');
+              setOutputLabel('PASSED &#8212; ' + testId, 'passed');
+              updateStats('passed');
+            }
+            if (data.type === 'fail') {
+              setTestState(testId, 'failed');
+              setOutputLabel('FAILED &#8212; ' + testId, 'failed');
+              updateStats('failed');
+            }
+            if (data.type === 'report') { onNewReport(data.env, data.file); }
+            if (data.msg) addLog(data.type, data.msg);
+          } catch(e) {}
+        });
+        read();
+      });
+    }
+    read();
+  }).catch(function(err) {
+    addLog('err', '>> Error: ' + err.message);
+    setTestState(testId, 'failed');
+    setOutputLabel('FAILED &#8212; ' + testId, 'failed');
+    updateStats('failed');
+  });
+}
+
+function stopTest(testId) {
+  fetch('/stop', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ test: testId })
+  });
+  setTestState(testId, 'idle');
+  setOutputLabel('OUTPUT', '');
+  addLog('err', '&#9632; Stopped by user');
+}
+
+function setTestState(testId, state) {
+  var row   = document.getElementById('row-' + testId);
+  var badge = document.getElementById('badge-' + testId);
+  var btn   = document.getElementById('btn-' + testId);
+  if (!row) return;
+  row.dataset.state = state;
+  row.className = 'test-row' + (state !== 'idle' ? ' ' + state : '');
+
+  var map = {
+    idle:    { b: 'IDLE', bc: 'idle',    bt: '&#9654;', btnc: 'icon-btn run'  },
+    running: { b: 'RUN',  bc: 'running', bt: '&#9632;', btnc: 'icon-btn stop' },
+    passed:  { b: 'PASS', bc: 'passed',  bt: '&#9654;', btnc: 'icon-btn run'  },
+    failed:  { b: 'FAIL', bc: 'failed',  bt: '&#9654;', btnc: 'icon-btn run'  }
+  };
+  var s = map[state] || map.idle;
+  badge.innerHTML = s.b;
+  badge.className = 'badge ' + s.bc;
+  btn.innerHTML   = s.bt;
+  btn.className   = s.btnc;
+
+  if (selectedTest === testId) {
+    var runBtn = document.getElementById('runMainBtn');
+    if (state === 'running') {
+      runBtn.innerHTML   = '&#9632; Stop Test';
+      runBtn.className   = 'run-main-btn stop-mode';
+      runBtn.onclick     = function() { stopTest(testId); };
+    } else {
+      runBtn.innerHTML   = '&#9654; Run Test';
+      runBtn.className   = 'run-main-btn';
+      runBtn.onclick     = runSelectedTest;
+    }
+  }
+}
+
+function setOutputLabel(html, type) {
+  var el = document.getElementById('outputLabel');
+  if (type) {
+    el.innerHTML = '<span class="' + type + '-label">' + html + '</span>';
+  } else {
+    el.textContent = html;
+  }
+}
+
+function updateStats(result) {
+  stats.total++;
+  if (result === 'passed') stats.passed++; else stats.failed++;
+  document.getElementById('statTotal').textContent  = stats.total;
+  document.getElementById('statPassed').textContent = stats.passed;
+  document.getElementById('statFailed').textContent = stats.failed;
+}
+
+function addLog(type, msg) {
+  var log = document.getElementById('outputLog');
+  var empty = log.querySelector('.output-empty');
+  if (empty) empty.remove();
+  var span = document.createElement('span');
+  span.className   = 'log-line ' + type;
+  span.textContent = msg;
+  log.appendChild(span);
+  log.appendChild(document.createElement('br'));
+  log.scrollTop = log.scrollHeight;
+  lastLogLines.push(msg);
+  if (lastLogLines.length > 200) lastLogLines.shift();
+}
+
+function clearLog() {
+  document.getElementById('outputLog').innerHTML =
+    '<div class="output-empty"><div class="output-empty-icon">&#9655;</div><div class="output-empty-text">Cleared</div></div>';
+  lastLogLines = [];
+  setOutputLabel('OUTPUT', '');
+}
+
+// ════════════════════════════════════════════
+//  REPORTS
+// ════════════════════════════════════════════
+var allReports      = {};
+var activeReportEnv = 'staging';
+var activeReportStatus = 'all';
+var newReportFiles  = {};
+
+function loadReports() {
+  fetch('/reports')
+    .then(function(r) { return r.json(); })
+    .then(function(d) { allReports = d; renderReports(); })
+    .catch(function() {
+      document.getElementById('reportsTableWrap').innerHTML =
+        '<div class="reports-empty"><div class="reports-empty-icon">&#9888;</div><div class="reports-empty-text">Could not load reports</div></div>';
+    });
+}
+
+function switchReportEnv(env, btn) {
+  activeReportEnv = env;
+  document.querySelectorAll('.renv-tab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderReports();
+}
+
+function switchReportStatus(status, btn) {
+  activeReportStatus = status;
+  document.querySelectorAll('.rstatus-tab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderReports();
+}
+
+function parseFilename(filename) {
+  // Format: testName_YYYY-MM-DD_HH-mm-ss_RESULT.xlsx  (new)
+  // or:     testName_YYYY-MM-DD_HH-mm-ss.xlsx          (old, no result)
+  var base  = filename.replace('.xlsx', '');
+  var parts = base.split('_');
+  var last  = parts[parts.length - 1];
+  var result = 'unknown';
+  if (last === 'PASS' || last === 'FAIL') {
+    result = last;
+    parts.pop();
+  }
+  var timePart = parts.pop().replace(/-/g, ':');
+  var datePart = parts.pop();
+  var testName = parts.join('-');
+  return { testName: testName, date: datePart + ' ' + timePart, result: result };
+}
+
+function renderReports() {
+  var wrap  = document.getElementById('reportsTableWrap');
+  var files = allReports[activeReportEnv] || [];
+
+  // Filter by status
+  if (activeReportStatus !== 'all') {
+    files = files.filter(function(f) {
+      var info = parseFilename(f.name);
+      if (activeReportStatus === 'pass') return info.result === 'PASS';
+      if (activeReportStatus === 'fail') return info.result === 'FAIL';
+      return true;
+    });
+  }
+
+  if (files.length === 0) {
+    wrap.innerHTML = '<div class="reports-empty"><div class="reports-empty-icon">&#128194;</div>'
+      + '<div class="reports-empty-text">No reports found</div></div>';
+    return;
+  }
+
+  var rows = files.map(function(f) {
+    var info     = parseFilename(f.name);
+    var sizeKB   = (f.size / 1024).toFixed(1);
+    var isNew    = !!newReportFiles[f.name];
+    var env      = activeReportEnv;
+    var resultClass = info.result === 'PASS' ? 'pass' : info.result === 'FAIL' ? 'fail' : 'unknown';
+    var resultLabel = info.result === 'unknown' ? '—' : info.result;
+
+    return '<tr id="row-' + f.name + '">'
+      + '<td class="cb-col"><input type="checkbox" class="r-check row-check" data-env="' + env + '" data-file="' + f.name + '"></td>'
+      + '<td class="mono">' + info.testName + (isNew ? '<span class="new-badge">NEW</span>' : '') + '</td>'
+      + '<td><span class="env-pill ' + env + '">' + env.toUpperCase() + '</span></td>'
+      + '<td><span class="result-pill ' + resultClass + '">' + resultLabel + '</span></td>'
+      + '<td class="mono">' + info.date + '</td>'
+      + '<td class="mono">' + sizeKB + ' KB</td>'
+      + '<td style="display:flex;gap:6px;">'
+      + '<button class="dl-btn" data-action="preview" data-env="' + env + '" data-file="' + f.name + '">&#128065; Preview</button>'
+      + '<button class="dl-btn" data-action="download" data-env="' + env + '" data-file="' + f.name + '">&#8659; Download</button>'
+      + '<button class="dl-btn del" data-action="delete" data-env="' + env + '" data-file="' + f.name + '">&#128465; Delete</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+
+  wrap.innerHTML = '<table class="reports-table">'
+    + '<thead><tr>'
+    + '<th class="cb-col"><input type="checkbox" class="r-check" id="selectAll" onclick="toggleSelectAll(this)"></th>'
+    + '<th>Test</th><th>Environment</th><th>Result</th><th>Date / Time</th><th>Size</th><th>Action</th>'
+    + '</tr></thead>'
+    + '<tbody>' + rows + '</tbody></table>';
+
+  // Event delegation for checkboxes and action buttons
+  wrap.addEventListener('change', function(e) {
+    if (e.target.classList.contains('row-check')) {
+      onRowCheck(e.target);
+    }
+  });
+
+  wrap.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    var action = btn.dataset.action;
+    var env    = btn.dataset.env;
+    var file   = btn.dataset.file;
+    if (action === 'preview')  { openPreview(env, file); }
+    if (action === 'download') { downloadReport(env, file); }
+    if (action === 'delete')   { deleteReport(env, file); }
+  });
+}
+
+function downloadReport(env, file) {
+  window.location.href = '/reports/download?env=' + env + '&file=' + encodeURIComponent(file);
+}
+
+// ════════════════════════════════════════════
+//  CONFIRM MODAL
+// ════════════════════════════════════════════
+var confirmCallback = null;
+
+function showConfirm(msg, onOk) {
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmOverlay').classList.add('open');
+  confirmCallback = onOk;
+}
+
+function confirmOk() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  if (confirmCallback) { confirmCallback(); confirmCallback = null; }
+}
+
+function confirmCancel() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  confirmCallback = null;
+}
+
+function deleteReport(env, file) {
+  showConfirm('Delete this report?\n' + file + '\n\nThis cannot be undone.', function() {
+    fetch('/reports/delete?env=' + env + '&file=' + encodeURIComponent(file), { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) {
+          if (allReports[env]) {
+            allReports[env] = allReports[env].filter(function(f) { return f.name !== file; });
+          }
+          delete newReportFiles[file];
+          renderReports();
+          clearSelection();
+        }
+      })
+      .catch(function(err) { alert('Delete failed: ' + err.message); });
+  });
+}
+
+function bulkDelete() {
+  var checked = Array.from(document.querySelectorAll('.row-check:checked'));
+  if (checked.length === 0) return;
+  showConfirm('Delete ' + checked.length + ' report(s)?\nThis cannot be undone.', function() {
+    var promises = checked.map(function(c) {
+      var env  = c.dataset.env;
+      var file = c.dataset.file;
+      return fetch('/reports/delete?env=' + env + '&file=' + encodeURIComponent(file), { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.ok) {
+            if (allReports[env]) {
+              allReports[env] = allReports[env].filter(function(f) { return f.name !== file; });
+            }
+            delete newReportFiles[file];
+          }
+        });
+    });
+    Promise.all(promises).then(function() { renderReports(); clearSelection(); });
+  });
+}
+
+function toggleSelectAll(cb) {
+  var checks = document.querySelectorAll('.row-check');
+  checks.forEach(function(c) {
+    c.checked = cb.checked;
+    c.closest('tr').classList.toggle('selected', cb.checked);
+  });
+  updateBulkBar();
+}
+
+function onRowCheck(el) {
+  var checks    = document.querySelectorAll('.row-check');
+  var selectAll = document.getElementById('selectAll');
+  var all       = Array.from(checks);
+  if (selectAll) {
+    selectAll.checked       = all.every(function(c) { return c.checked; });
+    selectAll.indeterminate = !selectAll.checked && all.some(function(c) { return c.checked; });
+  }
+  el.closest('tr').classList.toggle('selected', el.checked);
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  var checked = document.querySelectorAll('.row-check:checked');
+  var bar     = document.getElementById('bulkBar');
+  var count   = document.getElementById('bulkCount');
+  if (checked.length > 0) {
+    bar.classList.add('visible');
+    count.textContent = checked.length + ' selected';
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function clearSelection() {
+  document.querySelectorAll('.row-check').forEach(function(c) {
+    c.checked = false;
+    c.closest('tr').classList.remove('selected');
+  });
+  var sa = document.getElementById('selectAll');
+  if (sa) { sa.checked = false; sa.indeterminate = false; }
+  document.getElementById('bulkBar').classList.remove('visible');
+}
+
+
+function onNewReport(env, file) {
+  newReportFiles[file] = true;
+  if (!allReports[env]) allReports[env] = [];
+  var exists = allReports[env].some(function(f) { return f.name === file; });
+  if (!exists) allReports[env].unshift({ name: file, env: env, size: 0, modified: new Date().toISOString() });
+  var reportsTab = document.querySelector('[data-tab="reports"]');
+  if (reportsTab && !reportsTab.classList.contains('active')) {
+    if (!reportsTab.querySelector('.new-badge')) {
+      var badge = document.createElement('span');
+      badge.className   = 'new-badge';
+      badge.textContent = 'NEW';
+      reportsTab.appendChild(badge);
+    }
+  }
+}
+
+loadReports();
+
+// ════════════════════════════════════════════
+//  PREVIEW MODAL
+// ════════════════════════════════════════════
+var previewEnv  = '';
+var previewFile = '';
+
+function openPreview(env, file) {
+  previewEnv  = env;
+  previewFile = file;
+
+  var overlay = document.getElementById('previewOverlay');
+  var body    = document.getElementById('previewBody');
+  var title   = document.getElementById('previewTitle');
+
+  var parts    = file.replace('.xlsx', '').split('_');
+  var timePart = parts.pop().replace(/-/g, ':');
+  var datePart = parts.pop();
+  var testName = parts.join('-');
+  title.textContent = testName + '  \u00B7  ' + datePart + ' ' + timePart;
+
+  body.innerHTML = '<div class="modal-loading">&#9679; Loading preview...</div>';
+  overlay.classList.add('open');
+
+  fetch('/reports/preview?env=' + env + '&file=' + encodeURIComponent(file))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        body.innerHTML = '<div class="modal-loading" style="color:var(--red)">' + data.error + '</div>';
+        return;
+      }
+      renderPreviewBody(body, data);
+    })
+    .catch(function(err) {
+      body.innerHTML = '<div class="modal-loading" style="color:var(--red)">Failed to load: ' + err.message + '</div>';
+    });
+}
+
+function renderPreviewBody(body, data) {
+  var s      = data.summary;
+  var logs   = data.logLines || [];
+  var isPass = (s.result || '').toUpperCase() === 'PASS';
+  var envClass = 'env-' + (s.env || '').toLowerCase();
+
+  var fields = [
+    { key: 'Test Name',       val: s.testName,         cls: '' },
+    { key: 'Environment',     val: s.env,              cls: envClass },
+    { key: 'Date / Time',     val: s.date,             cls: '' },
+    { key: 'Result',          val: s.result,           cls: isPass ? 'pass' : 'fail' },
+    { key: 'Duration',        val: (s.durationSec ? s.durationSec + 's' : ''), cls: '' },
+    { key: 'Deposit Amount',  val: s.depositAmount,    cls: '' },
+    { key: 'Withdrawal Amt',  val: s.withdrawalAmount, cls: '' },
+    { key: 'Members',         val: s.members,          cls: '' },
+  ];
+
+  var banner = '<div class="modal-result-banner ' + (isPass ? 'pass' : 'fail') + '">'
+    + (isPass ? '&#10003;  TEST PASSED' : '&#10007;  TEST FAILED') + '</div>';
+
+  var rows = fields.map(function(f) {
+    if (!f.val || f.val === '-') return '';
+    return '<div class="modal-row">'
+      + '<span class="modal-row-key">' + f.key + '</span>'
+      + '<span class="modal-row-val ' + f.cls + '">' + f.val + '</span>'
+      + '</div>';
+  }).join('');
+
+  var logPreview = '';
+  if (logs.length > 0) {
+    var recent = logs.slice(-20).join('\n');
+    logPreview = '<div style="margin-top:12px;font-size:10px;color:var(--text-faint);font-family:var(--mono);margin-bottom:4px;letter-spacing:0.08em;">LOG PREVIEW (last 20 of ' + data.totalLines + ' lines)</div>'
+      + '<div class="modal-log-section">' + recent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</div>';
+  }
+
+  body.innerHTML = banner + rows + logPreview;
+}
+
+function closeModal() {
+  document.getElementById('previewOverlay').classList.remove('open');
+}
+
+function closePreview(event) {
+  if (event.target === document.getElementById('previewOverlay')) closeModal();
+}
+
+function triggerDownload() {
+  downloadReport(previewEnv, previewFile);
+}
+var TEST_LABELS = {
+  'approve-deposit':    'Approve Deposit',
+  'reject-deposit':     'Reject Deposit',
+  'approve-withdrawal': 'Approve Withdrawal',
+  'reject-withdrawal':  'Reject Withdrawal',
+  'create-members':     'Create Members'
+};
+
+var SYSTEM_PROMPT = 'You are an expert QA automation assistant embedded in a Playwright-based QA Dashboard for an iGaming platform.\n\n'
+  + 'You have two roles:\n'
+  + '1. TRIGGER TESTS - parse intent and respond with a structured trigger.\n'
+  + '2. QA ASSISTANT - answer questions, debug failures, explain test flows.\n\n'
+  + '## Available Tests\n'
+  + '- approve-deposit: Player submits deposit, backoffice approves, balance and rollover verified\n'
+  + '- reject-deposit: Player submits deposit, backoffice rejects, balance unchanged\n'
+  + '- approve-withdrawal: Submit withdrawal (rollover + balance checks), BO approves, balance decreases, rollover resets\n'
+  + '- reject-withdrawal: Submit withdrawal, BO rejects, balance unchanged\n'
+  + '- create-members: Create in BO + bank account + playsite password change\n\n'
+  + '## Environments\n'
+  + '- staging (stage-mem.linkv2.com / stage-bo.linkv2.com, prefix: x9048_)\n'
+  + '- uat (mem2.linkv2.com / ag-uat.linkv2.com)\n'
+  + '- prod (998hihi.com / bo.v2hotel.com)\n\n'
+  + '## Tech\n'
+  + '- Playwright + Node.js, Page Object Model\n'
+  + '- Captcha: ddddocr (Python), 2FA: otpauth TOTP\n'
+  + '- Sessions in .auth/ per env, config via TEST_ENV\n\n'
+  + '## Triggering\n'
+  + 'When user wants to run a test, confirm conversationally then end with:\n'
+  + 'TRIGGER_JSON:{"test":"approve-deposit","env":"staging","depositAmount":"50"}\n\n'
+  + 'Only include amounts if relevant. For create-members include "members" JSON string if specified.\n\n'
+  + '## QA Help\n'
+  + 'For failures, identify the likely cause and suggest a fix. Be concise.';
+
+var chatHistory = [];
+var claudeBusy  = false;
+
+function appendChat(role, content, extraHTML) {
+  extraHTML = extraHTML || '';
+  var log  = document.getElementById('chatLog');
+  var wrap = document.createElement('div');
+  wrap.className = 'chat-msg ' + role;
+  var safeContent = content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  wrap.innerHTML = '<div class="msg-who">' + (role === 'user' ? 'You' : 'Claude') + '</div>'
+    + '<div class="msg-body">' + safeContent + extraHTML + '</div>';
+  log.appendChild(wrap);
+  log.scrollTop = log.scrollHeight;
+  return wrap.querySelector('.msg-body');
+}
+
+function buildTriggerCard(p) {
+  var label = TEST_LABELS[p.test] || p.test;
+  var env   = (p.env || 'staging').toUpperCase();
+  var safe  = JSON.stringify(p).replace(/"/g, '&quot;');
+  var rows  = '<div class="tc-row"><span class="tc-row-k">test</span><span class="tc-row-v">' + label + '</span></div>'
+    + '<div class="tc-row"><span class="tc-row-k">env</span><span class="tc-row-v">' + env + '</span></div>'
+    + (p.depositAmount    ? '<div class="tc-row"><span class="tc-row-k">deposit</span><span class="tc-row-v">MYR ' + p.depositAmount + '</span></div>' : '')
+    + (p.withdrawalAmount ? '<div class="tc-row"><span class="tc-row-k">withdrawal</span><span class="tc-row-v">MYR ' + p.withdrawalAmount + '</span></div>' : '');
+  return '<div class="trigger-card">' + rows
+    + '<button class="tc-run" onclick=\'executeTrigger(' + safe + ')\'>&#9654; Run Now</button></div>';
+}
+
+function executeTrigger(p) {
+  document.querySelectorAll('.env-chip').forEach(function(b) {
+    if (b.textContent.trim().toLowerCase() === (p.env || 'staging').toLowerCase()) {
+      setEnv(p.env || 'staging', b);
+    }
+  });
+  if (p.depositAmount) {
+    var da = document.getElementById('cfg-depositAmount');
+    if (da) da.value = p.depositAmount;
+  }
+  if (p.withdrawalAmount) {
+    var wa = document.getElementById('cfg-withdrawalAmount');
+    if (wa) wa.value = p.withdrawalAmount;
+  }
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector('[data-tab="runner"]').classList.add('active');
+  document.getElementById('tab-runner').classList.add('active');
+  if (p.test) {
+    var row = document.getElementById('row-' + p.test);
+    if (row) selectTest(p.test, row);
+    runTest(p.test, { depositAmount: p.depositAmount, withdrawalAmount: p.withdrawalAmount, members: p.members });
+  }
+}
+
+function sendMessage() {
+  if (claudeBusy) return;
+  var input = document.getElementById('claudeInput');
+  var text  = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendChat('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  claudeBusy = true;
+  document.getElementById('sendBtn').disabled = true;
+  var typingBubble = appendChat('assistant', 'Thinking\u2026');
+  typingBubble.classList.add('typing');
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': window.ANTHROPIC_API_KEY || '',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-allow-browser': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: chatHistory
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    typingBubble.closest('.chat-msg').remove();
+    if (data.error) {
+      appendChat('assistant', 'API error: ' + data.error.message + '\n\nSet ANTHROPIC_API_KEY via server.js /config endpoint.');
+    } else {
+      var fullText = (data.content || []).filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text; }).join('');
+      var triggerMatch = fullText.match(/TRIGGER_JSON:(\{[^}]+\})/);
+      var displayText  = fullText.replace(/TRIGGER_JSON:\{[^}]+\}/, '').trim();
+      var card = '';
+      if (triggerMatch) {
+        try { card = buildTriggerCard(JSON.parse(triggerMatch[1])); } catch(e) {}
+      }
+      appendChat('assistant', displayText, card);
+      chatHistory.push({ role: 'assistant', content: fullText });
+    }
+  })
+  .catch(function(err) {
+    typingBubble.closest('.chat-msg').remove();
+    appendChat('assistant', 'Could not reach Claude API: ' + err.message);
+  })
+  .finally(function() {
+    claudeBusy = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('claudeInput').focus();
+  });
+}
+
+function quickPrompt(text) {
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector('[data-tab="terminal"]').classList.add('active');
+  document.getElementById('tab-terminal').classList.add('active');
+  document.getElementById('claudeInput').value = text;
+  document.getElementById('claudeInput').focus();
+}
+
+function quickPromptDebug() {
+  quickPrompt('Why did the last test fail? Output:\n\n' + (lastLogLines.slice(-40).join('\n') || '(no output yet)'));
+}
+
+function handleInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  var el = e.target;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+</script>
 </body>
 </html>

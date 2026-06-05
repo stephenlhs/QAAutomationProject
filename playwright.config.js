@@ -1,5 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const sharedUse = {
+  ...devices['Desktop Chromium'],
+  headless: false,
+  screenshot: 'on',
+  video: 'on',
+  trace: 'on',
+  viewport: null,
+  launchOptions: {
+    args: ['--start-maximized'],
+  },
+};
+
 export default defineConfig({
   testDir: './tests',
   workers: 1,
@@ -7,30 +19,42 @@ export default defineConfig({
   reporter: 'html',
 
   projects: [
+
+    // ── STAGING ──
     {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chromium'],
-        headless: false,
-        screenshot: 'on',
-        video: 'on',
-        trace: 'on',
-        // ── Fix viewport to full HD ──
-        viewport: { width: 1920, height: 1080 },
-      },
-      testIgnore: '**/CreateMemberAndSaveSession.spec.js',
+      name: 'staging',
+      testMatch: '**/staging/!(CreateMemberAndSaveSession).spec.js',
+      use: { ...sharedUse },
     },
     {
-      name: 'member-setup',
-      testMatch: '**/CreateMemberAndSaveSession.spec.js',
-      use: {
-        ...devices['Desktop Chromium'],
-        headless: false,
-        screenshot: 'on',
-        video: 'on',
-        trace: 'on',
-        viewport: { width: 1920, height: 1080 },
-      },
+      name: 'staging-member-setup',
+      testMatch: '**/staging/CreateMemberAndSaveSession.spec.js',
+      use: { ...sharedUse },
     },
+
+    // ── UAT ──
+    {
+      name: 'uat',
+      testMatch: '**/uat/!(CreateMemberAndSaveSession).spec.js',
+      use: { ...sharedUse },
+    },
+    {
+      name: 'uat-member-setup',
+      testMatch: '**/uat/CreateMemberAndSaveSession.spec.js',
+      use: { ...sharedUse },
+    },
+
+    // ── PROD ──
+    {
+      name: 'prod',
+      testMatch: '**/prod/!(CreateMemberAndSaveSession).spec.js',
+      use: { ...sharedUse },
+    },
+    {
+      name: 'prod-member-setup',
+      testMatch: '**/prod/CreateMemberAndSaveSession.spec.js',
+      use: { ...sharedUse },
+    },
+
   ],
 });

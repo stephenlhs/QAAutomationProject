@@ -1,7 +1,18 @@
 import { test } from '@playwright/test';
-import { CaptchaHelper } from './helpers/CaptchaHelper.js';
-import { BackofficePage } from './pages/BackofficePage.js';
-import { URLS, MEMBER_SETUP, MEMBERS } from './config.js';
+import { CaptchaHelper } from '../helpers/CaptchaHelper.js';
+import { BackofficePage } from '../pages/BackofficePage.js';
+import { LoginPage } from '../pages/LoginPage.js';
+import { URLS, MEMBER_SETUP, MEMBERS, ENV_NAME } from '../config.js';
+
+// ── Strip staging prefix from username for BO form ──────────
+// The BO create-member form shows the prefix (x9048_) as a fixed label.
+// We only fill the part after it.
+const BO_PREFIX = ENV_NAME === 'staging' ? 'x9048_' : '';
+function stripPrefix(username) {
+  return BO_PREFIX && username.startsWith(BO_PREFIX)
+    ? username.slice(BO_PREFIX.length)
+    : username;
+}
 
 // =============================
 // HELPER: Generate unique bank account number
@@ -46,7 +57,7 @@ async function createMember(page, username, currency = 'MYR') {
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
 
-  await page.locator('input[name="Username"]').fill(username);
+  await page.locator('input[name="Username"]').fill(stripPrefix(username));
   await page.getByRole('button', { name: 'Check Availability' }).click();
   await page.waitForTimeout(1000);
 
@@ -72,8 +83,8 @@ async function createMember(page, username, currency = 'MYR') {
   await page.getByRole('button', { name: 'Submit' }).click();
   await page.waitForTimeout(1000);
 
-  const okVisible = await page.getByRole('button', { name: 'OK' }).isVisible({ timeout: 5000 }).catch(() => false);
-  if (okVisible) await page.getByRole('button', { name: 'OK' }).click();
+  const okVisible = await page.getByRole('button', { name: /^ok$/i }).isVisible({ timeout: 5000 }).catch(() => false);
+  if (okVisible) await page.getByRole('button', { name: /^ok$/i }).click();
 
   console.log(`>> [${username}] Member created ✅`);
 }
@@ -88,7 +99,6 @@ async function updateBankAccount(page, username) {
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
 
-  // Search and retry until player appears
   let found = false;
   for (let retry = 1; retry <= 10; retry++) {
     await page.locator('input[name="filterKeyword"]').fill(username);
@@ -110,25 +120,35 @@ async function updateBankAccount(page, username) {
   await page.getByTitle('Update Bank Account').first().click();
   await page.waitForTimeout(1000);
 
-  // Fill bank details with retry for duplicate number
   let bankUpdated = false;
   for (let attempt = 1; attempt <= 5; attempt++) {
     const accountNumber = generateBankAccountNumber();
     console.log(`>> [${username}] Trying account number: ${accountNumber} (attempt ${attempt})`);
 
-    await page.locator('input[name="txtfullname"]').fill(username);
-    await page.locator('select[name="bank"]').selectOption(MEMBER_SETUP.bankCode);
-    await page.waitForTimeout(500);
+    // Bank account name should NOT include the staging prefix
+    await page.locator('input[name="txtfullname"]').fill(stripPrefix(username));
 
-    await page.locator('input[type="text"]').nth(4).clear();
-    await page.locator('input[type="text"]').nth(4).fill(accountNumber);
+    // Select bank — wait for options to load first
+    await page.waitForTimeout(300);
+    await page.locator('select[name="bank"]').selectOption(MEMBER_SETUP.bankCode);
+    await page.waitForTimeout(800);
+
+    // Fill account number — try by name first, fallback to nth
+    const acctInput = page.locator('input[name="txtaccountno"], input[name="accountno"]').first();
+    const acctVisible = await acctInput.isVisible({ timeout: 2000 }).catch(() => false);
+    if (acctVisible) {
+      await acctInput.clear();
+      await acctInput.fill(accountNumber);
+    } else {
+      await page.locator('input[type="text"]').nth(4).clear();
+      await page.locator('input[type="text"]').nth(4).fill(accountNumber);
+    }
 
     const defaultCheckbox = page.locator('#chkSetDefault');
     if (await defaultCheckbox.isVisible().catch(() => false)) {
       await defaultCheckbox.check();
     }
 
-    // Use stable submit locator instead of dynamic modal ID
     await page.locator('.modal.in .modal-footer .btn-primary, .modal.show .modal-footer .btn-primary')
       .filter({ hasText: 'Submit' })
       .click();
