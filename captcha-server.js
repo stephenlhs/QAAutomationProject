@@ -3,6 +3,9 @@ import fs from 'fs';
 import { exec } from 'child_process';
 import 'dotenv/config';
 
+const CAPTCHA_DIR = '.captcha-tmp';
+fs.mkdirSync(CAPTCHA_DIR, { recursive: true });
+
 const PORT = 3333;
 
 async function solveCaptcha(imagePath) {
@@ -52,19 +55,19 @@ const server = http.createServer(async (req, res) => {
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const id = params.get('id') || 'default';
-      const captchaFile = `captcha-${id}.png`;
+      const captchaFile = `${CAPTCHA_DIR}/captcha-${id}.png`;
 
       console.log(`>> Auto-solving captcha [${id}]...`);
 
       // Use captcha-default.png if specific file doesn't exist
-      const fileToSolve = fs.existsSync(captchaFile) ? captchaFile : 'captcha.png';
+      const fileToSolve = fs.existsSync(captchaFile) ? captchaFile : `${CAPTCHA_DIR}/captcha.png`;
       const captcha = await solveCaptcha(fileToSolve);
 
       if (!captcha || captcha.length === 0) {
         throw new Error('ddddocr returned empty result');
       }
 
-      fs.writeFileSync(`captcha-answer-${id}.txt`, captcha);
+      fs.writeFileSync(`${CAPTCHA_DIR}/captcha-answer-${id}.txt`, captcha);
       console.log(`>> Captcha solved [${id}]:`, captcha);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ captcha }));

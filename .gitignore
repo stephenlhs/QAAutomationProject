@@ -2,8 +2,7 @@
 .auth/
 .claude/
 node_modules/
-captcha*.png
-captcha-answer*.txt
+.captcha-tmp/
 member-account*.png
 withdrawal-*.png
 test-results/

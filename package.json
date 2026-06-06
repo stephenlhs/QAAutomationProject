@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "setup": "playwright test tests/auth.setup.js --headed"
+    "setup": "playwright test AutomationProject/auth.setup.js --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0"

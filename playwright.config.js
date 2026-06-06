@@ -13,7 +13,7 @@ const sharedUse = {
 };
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: './AutomationProject',
   workers: 1,
   timeout: 180000,
   reporter: 'html',

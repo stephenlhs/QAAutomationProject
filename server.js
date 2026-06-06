@@ -180,7 +180,7 @@ const server = createServer((req, res) => {
         return;
       }
 
-      const testFile = `tests/${env}/${fileName}`;
+      const testFile = `AutomationProject/${env}/${fileName}`;
       const isCreateMembers = test === 'create-members';
       const project = isCreateMembers ? `${env}-member-setup` : env;
 
