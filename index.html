@@ -981,11 +981,15 @@ What would you like to do?</div>
 
 <script>
 // ════════════════════════════════════════════
-//  INIT — fetch API key from server
+//  INIT — fetch API key and config from server
 // ════════════════════════════════════════════
+var defaultMemberUsername = 'gaplay1';
 fetch('/config')
   .then(function(r) { return r.json(); })
-  .then(function(d) { window.ANTHROPIC_API_KEY = d.apiKey || ''; })
+  .then(function(d) {
+    window.ANTHROPIC_API_KEY = d.apiKey || '';
+    defaultMemberUsername = d.defaultMember || 'gaplay1';
+  })
   .catch(function() { window.ANTHROPIC_API_KEY = ''; });
 
 // ════════════════════════════════════════════
@@ -1111,7 +1115,7 @@ function selectTest(testId, rowEl) {
     var ms = document.createElement('div');
     ms.innerHTML = '<div class="member-rows" id="memberRows">'
       + '<div class="member-row-item">'
-      + '<input type="text" placeholder="Username" value="gaplay1">'
+      + '<input type="text" placeholder="e.g. gaplay1">'
       + makeCurrencySelect()
       + '<button class="member-rm" onclick="removeMemberRow(this)">&#10005;</button>'
       + '</div></div>'
@@ -1148,7 +1152,7 @@ function addMemberRow() {
   if (!rows) return;
   var div = document.createElement('div');
   div.className = 'member-row-item';
-  div.innerHTML = '<input type="text" placeholder="Username">'
+  div.innerHTML = '<input type="text" placeholder="e.g. gaplay1">'
     + makeCurrencySelect()
     + '<button class="member-rm" onclick="removeMemberRow(this)">&#10005;</button>';
   rows.appendChild(div);

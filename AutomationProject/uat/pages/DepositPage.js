@@ -26,7 +26,7 @@ export class DepositPage {
     await this.packageButton.click();
     await this.methodDropdown.selectOption('bank-in-transfer');
     await this.bankDropdown.click();
-    await this.page.getByText(bankName).click();
+    await this.page.locator('.dropdown-option').filter({ hasText: bankName }).first().click();
     console.log(`>> Selected bank: ${bankName}`);
   }
 

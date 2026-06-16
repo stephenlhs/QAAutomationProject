@@ -192,6 +192,11 @@ screenshot_paths = data.get('screenshotPaths', [])
 if screenshot_paths:
     import os
     from openpyxl.drawing.image import Image as XLImage
+    try:
+        from PIL import Image as PILImage
+        HAS_PIL = True
+    except Exception:
+        HAS_PIL = False
 
     ws3 = wb.create_sheet('Screenshots')
     ws3.sheet_view.showGridLines = False
@@ -233,8 +238,13 @@ if screenshot_paths:
 
         try:
             img = XLImage(img_path)
-            # Scale to fit within ~900px wide
-            orig_w, orig_h = img.width, img.height
+            # Use PIL for reliable dimension reading
+            if HAS_PIL:
+                with PILImage.open(img_path) as pil_img:
+                    orig_w, orig_h = pil_img.size
+            else:
+                orig_w = img.width or 1920
+                orig_h = img.height or 1080
             if orig_w > 900:
                 scale = 900 / orig_w
                 img.width  = int(orig_w * scale)
@@ -248,5 +258,8 @@ if screenshot_paths:
 
     ws3.sheet_properties.tabColor = '6366f1'
 
-# ── Save ──────────────────────────────────────────
-wb.save(out_path)
+# ── Save (atomic: write to .tmp then rename so a crash never corrupts the final file) ──
+import os as _os
+tmp_path = out_path + '.tmp'
+wb.save(tmp_path)
+_os.replace(tmp_path, out_path)

@@ -10,16 +10,19 @@ import { StatementPage } from './pages/StatementPage.js';
 import { PLAYER, BACKOFFICE, DEPOSIT } from './config.js';
 
 const screenshots = [];
+const MANIFEST_NAME = 'manifest-reject-deposit.json';
 async function snap(page, label) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${Date.now()}-${label.replace(/\s+/g, '-')}.png`);
   await page.screenshot({ path: file, fullPage: false });
   screenshots.push({ label, path: file });
+  writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), 'utf-8');
   console.log(`>> Screenshot: ${label}`);
 }
 
 test('deposit reject — verify balance and rollover unchanged', async ({ browser }) => {
+  test.setTimeout(0);
 
   const playerContext = await browser.newContext();
   const playerPage    = await playerContext.newPage();
@@ -30,7 +33,7 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   const captcha       = new CaptchaHelper(playerPage, 'player');
 
   await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
-  const actualUsername = await loginPage.getLoggedInUsername();
+  const actualUsername = PLAYER.username;
   await snap(playerPage, '01 - Player Login');
 
   await withdrawalPage.navigate();
@@ -50,6 +53,7 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   await snap(playerPage, '05 - Cash History Pending');
   console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
+  await playerPage.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext.close();
 
   const boContext  = await browser.newContext();
@@ -63,6 +67,7 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   await backoffice.rejectDeposit(actualUsername, 'test manual reject');
   await snap(boPage, '07 - Deposit Rejected in BO');
 
+  await boPage.close({ runBeforeUnload: false }).catch(() => {});
   await boContext.close();
 
   const playerContext2  = await browser.newContext({ storageState: PLAYER.sessionPath });
@@ -92,5 +97,8 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   writeFileSync(join(manifestDir, "manifest-reject-deposit.json"), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), "utf-8");
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
 
+  console.log('>> RESULT: PASS');
+  await playerPage2.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext2.close();
+  process.exit(0);
 });

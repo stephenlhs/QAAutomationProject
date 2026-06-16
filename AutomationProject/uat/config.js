@@ -1,5 +1,9 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '..', '..', '.env'), override: false });
 
 export const ENV_NAME = 'uat';
 
@@ -37,7 +41,7 @@ export const MEMBER_SETUP = {
   boUsername:      process.env.UAT_BO_USERNAME,
   boPassword:      process.env.UAT_BO_PASSWORD,
   twoFASecret:     process.env.UAT_BO_2FA_SECRET,
-  initialPassword: process.env.MEMBER_INITIAL_PASSWORD || 'Abc12345',
+  initialPassword: process.env.MEMBER_INITIAL_PASSWORD || '1234ssss',
   newPassword:     process.env.MEMBER_NEW_PASSWORD      || 'ssss1234',
   bankCode:        process.env.MEMBER_BANK_CODE         || '808',
 };
@@ -55,6 +59,6 @@ export const MEMBERS = (() => {
     }
   }
   return [
-    { username: 'scauto5', currency: 'MYR' },
+    { username: 'gaplay1', currency: 'MYR' },
   ];
 })();

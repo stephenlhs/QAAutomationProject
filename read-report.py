@@ -16,7 +16,12 @@ def clean(val):
     text = ILLEGAL_RE.sub('', text)
     return text.strip()
 
-wb = load_workbook(sys.argv[1], data_only=True)
+try:
+    wb = load_workbook(sys.argv[1], data_only=True)
+except Exception as e:
+    print(json.dumps({'error': f'Corrupted report file: {e}', 'summary': {}, 'logLines': [], 'totalLines': 0}))
+    sys.exit(0)
+
 ws = wb['Summary']
 
 # Rows 4-11 are the data rows (label in col A, value in col B)

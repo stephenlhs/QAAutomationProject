@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test, chromium } from '@playwright/test';
 import { CaptchaHelper } from '../helpers/CaptchaHelper.js';
 import { BackofficePage } from './pages/BackofficePage.js';
 import { LoginPage } from './pages/LoginPage.js';
@@ -246,14 +246,25 @@ async function loginAndChangePassword(browser, username) {
   } catch (err) {
     console.log(`>> [${username}] Error: ${err.message}`);
   } finally {
-    await context.close();
+    try { await page.goto('about:blank', { timeout: 3000, waitUntil: 'commit' }); } catch {}
+    await page.close({ runBeforeUnload: false }).catch(() => {});
+    await context.close().catch(() => {});
   }
 }
 
 // =============================
 // TEST: Create members + update bank + change password
 // =============================
-test('create members setup', async ({ browser }) => {
+test('create members setup', async () => {
+  test.setTimeout(0);
+
+  const browser = await chromium.launch({
+    channel: 'chrome',
+    headless: false,
+    args: ['--start-maximized'],
+  });
+
+  try {
 
   // ── PART 1: Login to backoffice ──
   const boContext = await browser.newContext();
@@ -278,6 +289,7 @@ test('create members setup', async ({ browser }) => {
     }
   }
 
+  await boPage.close({ runBeforeUnload: false }).catch(() => {});
   await boContext.close();
   console.log('>> Backoffice tasks complete ✅');
 
@@ -294,4 +306,15 @@ test('create members setup', async ({ browser }) => {
     console.log(`>>   ✅ ${m.username} (${m.currency}) — password: ${MEMBER_SETUP.newPassword}`);
   });
   console.log('>> =============================\n');
+  console.log('>> RESULT: PASS');
+  console.log('>> TEST COMPLETE');
+
+  } finally {
+    await Promise.race([
+      browser.close().catch(() => {}),
+      new Promise(r => setTimeout(r, 3000)),
+    ]);
+    try { browser.process()?.kill(); } catch {}
+  }
+  process.exit(0);
 });

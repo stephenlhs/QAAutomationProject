@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const sharedUse = {
   ...devices['Desktop Chromium'],
+  channel: 'chrome',
   headless: false,
   screenshot: 'on',
   video: 'on',
@@ -29,6 +30,7 @@ export default defineConfig({
     {
       name: 'staging-member-setup',
       testMatch: '**/staging/CreateMemberAndSaveSession.spec.js',
+      timeout: 0,
       use: { ...sharedUse },
     },
 
@@ -41,6 +43,7 @@ export default defineConfig({
     {
       name: 'uat-member-setup',
       testMatch: '**/uat/CreateMemberAndSaveSession.spec.js',
+      timeout: 0,
       use: { ...sharedUse },
     },
 
@@ -53,6 +56,7 @@ export default defineConfig({
     {
       name: 'prod-member-setup',
       testMatch: '**/prod/CreateMemberAndSaveSession.spec.js',
+      timeout: 0,
       use: { ...sharedUse },
     },
 

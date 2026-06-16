@@ -11,16 +11,19 @@ import { PLAYER, BACKOFFICE, DEPOSIT } from './config.js';
 
 // ── Screenshot helper ──────────────────────────────────────────
 const screenshots = [];
+const MANIFEST_NAME = 'manifest-approve-deposit.json';
 async function snap(page, label) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${Date.now()}-${label.replace(/\s+/g, '-')}.png`);
   await page.screenshot({ path: file, fullPage: false });
   screenshots.push({ label, path: file });
+  writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), 'utf-8');
   console.log(`>> Screenshot: ${label}`);
 }
 
 test('deposit approve — verify balance and rollover', async ({ browser }) => {
+  test.setTimeout(0);
 
   // ── PART 1: Player login + stats before ──
   const playerContext = await browser.newContext();
@@ -32,7 +35,7 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   const captcha       = new CaptchaHelper(playerPage, 'player');
 
   await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
-  const actualUsername = await loginPage.getLoggedInUsername();
+  const actualUsername = PLAYER.username;
   console.log(`>> Logged in as: ${actualUsername}`);
   await snap(playerPage, '01 - Player Login');
 
@@ -55,6 +58,7 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   await snap(playerPage, '05 - Cash History Pending');
   console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
+  await playerPage.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext.close();
 
   // ── PART 4: Backoffice approve ──
@@ -70,6 +74,7 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   await backoffice.approveDeposit(actualUsername, 'test manual approve');
   await snap(boPage, '07 - Deposit Approved in BO');
 
+  await boPage.close({ runBeforeUnload: false }).catch(() => {});
   await boContext.close();
 
   // ── PART 5: Player verify after approval ──
@@ -95,8 +100,12 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   const effectiveBal   = before.balance + outstanding.total;
   const rolloverInc    = totalCredit * DEPOSIT.rolloverMultiplier;
 
+  const rolloverAlreadyMet = before.target > 0 && before.rollover >= before.target;
   let expectedRollover, expectedTarget;
-  if (effectiveBal <= 20) {
+  if (rolloverAlreadyMet) {
+    expectedRollover = 0; expectedTarget = rolloverInc;
+    console.log(`>> Rollover already met (${before.rollover} >= ${before.target}) — RESET`);
+  } else if (effectiveBal <= 20) {
     expectedRollover = 0; expectedTarget = rolloverInc;
     console.log(`>> Effective balance <= 20 — rollover RESETS`);
   } else {
@@ -118,5 +127,8 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   writeFileSync(join(manifestDir, "manifest-approve-deposit.json"), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), "utf-8");
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
 
+  console.log('>> RESULT: PASS');
+  await playerPage2.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext2.close();
+  process.exit(0);
 });

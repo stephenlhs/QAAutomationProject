@@ -1,11 +1,17 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Always load .env from project root regardless of where this file is
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '..', '..', '.env'), override: false });
 
 export const ENV_NAME = 'staging';
 
 export const URLS = {
-  playsite:   'https://stage-mem.linkv2.com/',
-  backoffice: 'https://stage-bo.linkv2.com/login',
+  playsite:      'https://stage-mem.linkv2.com/',
+  backoffice:    'https://stage-bo.linkv2.com/login',
+  memberPrefix:  'x9048_',
 };
 
 const MEMBER_PREFIX = 'x9048_';
@@ -27,7 +33,7 @@ export const BACKOFFICE = {
 export const DEPOSIT = {
   amount:             parseFloat(process.env.CUSTOM_DEPOSIT_AMOUNT) || 50,
   bankName:           process.env.DEPOSIT_BANK_NAME || 'Maybank',
-  packageName:        process.env.DEPOSIT_PACKAGE_NAME || 'Normal Deposit',
+  packageName:        process.env.DEPOSIT_PACKAGE_NAME || 'Stephen Turnover Package',
   rolloverMultiplier: parseFloat(process.env.DEPOSIT_ROLLOVER_MULTIPLIER) || 1,
 };
 
@@ -39,7 +45,7 @@ export const MEMBER_SETUP = {
   boUsername:      process.env.STAGING_BO_USERNAME,
   boPassword:      process.env.STAGING_BO_PASSWORD,
   twoFASecret:     process.env.STAGING_BO_2FA_SECRET,
-  initialPassword: process.env.MEMBER_INITIAL_PASSWORD || 'Abc12345',
+  initialPassword: process.env.MEMBER_INITIAL_PASSWORD || '1234ssss',
   newPassword:     process.env.MEMBER_NEW_PASSWORD      || 'ssss1234',
   bankCode:        process.env.MEMBER_BANK_CODE         || '808',
 };

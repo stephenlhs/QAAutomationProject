@@ -1,4 +1,6 @@
 import { expect } from '@playwright/test';
+import { mkdirSync } from 'fs';
+import { join } from 'path';
 import { URLS } from '../config.js';
 
 export class WithdrawalPage {
@@ -20,7 +22,9 @@ export class WithdrawalPage {
   }
 
   async getStats(label = 'stats') {
-    await this.page.screenshot({ path: `withdrawal-${label}.png` });
+    const screenshotsDir = join(process.cwd(), 'screenshots');
+    mkdirSync(screenshotsDir, { recursive: true });
+    await this.page.screenshot({ path: join(screenshotsDir, `withdrawal-${label}.png`) });
 
     const balanceText  = await this.balanceDisplay.first().innerText().catch(() => '0');
     const balanceMatch = balanceText.match(/[\d,]+\.\d+/);

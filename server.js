@@ -61,7 +61,10 @@ const server = createServer((req, res) => {
   // ── Config (exposes API key to frontend — local only) ──
   if (req.method === 'GET' && url.pathname === '/config') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ apiKey: process.env.ANTHROPIC_API_KEY || '' }));
+    res.end(JSON.stringify({
+      apiKey:        process.env.ANTHROPIC_API_KEY        || '',
+      defaultMember: process.env.DEFAULT_MEMBER_USERNAME  || 'gaplay1',
+    }));
     return;
   }
 
@@ -232,31 +235,31 @@ const server = createServer((req, res) => {
         });
       });
 
-      proc.on('close', async (code) => {
+      proc.on('close', (code) => {
         delete activeProcesses[test];
-        const result = code === 0 ? 'passed' : 'failed';
+        const resultByCode = code === 0 ? 'passed' : 'failed';
+        const result = logLines.some(l => l.includes('>> RESULT: PASS')) ? 'passed' : resultByCode;
         const durationMs = Date.now() - startTime;
 
         send({ type: 'info', msg: '>> ─────────────────────────────────' });
         send({ type: result === 'passed' ? 'success' : 'fail',
                msg: result === 'passed' ? '>> TEST PASSED' : '>> TEST FAILED' });
 
-        // ── Write Excel report ──
-        try {
-          const reportPath = await writeReport({
-            testName: test, env, result, durationMs,
-            depositAmount, withdrawalAmount, members,
-            logLines,
-          });
-          const reportFile = reportPath.split(/[/\\]/).pop();
-          send({ type: 'info', msg: `>> Report saved: reports/${env}/${reportFile}` });
-          send({ type: 'report', env, file: reportFile });
-        } catch (err) {
-          send({ type: 'err', msg: `>> Report write failed: ${err.message}` });
-        }
-
+        // ── Send done immediately so test isn't held up by report writing ──
         send({ type: 'done', msg: 'done' });
         res.end();
+
+        // ── Write Excel report in background ──
+        writeReport({
+          testName: test, env, result, durationMs,
+          depositAmount, withdrawalAmount, members,
+          logLines,
+        }).then(reportPath => {
+          const reportFile = reportPath.split(/[/\\]/).pop();
+          console.log(`>> Report saved: reports/${env}/${reportFile}`);
+        }).catch(err => {
+          console.error(`>> Report write failed: ${err.message}`);
+        });
       });
     });
     return;

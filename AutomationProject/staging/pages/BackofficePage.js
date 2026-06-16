@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { mkdirSync } from 'fs';
+import { join } from 'path';
 import * as OTPAuth from 'otpauth';
 import { URLS, ENV_NAME } from '../config.js';
 
@@ -41,6 +42,17 @@ export class BackofficePage {
     const pages = context.pages();
     for (const p of pages) {
       if (p !== this.page) await p.close().catch(() => {});
+    }
+  }
+
+  async closeAnnouncements() {
+    const modal = this.page.locator('#announcement-modal.in');
+    if (await modal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      console.log(`>> [${this.testId}] Closing announcement modal...`);
+      await this.page.keyboard.press('Escape');
+      await this.page.waitForTimeout(500);
+      await modal.locator('.close, [data-dismiss="modal"]').first().click().catch(() => {});
+      await this.page.waitForTimeout(500);
     }
   }
 
@@ -175,6 +187,7 @@ export class BackofficePage {
 
   async getMemberOutstandingBalance(username) {
     await this.closeExtraTabs();
+    await this.closeAnnouncements();
 
     // Only staging has member outstanding balance feature
     if (ENV_NAME !== 'staging') {
@@ -188,8 +201,9 @@ export class BackofficePage {
     await this.page.waitForLoadState('domcontentloaded');
     await this.page.waitForTimeout(1000);
 
-    // Search player
-    await this.page.getByRole('textbox', { name: 'Username' }).fill(`${this.memberPrefix}${username}`);
+    // Search player — staging BO Member Account requires the x9048_ prefix
+    const boMemberName = username.startsWith('x9048_') ? username : `x9048_${username}`;
+    await this.page.getByRole('textbox', { name: 'Username' }).fill(boMemberName);
     await this.page.getByRole('button', { name: 'Search' }).click();
     await this.page.waitForTimeout(2000);
     await this.closeExtraTabs();
@@ -200,8 +214,10 @@ export class BackofficePage {
 
     // Screenshot
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    await this.page.screenshot({ path: `member-account-${timestamp}.png`, fullPage: true });
-    console.log(`>> Screenshot saved: member-account-${timestamp}.png`);
+    const screenshotsDir = join(process.cwd(), 'screenshots');
+    mkdirSync(screenshotsDir, { recursive: true });
+    await this.page.screenshot({ path: join(screenshotsDir, `member-account-${timestamp}.png`), fullPage: true });
+    console.log(`>> Screenshot saved: screenshots/member-account-${timestamp}.png`);
 
     // Parse outstanding values
     const getVal = async (labelText) => {
@@ -239,6 +255,7 @@ export class BackofficePage {
 
   async approveDeposit(username, comment = 'test manual approve') {
     await this.closeExtraTabs();
+    await this.closeAnnouncements();
 
     if (!this.page.url().includes('deposit-list')) {
       await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
@@ -263,6 +280,7 @@ export class BackofficePage {
 
   async rejectDeposit(username, comment = 'test manual reject') {
     await this.closeExtraTabs();
+    await this.closeAnnouncements();
 
     if (!this.page.url().includes('deposit-list')) {
       await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
@@ -287,6 +305,7 @@ export class BackofficePage {
 
   async approveWithdrawal(username, comment = 'test manual approve withdrawal') {
     await this.closeExtraTabs();
+    await this.closeAnnouncements();
 
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();
@@ -309,6 +328,7 @@ export class BackofficePage {
 
   async rejectWithdrawal(username, comment = 'test manual reject withdrawal') {
     await this.closeExtraTabs();
+    await this.closeAnnouncements();
 
     await this.page.locator('a').filter({ hasText: 'Cash Transactions' }).click();
     await this.page.getByRole('link', { name: 'Cash Withdraw List' }).click();

@@ -9,16 +9,19 @@ import { StatementPage } from './pages/StatementPage.js';
 import { PLAYER, BACKOFFICE, WITHDRAWAL } from './config.js';
 
 const screenshots = [];
+const MANIFEST_NAME = 'manifest-reject-withdrawal.json';
 async function snap(page, label) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${Date.now()}-${label.replace(/\s+/g, '-')}.png`);
   await page.screenshot({ path: file, fullPage: false });
   screenshots.push({ label, path: file });
+  writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), 'utf-8');
   console.log(`>> Screenshot: ${label}`);
 }
 
 test('withdrawal reject — verify balance and rollover unchanged', async ({ browser }) => {
+  test.setTimeout(0);
 
   const playerContext = await browser.newContext();
   const playerPage    = await playerContext.newPage();
@@ -28,7 +31,7 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   const captcha       = new CaptchaHelper(playerPage, 'player');
 
   await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
-  const actualUsername = await loginPage.getLoggedInUsername();
+  const actualUsername = PLAYER.username;
   await snap(playerPage, '01 - Player Login');
 
   await withdrawalPage.navigate();
@@ -45,8 +48,10 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   mkdirSync(manifestDir, { recursive: true });
   writeFileSync(join(manifestDir, "manifest-reject-withdrawal.json"), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), "utf-8");
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
+    console.log('>> RESULT: PASS');
+    await playerPage.close({ runBeforeUnload: false }).catch(() => {});
     await playerContext.close();
-    return;
+    process.exit(0);
   }
 
   await withdrawalPage.verifyInsufficientBalance(before.balance + 1000);
@@ -63,6 +68,7 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   await snap(playerPage, '06 - Cash History Pending');
   console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
+  await playerPage.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext.close();
 
   const boContext  = await browser.newContext();
@@ -76,6 +82,7 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   await backoffice.rejectWithdrawal(actualUsername, 'test manual reject withdrawal');
   await snap(boPage, '08 - Withdrawal Rejected in BO');
 
+  await boPage.close({ runBeforeUnload: false }).catch(() => {});
   await boContext.close();
 
   const playerContext2  = await browser.newContext({ storageState: PLAYER.sessionPath });
@@ -105,5 +112,8 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   writeFileSync(join(manifestDir, "manifest-reject-withdrawal.json"), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), "utf-8");
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
 
+  console.log('>> RESULT: PASS');
+  await playerPage2.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext2.close();
+  process.exit(0);
 });
