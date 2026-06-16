@@ -1,6 +1,6 @@
 # QA Automation Project (v2)
 
-Automated testing suite for deposit, withdrawal, and member-setup flows using Playwright.
+Automated testing suite for deposit, withdrawal, paygate, and member-setup flows using Playwright.
 Supports Staging, UAT, and Production environments with auto captcha solving and 2FA handling.
 
 ---
@@ -26,7 +26,7 @@ git --version
 ### 2. Clone the repository
 
 ```
-git clone https://github.com/stephenlhs/QAAutomationProject.git
+git clone https://github.com/<your-username>/QAAutomationProject.git
 cd QAAutomationProject
 ```
 
@@ -48,6 +48,8 @@ pip install openpyxl ddddocr
 npx playwright install chromium
 ```
 
+> **Windows Defender note:** If the install hangs at 100% 0.0s, add `C:\Users\<you>\AppData\Local\ms-playwright` to Windows Defender exclusions, then re-run.
+
 ### 6. Set up environment variables
 
 ```
@@ -60,7 +62,11 @@ Open `.env` and fill in your credentials. Required keys are documented inside `.
 
 Double-click **`start-dashboard.bat`**
 
-This starts the captcha server (port 3333) and the QA Dashboard (port 4000), then opens your browser automatically.
+This starts:
+- Captcha server (port 3333)
+- QA Dashboard (port 4000)
+- ngrok public tunnel (see ngrok window for your HTTPS URL)
+- Opens browser at `http://localhost:4000`
 
 ---
 
@@ -87,7 +93,7 @@ Then in a second terminal, run any of the commands below.
 Creates member accounts and saves login sessions for later tests.
 
 ```
-# Staging — creates member with x9048_ prefix in BO
+# Staging — creates member with the configured BO prefix
 npx playwright test AutomationProject/staging/CreateMemberAndSaveSession.spec.js --headed --project=staging-member-setup
 
 # UAT
@@ -97,9 +103,9 @@ npx playwright test AutomationProject/uat/CreateMemberAndSaveSession.spec.js --h
 npx playwright test AutomationProject/prod/CreateMemberAndSaveSession.spec.js --headed --project=prod-member-setup
 ```
 
-To create a specific member by name (e.g. `claudep1` with MYR currency):
+To create a specific member by name (e.g. `player1` with MYR currency):
 ```
-CUSTOM_MEMBERS='[{"username":"claudep1","currency":"MYR"}]' npx playwright test AutomationProject/staging/CreateMemberAndSaveSession.spec.js --headed --project=staging-member-setup
+CUSTOM_MEMBERS='[{"username":"player1","currency":"MYR"}]' npx playwright test AutomationProject/staging/CreateMemberAndSaveSession.spec.js --headed --project=staging-member-setup
 ```
 
 ### Deposit Tests
@@ -108,31 +114,50 @@ Run with a specific player and amount using environment variable overrides:
 
 ```
 # Approve Deposit — staging
-CUSTOM_PLAYER_USERNAME=x9048_claudep1 CUSTOM_PLAYER_PASSWORD=ssss1234 CUSTOM_DEPOSIT_AMOUNT=50 npx playwright test AutomationProject/staging/ManualApproveDeposit.spec.js --headed --project=staging
+CUSTOM_PLAYER_USERNAME=<member_prefix>player1 CUSTOM_PLAYER_PASSWORD=your_password CUSTOM_DEPOSIT_AMOUNT=50 npx playwright test AutomationProject/staging/ManualApproveDeposit.spec.js --headed --project=staging
 
 # Reject Deposit — staging
-CUSTOM_PLAYER_USERNAME=x9048_claudep1 CUSTOM_PLAYER_PASSWORD=ssss1234 CUSTOM_DEPOSIT_AMOUNT=50 npx playwright test AutomationProject/staging/ManualRejectDeposit.spec.js --headed --project=staging
+CUSTOM_PLAYER_USERNAME=<member_prefix>player1 CUSTOM_PLAYER_PASSWORD=your_password CUSTOM_DEPOSIT_AMOUNT=50 npx playwright test AutomationProject/staging/ManualRejectDeposit.spec.js --headed --project=staging
 ```
 
 Replace `staging` with `uat` or `prod` for other environments.
 
-> **Deposit page mode:** The deposit page must be set to **All-in-One** mode in BO settings before running deposit tests. Compact mode is not supported by the automation.
+> **Deposit page mode:** The deposit page must be set to **All-in-One** mode in BO settings before running deposit tests. Compact mode is not supported.
 
 > **Deposit package:** Staging uses `Stephen Turnover Package` (rollover x1) by default. Override with `DEPOSIT_PACKAGE_NAME` in `.env` if needed.
 
 ### Withdrawal Tests
 
-> **Prerequisite:** Disable the payment gateway (paygate) in BO settings before running withdrawal tests. These tests are designed for **manual withdrawal** flow only. If paygate is enabled and the withdrawal amount falls within its limit, the transaction will be routed to the gateway instead and the test will hang.
+> **Prerequisite:** Disable the payment gateway (paygate) in BO settings before running withdrawal tests. These tests are for **manual withdrawal** flow only. If paygate is enabled and the withdrawal amount falls within its limit, the transaction will be routed to the gateway and the test will hang.
 
 ```
 # Approve Withdrawal — staging
-CUSTOM_PLAYER_USERNAME=x9048_claudep1 CUSTOM_PLAYER_PASSWORD=ssss1234 CUSTOM_WITHDRAWAL_AMOUNT=10 npx playwright test AutomationProject/staging/ManualApproveWithdrawal.spec.js --headed --project=staging
+CUSTOM_PLAYER_USERNAME=<member_prefix>player1 CUSTOM_PLAYER_PASSWORD=your_password CUSTOM_WITHDRAWAL_AMOUNT=10 npx playwright test AutomationProject/staging/ManualApproveWithdrawal.spec.js --headed --project=staging
 
 # Reject Withdrawal — staging
-CUSTOM_PLAYER_USERNAME=x9048_claudep1 CUSTOM_PLAYER_PASSWORD=ssss1234 CUSTOM_WITHDRAWAL_AMOUNT=10 npx playwright test AutomationProject/staging/ManualRejectWithdrawal.spec.js --headed --project=staging
+CUSTOM_PLAYER_USERNAME=<member_prefix>player1 CUSTOM_PLAYER_PASSWORD=your_password CUSTOM_WITHDRAWAL_AMOUNT=10 npx playwright test AutomationProject/staging/ManualRejectWithdrawal.spec.js --headed --project=staging
 ```
 
 Replace `staging` with `uat` or `prod` for other environments.
+
+### Paygate Tests (VaderPay C2)
+
+Tests end-to-end paygate deposit and withdrawal flows with a manual pause/resume step for vendor callbacks.
+
+Configure which payment methods to test and which player to use by editing:
+```
+AutomationProject/staging/fixtures/VaderpayC2Config.json
+```
+
+```
+# Paygate Deposit — staging
+npx playwright test AutomationProject/staging/PaygateDepositTest.spec.js --headed --project=staging
+
+# Paygate Withdrawal — staging
+npx playwright test AutomationProject/staging/PaygateWithdrawTest.spec.js --headed --project=staging
+```
+
+> See **Paygate Test Flow** below for details on the pause/resume mechanism.
 
 ### View HTML Report
 
@@ -148,8 +173,8 @@ Pass these as prefixes on any test command to override defaults without editing 
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `CUSTOM_PLAYER_USERNAME` | Player to log in as | `x9048_claudep1` |
-| `CUSTOM_PLAYER_PASSWORD` | Player password | `ssss1234` |
+| `CUSTOM_PLAYER_USERNAME` | Player to log in as | `<member_prefix>player1` |
+| `CUSTOM_PLAYER_PASSWORD` | Player password | `your_password` |
 | `CUSTOM_DEPOSIT_AMOUNT` | Deposit amount in MYR | `50` |
 | `CUSTOM_WITHDRAWAL_AMOUNT` | Withdrawal amount in MYR | `10` |
 | `CUSTOM_MEMBERS` | JSON array for CreateMember | `[{"username":"abc","currency":"MYR"}]` |
@@ -166,6 +191,8 @@ QAAutomationProject/
 │   ├── helpers/
 │   │   └── CaptchaHelper.js          Auto captcha solver (shared across all envs)
 │   ├── staging/
+│   │   ├── fixtures/
+│   │   │   └── VaderpayC2Config.json  Paygate method config (enabled methods, amounts, credentials)
 │   │   ├── pages/                    Page Object Models for staging
 │   │   │   ├── BackofficePage.js
 │   │   │   ├── DepositPage.js
@@ -177,7 +204,9 @@ QAAutomationProject/
 │   │   ├── ManualApproveDeposit.spec.js
 │   │   ├── ManualRejectDeposit.spec.js
 │   │   ├── ManualApproveWithdrawal.spec.js
-│   │   └── ManualRejectWithdrawal.spec.js
+│   │   ├── ManualRejectWithdrawal.spec.js
+│   │   ├── PaygateDepositTest.spec.js
+│   │   └── PaygateWithdrawTest.spec.js
 │   ├── uat/                          Same structure as staging
 │   └── prod/                         Same structure as staging
 ├── reports/                          Auto-generated Excel reports per env
@@ -187,7 +216,7 @@ QAAutomationProject/
 ├── captcha-server.js                 Captcha OCR server on port 3333
 ├── server.js                         QA Dashboard backend on port 4000
 ├── index.html                        Dashboard UI
-├── start-dashboard.bat               One-click launcher (Windows)
+├── start-dashboard.bat               One-click launcher (Windows) — starts all servers + ngrok
 ├── playwright.config.js              Playwright project config
 └── README.md                         This file
 ```
@@ -198,11 +227,11 @@ QAAutomationProject/
 
 | Environment | Playsite | Backoffice |
 |-------------|----------|------------|
-| Staging | https://stage-mem.linkv2.com/ | https://stage-bo.linkv2.com/login |
-| UAT | https://mem2.linkv2.com/# | https://ag-uat.linkv2.com/login |
-| Production | https://998hihi.com/ | https://bo.v2hotel.com/login |
+| Staging | configured in `.env` | configured in `.env` |
+| UAT | configured in `.env` | configured in `.env` |
+| Production | configured in `.env` | configured in `.env` |
 
-> **Staging member prefix:** BO stores staging members with the prefix `x9048_` (e.g. member `claudep1` appears as `x9048_claudep1` in BO). Always use the full prefixed name as `CUSTOM_PLAYER_USERNAME` for staging tests.
+> **Staging member prefix:** BO stores staging members with a prefix (e.g. member `player1` appears as `<prefix>player1` in BO). The prefix is set in the staging `config.js`. Always use the full prefixed username as `CUSTOM_PLAYER_USERNAME` for staging tests.
 
 ---
 
@@ -215,19 +244,93 @@ QAAutomationProject/
 4. Saves player + BO sessions for subsequent tests
 
 ### ManualApproveDeposit / ManualRejectDeposit
-1. Player logs in and records balance/rollover before deposit
+1. Player logs in and records balance/rollover/target before deposit
 2. Player submits deposit (Bank Transfer, Maybank)
-3. BO logs in and approves or rejects the pending transaction
-4. Player verifies transaction status and balance/rollover after
-5. Assertions: approve → balance increases + rollover recalculated; reject → balance/rollover unchanged
+3. Cash History verified — transaction shows Pending
+4. BO logs in and approves or rejects the pending transaction
+5. Player verifies transaction status in Cash History
+6. Player records balance/rollover/target after
+7. Assertions: approve → balance increases + rollover recalculated; reject → balance/rollover unchanged
 
 ### ManualApproveWithdrawal / ManualRejectWithdrawal
-1. Player logs in and records balance/rollover before withdrawal
+1. Player logs in and records balance/rollover/target before withdrawal
 2. If rollover not met → test verifies rollover-gate error and exits early
 3. Player attempts withdrawal above balance (verifies insufficient-balance error), then submits valid amount
 4. BO logs in and approves or rejects the pending transaction
 5. Player verifies transaction status and balance/rollover after
 6. Assertions: approve → balance decreases + rollover/target resets to 0; reject → balance/rollover unchanged
+
+### PaygateDepositTest (VaderPay C2)
+1. Player logs in and records balance/rollover/target before deposit
+2. Player selects package, payment method, gateway card, and submits deposit
+3. Cash History verified — transaction recorded as In Process
+4. **Test pauses** — dashboard shows yellow banner with txNo, amount, and Approved/Rejected buttons
+5. Contact vendor to confirm outcome, then click **Approved** or **Rejected** in the dashboard
+6. Cash History revisited to capture final transaction status
+7. Player records balance/rollover/target after
+8. BO logs in, verifies transaction appears in Cash Deposit List
+9. Assertions (approved): balance increases + rollover recalculated using package multiplier; (rejected): balance/rollover/target unchanged
+
+> **Pending ticket:** The site blocks a new deposit if a previous paygate transaction is still Pending. Before re-running, go to BO → Cash Deposit List and reject the pending transaction to clear it.
+
+### PaygateWithdrawTest (VaderPay C2)
+1. Player logs in and records balance/rollover/target before withdrawal
+2. If rollover not met → test verifies rollover-gate error and exits early
+3. Player submits paygate withdrawal
+4. Cash History verified — transaction recorded
+5. Player records balance/rollover/target after
+6. BO logs in, verifies transaction in Cash Withdraw List and confirms paygate label
+
+---
+
+## VaderpayC2Config.json
+
+Located at `AutomationProject/<env>/fixtures/VaderpayC2Config.json`.
+
+Controls which payment methods are tested and with which credentials:
+
+```json
+{
+  "gatewayName": "VaderPay C2",
+  "packageName": "Stephen Turnover Package",
+  "deposit": {
+    "Bank":    { "enabled": false, "tab": "online-transfer",  "amount": 50, "username": "", "password": "" },
+    "EWallet": { "enabled": false, "tab": "e-wallet",         "amount": 50, "username": "", "password": "" },
+    "QR":      { "enabled": true,  "tab": "qr-code-payment",  "amount": 50, "username": "your_player", "password": "your_password" },
+    "Crypto":  { "enabled": false, "tab": "crypto-payment",   "amount": 50, "username": "", "password": "" }
+  },
+  "withdraw": {
+    "Bank":    { "enabled": true,  "amount": 50, "username": "", "password": "" },
+    "EWallet": { "enabled": false, "amount": 50, "username": "", "password": "" }
+  }
+}
+```
+
+Set `enabled: true` for the methods you want to test. Leave `username`/`password` blank to use the default player from `.env`.
+
+---
+
+## ngrok — Remote Dashboard Access
+
+`start-dashboard.bat` starts ngrok automatically. The ngrok window will show a public HTTPS URL like:
+```
+Forwarding  https://xxxx-xxxx.ngrok-free.app -> http://localhost:4000
+```
+
+Use that URL on your phone or any device to access the dashboard and click the Approved/Rejected resume buttons remotely.
+
+### First-time ngrok setup
+
+Install ngrok (Windows):
+```
+winget install ngrok.ngrok
+ngrok update
+ngrok config add-authtoken YOUR_TOKEN
+```
+
+Get your authtoken from https://dashboard.ngrok.com/authtokens (free account).
+
+> **Note:** The free plan generates a new random URL every time ngrok restarts.
 
 ---
 
@@ -267,9 +370,13 @@ pip install openpyxl
 - Ensure deposit page mode is set to **All-in-One** in BO settings (not Compact)
 - Allow ~5 minutes for the mode setting to take effect after changing it
 
-**ngrok remote dashboard access**
-```
-npm install -g ngrok
-ngrok config add-authtoken YOUR_TOKEN
-ngrok http 4000
-```
+**Playwright browser install hangs at 100% 0.0s**
+- Windows Defender is blocking zip extraction — add `C:\Users\<you>\AppData\Local\ms-playwright` to Defender exclusions, then re-run `npx playwright install chromium`
+
+**Paygate test — resume button not appearing**
+- Restart the server (`node server.js`) — the ANSI stripping fix requires a fresh server process
+- Check that the test output panel shows the `>> PAUSE:` line; if it shows garbled characters, the server needs restarting
+
+**Paygate test — txNo not found in BO deposit list**
+- For rejected transactions the test tries `Rejected` status first, then falls back to `Pending/InProcess`
+- If still not found, check BO manually — the vendor callback may not have updated the status yet

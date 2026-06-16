@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { spawn } from 'child_process';
-import { readFileSync, readdirSync, statSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
@@ -15,6 +15,8 @@ const TEST_FILES = {
   'approve-withdrawal': 'ManualApproveWithdrawal.spec.js',
   'reject-withdrawal':  'ManualRejectWithdrawal.spec.js',
   'create-members':     'CreateMemberAndSaveSession.spec.js',
+  'paygate-deposit':    'PaygateDepositTest.spec.js',
+  'paygate-withdraw':   'PaygateWithdrawTest.spec.js',
 };
 
 const activeProcesses = {};
@@ -174,13 +176,35 @@ const server = createServer((req, res) => {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
-      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword } = JSON.parse(body);
+      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword, paygateConfig } = JSON.parse(body);
 
       const fileName = TEST_FILES[test];
       if (!fileName) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unknown test' }));
         return;
+      }
+
+      // ── Paygate deposit: write selected method to config before running ──
+      if (test === 'paygate-deposit' && paygateConfig) {
+        try {
+          const pg = typeof paygateConfig === 'string' ? JSON.parse(paygateConfig) : paygateConfig;
+          const cfgPath = join(__dirname, 'AutomationProject', env, 'fixtures', 'VaderpayC2Config.json');
+          const vc = JSON.parse(readFileSync(cfgPath, 'utf-8'));
+          for (const k of Object.keys(vc.deposit)) vc.deposit[k].enabled = false;
+          const tabToKey = { 'online-transfer': 'Bank', 'qr-code-payment': 'QR', 'e-wallet': 'EWallet', 'crypto-payment': 'Crypto' };
+          const key = tabToKey[pg.tab] || 'Bank';
+          if (vc.deposit[key]) {
+            vc.deposit[key].enabled  = true;
+            vc.deposit[key].tab      = pg.tab;
+            vc.deposit[key].amount   = pg.amount || vc.deposit[key].amount;
+            if (pg.username) vc.deposit[key].username = pg.username;
+            if (pg.password) vc.deposit[key].password = pg.password;
+          }
+          writeFileSync(cfgPath, JSON.stringify(vc, null, 2), 'utf-8');
+        } catch (e) {
+          console.error('Failed to update VaderpayC2Config:', e.message);
+        }
       }
 
       const testFile = `AutomationProject/${env}/${fileName}`;
@@ -223,14 +247,14 @@ const server = createServer((req, res) => {
 
       proc.stdout.on('data', data => {
         data.toString().split('\n').forEach(line => {
-          const clean = line.replace(/\x1B\[[0-9;]*m/g, '').trim();
+          const clean = line.replace(/\x1B\[[0-9;]*[A-Za-z]/g, '').trim();
           if (clean) { send({ type: 'log', msg: clean }); logLines.push(clean); }
         });
       });
 
       proc.stderr.on('data', data => {
         data.toString().split('\n').forEach(line => {
-          const clean = line.replace(/\x1B\[[0-9;]*m/g, '').trim();
+          const clean = line.replace(/\x1B\[[0-9;]*[A-Za-z]/g, '').trim();
           if (clean) { send({ type: 'err', msg: clean }); logLines.push(`[ERR] ${clean}`); }
         });
       });
@@ -261,6 +285,30 @@ const server = createServer((req, res) => {
           console.error(`>> Report write failed: ${err.message}`);
         });
       });
+    });
+    return;
+  }
+
+  // ── Resume test (paygate vendor callback) ──
+  if (req.method === 'POST' && url.pathname === '/resume') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      const { action } = JSON.parse(body);
+      if (action !== 'approved' && action !== 'rejected') {
+        res.writeHead(400); res.end(); return;
+      }
+      const signalDir  = join(__dirname, '.screenshots-tmp');
+      const signalPath = join(signalDir, 'paygate-resume-signal.json');
+      try {
+        mkdirSync(signalDir, { recursive: true });
+        writeFileSync(signalPath, JSON.stringify({ action }), 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
     });
     return;
   }

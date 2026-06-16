@@ -1,412 +1,398 @@
-# QA Automation Project
- 
-Automated testing suite for deposit, withdrawal and game flows using Playwright.
-Supports multiple environments: Staging, UAT and Production.
- 
+# QA Automation Project (v2)
+
+Automated testing suite for deposit, withdrawal, paygate, and member-setup flows using Playwright.
+Supports Staging, UAT, and Production environments with auto captcha solving and 2FA handling.
+
 ---
- 
+
 ## Prerequisites
- 
+
 Before you begin, install the following:
- 
+
 ### 1. Node.js
 - Download from https://nodejs.org
 - Choose LTS version
 - During install, check "Add to PATH"
-- Verify installation:
-    node -v
-    npm -v
- 
+- Verify: node -v  /  npm -v
+
 ### 2. Python
 - Download from https://www.python.org/downloads/
 - During install, check "Add Python to PATH"
-- Verify installation:
-    python --version
- 
-### 3. Visual Studio Code
-- Download from https://code.visualstudio.com
-- Install recommended extensions:
-  - Playwright Test for VSCode
-  - JavaScript (ES6+)
- 
-### 4. Git
+- Verify: python --version
+
+### 3. Git
 - Download from https://git-scm.com/download/win
 - Keep all default settings during install
-- Verify installation:
-    git --version
- 
+- Verify: git --version
+
+### 4. Visual Studio Code (optional but recommended)
+- Download from https://code.visualstudio.com
+- Recommended extension: Playwright Test for VSCode
+
 ---
- 
+
 ## Installation
- 
+
 ### Step 1 - Clone the repository
-  git clone https://github.com/stephenlhs/QAAutomationProject.git
+  git clone https://github.com/<your-username>/QAAutomationProject.git
   cd QAAutomationProject
- 
+
 ### Step 2 - Fix PowerShell execution policy (Windows only)
-Open PowerShell as Administrator and run:
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
- 
+
 ### Step 3 - Install Node.js dependencies
   npm install
- 
-### Step 4 - Install Playwright browsers
-  npx playwright install
- 
+
+### Step 4 - Install Playwright browser
+  npx playwright install chromium
+
+  NOTE: If the install hangs at "100% 0.0s", add the following folder to
+  Windows Defender exclusions, then re-run:
+    C:\Users\<you>\AppData\Local\ms-playwright
+
 ### Step 5 - Install Python dependencies
-  pip install ddddocr Pillow
- 
-### Step 6 - Install OTPAuth for 2FA support
-  npm install otpauth
- 
-### Step 7 - Create environment file
-Copy .env.example to .env and fill in your values:
+  pip install ddddocr openpyxl
+
+### Step 6 - Create environment file
   copy .env.example .env
- 
-Edit .env with your credentials:
-  TEST_ENV=staging
- 
+
+  Open .env and fill in your credentials:
+
   STAGING_PLAYER_USERNAME=your-player-username
   STAGING_PLAYER_PASSWORD=your-player-password
   STAGING_BO_USERNAME=your-bo-username
   STAGING_BO_PASSWORD=your-bo-password
   STAGING_BO_2FA_SECRET=your-2fa-secret-if-enabled
- 
+
   UAT_PLAYER_USERNAME=
   UAT_PLAYER_PASSWORD=
   UAT_BO_USERNAME=
   UAT_BO_PASSWORD=
   UAT_BO_2FA_SECRET=
- 
+
   PROD_PLAYER_USERNAME=
   PROD_PLAYER_PASSWORD=
   PROD_BO_USERNAME=
   PROD_BO_PASSWORD=
   PROD_BO_2FA_SECRET=
- 
-### Step 8 - Create auth folder
-  mkdir .auth
- 
+
 ---
- 
+
 ## Environments
- 
-  Environment   Playsite                        Backoffice
-  -----------------------------------------------------------------------
-  Staging       https://stage-mem.linkv2.com/   https://stage-bo.linkv2.com/login
-  UAT           https://mem2.linkv2.com/#        https://ag-uat.linkv2.com/login
-  Production    https://998hihi.com/             https://bo.v2hotel.com/login
- 
+
+  Environment   Playsite                  Backoffice
+  --------------------------------------------------------
+  Staging       configured in .env        configured in .env
+  UAT           configured in .env        configured in .env
+  Production    configured in .env        configured in .env
+
+NOTE: Staging members have a BO prefix (e.g. player1 appears as <prefix>player1
+in BO). The prefix is set in staging/config.js. Always use the full prefixed
+name as CUSTOM_PLAYER_USERNAME for staging tests.
+
 ---
- 
+
 ## QA Dashboard (Recommended)
- 
+
 The QA Dashboard is a web UI to run tests without using the terminal.
- 
+
 ### Start the dashboard (one click)
   Double-click: start-dashboard.bat
- 
+
 This will:
   - Start Captcha Server on port 3333
   - Start QA Dashboard on port 4000
+  - Start ngrok public tunnel (check ngrok window for your HTTPS URL)
   - Open browser automatically at http://localhost:4000
- 
+
 ### Dashboard features
   - Switch environments (Staging / UAT / Prod)
   - Set custom deposit and withdrawal amounts
+  - Select paygate method (Bank / EWallet / QR / Crypto)
   - Create members with currency selection
   - Run / Stop any test with one click
   - Live test output streaming
   - Pass / Fail stats tracker
   - Captcha server online/offline indicator
- 
+  - Pause / Resume banner for paygate vendor callbacks
+
 ### Access dashboard remotely via ngrok
-  ngrok http 4000
- 
-This generates a public URL (e.g. https://xxxx.ngrok-free.dev) to share with others.
-The captcha server status check is proxied through the dashboard server, so it works correctly via ngrok.
- 
-  Requirements:
-  - Install ngrok: npm install -g ngrok
-  - Sign up at https://ngrok.com and verify your email
-  - Add authtoken: ngrok config add-authtoken YOUR_TOKEN
-  - Run: ngrok http 4000
- 
+  start-dashboard.bat starts ngrok automatically.
+  Check the ngrok window for a line like:
+    Forwarding  https://xxxx-xxxx.ngrok-free.app -> http://localhost:4000
+
+  Use that URL on your phone or any device to access the dashboard
+  and click the Approved/Rejected resume buttons remotely.
+
+### First-time ngrok setup
+  winget install ngrok.ngrok
+  ngrok update
+  ngrok config add-authtoken YOUR_TOKEN
+
+  Get your authtoken from: https://dashboard.ngrok.com/authtokens (free account)
+  NOTE: The free plan generates a new URL every time ngrok restarts.
+
 ---
- 
-## Running Tests (Manual / Terminal)
- 
+
+## Running Tests (Terminal)
+
 ### Step 1 - Start captcha server
-Open a terminal and keep it running throughout all tests:
+Open a terminal and keep it running:
   node captcha-server.js
- 
+
 ### Step 2 - Create members (first time only)
-Update MEMBERS array in tests/config.js then run:
-  npx playwright test tests/CreateMemberAndSaveSession.spec.js --headed --project=member-setup
- 
-This will:
-  - Check username availability in backoffice
-  - Create member with specified currency
-  - Update bank account (unique account number generated)
-  - Login to playsite and change password
- 
+  # Staging
+  npx playwright test AutomationProject/staging/CreateMemberAndSaveSession.spec.js --headed --project=staging-member-setup
+
+  # Specific member
+  CUSTOM_MEMBERS='[{"username":"player1","currency":"MYR"}]' npx playwright test AutomationProject/staging/CreateMemberAndSaveSession.spec.js --headed --project=staging-member-setup
+
 ### Step 3 - Run individual tests
-Open a second terminal:
- 
-  Manual Approve Deposit:
-  npx playwright test tests/ManualApproveDeposit.spec.js --headed
- 
-  Manual Reject Deposit:
-  npx playwright test tests/ManualRejectDeposit.spec.js --headed
- 
-  Manual Approve Withdrawal:
-  npx playwright test tests/ManualApproveWithdrawal.spec.js --headed
- 
-  Manual Reject Withdrawal:
-  npx playwright test tests/ManualRejectWithdrawal.spec.js --headed
- 
-  Slot Game (manual play + verify):
-  npx playwright test tests/SlotGame.spec.js --headed
- 
-  Run all tests:
-  npx playwright test --headed
- 
-### Run on specific environment:
-  # Staging (default)
-  npx playwright test --headed
- 
-  # UAT
-  $env:TEST_ENV="uat"; npx playwright test --headed
- 
-  # Production
-  $env:TEST_ENV="prod"; npx playwright test --headed
- 
+
+  Manual Approve Deposit (staging):
+  npx playwright test AutomationProject/staging/ManualApproveDeposit.spec.js --headed --project=staging
+
+  Manual Reject Deposit (staging):
+  npx playwright test AutomationProject/staging/ManualRejectDeposit.spec.js --headed --project=staging
+
+  Manual Approve Withdrawal (staging):
+  npx playwright test AutomationProject/staging/ManualApproveWithdrawal.spec.js --headed --project=staging
+
+  Manual Reject Withdrawal (staging):
+  npx playwright test AutomationProject/staging/ManualRejectWithdrawal.spec.js --headed --project=staging
+
+  Paygate Deposit (staging):
+  npx playwright test AutomationProject/staging/PaygateDepositTest.spec.js --headed --project=staging
+
+  Paygate Withdrawal (staging):
+  npx playwright test AutomationProject/staging/PaygateWithdrawTest.spec.js --headed --project=staging
+
+  Replace "staging" with "uat" or "prod" for other environments.
+
 ### Step 4 - View HTML report
   npx playwright show-report
- 
+
 ---
- 
+
 ## Project Structure
- 
+
 QAAutomationProject/
-├── tests/
-│   ├── pages/                              Page Object Model classes
-│   │   ├── LoginPage.js                    Player site login + session management
-│   │   ├── BackofficePage.js               Backoffice login (with 2FA) + approve/reject
-│   │   ├── DepositPage.js                  Deposit flow actions
-│   │   ├── WithdrawalPage.js               Withdrawal flow actions
-│   │   └── StatementPage.js                Cash history verification
+├── AutomationProject/
 │   ├── helpers/
-│   │   └── CaptchaHelper.js                Auto captcha solver via ddddocr
-│   ├── config.js                           Centralized config (reads from .env)
-│   ├── CreateMemberAndSaveSession.spec.js  Create members + bank account + change password
-│   ├── ManualApproveDeposit.spec.js        Deposit approve test
-│   ├── ManualRejectDeposit.spec.js         Deposit reject test
-│   ├── ManualApproveWithdrawal.spec.js     Withdrawal approve test
-│   ├── ManualRejectWithdrawal.spec.js      Withdrawal reject test
-│   └── SlotGame.spec.js                    Slot game manual play + statement verify
-├── .auth/                                  Saved login sessions (not in git)
-├── .env                                    Environment credentials (not in git)
-├── .env.example                            Environment template (safe to share)
-├── captcha-server.js                       Captcha solving server (port 3333) + /health endpoint
-├── solve_captcha.py                        Python captcha OCR script
-├── server.js                               QA Dashboard server (port 4000) + /captcha-status proxy
-├── index.html                              QA Dashboard UI
-├── start-dashboard.bat                     One-click launcher (starts both servers + opens browser)
-├── playwright.config.js                    Playwright configuration
-└── README.txt                              This file
- 
+│   │   └── CaptchaHelper.js          Auto captcha solver (shared across all envs)
+│   ├── staging/
+│   │   ├── fixtures/
+│   │   │   └── VaderpayC2Config.json  Paygate method config (enabled methods, amounts, credentials)
+│   │   ├── pages/                    Page Object Models
+│   │   │   ├── BackofficePage.js
+│   │   │   ├── DepositPage.js
+│   │   │   ├── LoginPage.js
+│   │   │   ├── StatementPage.js
+│   │   │   └── WithdrawalPage.js
+│   │   ├── config.js
+│   │   ├── CreateMemberAndSaveSession.spec.js
+│   │   ├── ManualApproveDeposit.spec.js
+│   │   ├── ManualRejectDeposit.spec.js
+│   │   ├── ManualApproveWithdrawal.spec.js
+│   │   ├── ManualRejectWithdrawal.spec.js
+│   │   ├── PaygateDepositTest.spec.js
+│   │   └── PaygateWithdrawTest.spec.js
+│   ├── uat/                          Same structure as staging
+│   └── prod/                         Same structure as staging
+├── reports/                          Auto-generated Excel reports per env
+├── .auth/                            Saved login sessions (not committed to git)
+├── .env                              Your credentials (not committed to git)
+├── .env.example                      Credential template (safe to share)
+├── captcha-server.js                 Captcha OCR server on port 3333
+├── server.js                         QA Dashboard backend on port 4000
+├── index.html                        Dashboard UI
+├── start-dashboard.bat               One-click launcher (all servers + ngrok)
+├── playwright.config.js              Playwright project config
+└── README.txt                        This file
+
 ---
- 
-## Test Flow
- 
-### Deposit Tests
-  1. Player logs in fresh + session saved (captcha solved once)
-  2. Check balance + rollover/target BEFORE
-  3. Submit deposit (Bank Transfer)
-  4. Verify transaction status = Pending in Cash History
-  5. Backoffice logs in fresh + session saved (with 2FA if enabled)
-  6. Check player outstanding balance in Member Account (staging only)
-  7. Search player in Cash Deposit List
-  8. Approve / Reject transaction
-  9. Player restores saved session (no captcha needed)
-  10. Verify balance + rollover/target AFTER
-  11. Assert values match expected
-  12. Generate test report
- 
-### Withdrawal Tests
-  1. Player logs in fresh + session saved
-  2. Check balance + rollover/target BEFORE
-  3. Verify rollover >= target (must be met, else generate report and stop)
-  4. Test insufficient balance error
-  5. Submit withdrawal
-  6. Verify transaction status = Pending
-  7. Backoffice approves/rejects
-  8. Player restores session
-  9. Verify balance + rollover/target AFTER
-  10. Generate test report
- 
-### Create Member Flow
-  1. Backoffice logs in (with 2FA if enabled)
-  2. Check username availability
-  3. Create member with currency
-  4. Update bank account (unique number: 12344321XXXYYY)
-  5. Login to playsite with initial password (1234ssss)
-  6. Change password to new password (ssss1234)
- 
+
+## Test Flow Summary
+
+### ManualApproveDeposit / ManualRejectDeposit
+  1.  Player logs in, records balance/rollover/target BEFORE
+  2.  Player submits deposit (Bank Transfer)
+  3.  Cash History verified — transaction shows Pending
+  4.  BO logs in, approves or rejects transaction
+  5.  Player verifies Cash History — final status shown
+  6.  Player records balance/rollover/target AFTER
+  7.  Assertions:
+        Approved -> balance increases + rollover recalculated
+        Rejected -> balance/rollover/target unchanged
+
+### ManualApproveWithdrawal / ManualRejectWithdrawal
+  1.  Player logs in, records balance/rollover/target BEFORE
+  2.  If rollover not met -> verifies rollover-gate error, exits early
+  3.  Player submits withdrawal
+  4.  BO logs in, approves or rejects transaction
+  5.  Player verifies balance/rollover/target AFTER
+  6.  Assertions:
+        Approved -> balance decreases + rollover/target resets to 0
+        Rejected -> balance/rollover/target unchanged
+
+### PaygateDepositTest (VaderPay C2)
+  1.  Player logs in, records balance/rollover/target BEFORE
+  2.  Player selects package, payment method, gateway card, submits deposit
+  3.  Cash History verified — transaction recorded as In Process
+  4.  TEST PAUSES — dashboard shows yellow banner with txNo and Approved/Rejected buttons
+  5.  Contact vendor to confirm outcome, click Approved or Rejected in dashboard
+  6.  Cash History revisited — final transaction status captured
+  7.  Player records balance/rollover/target AFTER
+  8.  BO logs in, verifies transaction in Cash Deposit List
+  9.  Assertions:
+        Approved -> balance increases + rollover recalculated
+        Rejected -> balance/rollover/target unchanged
+
+  NOTE: The site blocks a new deposit if a previous paygate transaction is still
+  Pending. Before re-running, go to BO > Cash Deposit List and reject the
+  pending transaction to clear it.
+
+### PaygateWithdrawTest (VaderPay C2)
+  1.  Player logs in, records balance/rollover/target BEFORE
+  2.  If rollover not met -> verifies rollover-gate error, exits early
+  3.  Player submits paygate withdrawal
+  4.  Cash History verified
+  5.  Player records balance/rollover/target AFTER
+  6.  BO logs in, verifies transaction in Cash Withdraw List
+
+### CreateMemberAndSaveSession
+  1.  BO creates each member account
+  2.  Sets member bank account
+  3.  Player logs in and changes password from initial to new
+  4.  Saves player + BO sessions for subsequent tests
+
 ---
- 
-## Business Logic
- 
-### Deposit Approve - Rollover/Target Calculation
- 
-  Condition                          Result
-  -----------------------------------------------------------------------
-  Balance + Outstanding <= 20        Rollover RESETS to 0 / deposit amount
-  Balance + Outstanding > 20         Rollover STACKS - target increases
- 
-### Withdrawal Approve
-  - Balance decreases by withdrawal amount
-  - Rollover/Target resets to 0/0
- 
-### Withdrawal/Deposit Reject
-  - Balance unchanged
-  - Rollover/Target unchanged
- 
+
+## VaderpayC2Config.json
+
+Located at AutomationProject/<env>/fixtures/VaderpayC2Config.json
+
+Controls which payment methods are tested:
+
+  {
+    "gatewayName": "VaderPay C2",
+    "packageName": "Stephen Turnover Package",
+    "deposit": {
+      "Bank":    { "enabled": false, "tab": "online-transfer", "amount": 50, "username": "", "password": "" },
+      "EWallet": { "enabled": false, "tab": "e-wallet",        "amount": 50, "username": "", "password": "" },
+      "QR":      { "enabled": true,  "tab": "qr-code-payment", "amount": 50, "username": "your_player", "password": "your_password" },
+      "Crypto":  { "enabled": false, "tab": "crypto-payment",  "amount": 50, "username": "", "password": "" }
+    },
+    "withdraw": {
+      "Bank":    { "enabled": true,  "amount": 50, "username": "", "password": "" },
+      "EWallet": { "enabled": false, "amount": 50, "username": "", "password": "" }
+    }
+  }
+
+Set enabled: true for the methods you want to test.
+Leave username/password blank to use the default player from .env.
+
 ---
- 
+
+## Rollover / Target Business Logic
+
+  Condition                           Result
+  --------------------------------------------------------
+  Balance + Outstanding <= 20         Rollover RESETS  (target = deposit x multiplier)
+  Balance + Outstanding > 20          Rollover STACKS  (target += deposit x multiplier)
+  Rollover already met                Rollover RESETS
+
+  Withdrawal Approved -> Balance decreases, Rollover/Target resets to 0/0
+  Withdrawal/Deposit Rejected -> Balance, Rollover, Target all unchanged
+
+---
+
 ## 2FA (Google Authenticator) Support
- 
-Backoffice accounts with Google Authenticator enabled are handled automatically.
- 
-  1. Add the 2FA secret key to .env:
-     STAGING_BO_2FA_SECRET=your-secret-key
- 
-  2. Find your secret key:
-     - Login to BO
-     - Go to Profile > Google Authenticator
-     - Copy the text code shown below the QR code
- 
-  3. The script auto-generates the 6-digit code during login
-     No manual intervention needed!
- 
-  Accounts without 2FA:
-  - Leave STAGING_BO_2FA_SECRET empty in .env
-  - Script will skip 2FA automatically
- 
+
+BO accounts with Google Authenticator are handled automatically.
+
+  1. Go to BO > Profile > Google Authenticator
+  2. Copy the text secret key shown below the QR code
+  3. Add to .env:
+       STAGING_BO_2FA_SECRET=YOUR_SECRET_KEY
+  4. Script auto-generates the 6-digit code on every login
+
+  NOTE: Leave 2FA secret blank in .env if the account has no 2FA.
+  NOTE: System clock must be accurate — TOTP codes are time-based.
+
 ---
- 
-## Google Authenticator Setup for New BO Accounts
- 
-When a new BO account is created, the system may force GA setup before accessing BO.
-The script handles this automatically if twoFASecret is provided in .env.
- 
-Steps to setup GA for a new account:
- 
-1. Login to BO manually with the new account
-2. Go to Profile > Google Authenticator
-3. Copy the text code shown below the QR code
-   Example: GE3EOQKNIRKEKWCX
- 
-4. Add to .env:
-   STAGING_BO_2FA_SECRET=GE3EOQKNIRKEKWCX
- 
-5. Scan QR code with Google Authenticator app on your phone
-6. Enter the 6-digit code shown in the app to verify
- 
-7. Script will now auto-generate 2FA codes on every login
-   No manual intervention needed!
- 
-Note:
-- Each account has a unique secret key
-- Secret key is found in Profile > Google Authenticator page
-- If secret key changes (re-setup GA), update .env accordingly
-- System clock must be accurate for TOTP codes to work
- 
----
- 
-## Reports
- 
-After each test run, a report file is generated:
- 
-  Test                    Report File
+
+## Environment Variable Overrides
+
+  Variable                    Purpose                         Example
   -----------------------------------------------------------------------
-  Approve Deposit         test-report-deposit-approve.txt
-  Reject Deposit          test-report-deposit-reject.txt
-  Approve Withdrawal      test-report-withdrawal-approve.txt
-  Reject Withdrawal       test-report-withdrawal-reject.txt
-  Rollover Not Met        test-report-withdrawal-rollover-not-met.txt
- 
-HTML report with screenshots and videos:
-  npx playwright show-report
- 
+  CUSTOM_PLAYER_USERNAME      Player to log in as             <prefix>player1
+  CUSTOM_PLAYER_PASSWORD      Player password                 your_password
+  CUSTOM_DEPOSIT_AMOUNT       Deposit amount                  50
+  CUSTOM_WITHDRAWAL_AMOUNT    Withdrawal amount               10
+  CUSTOM_MEMBERS              JSON array for CreateMember     [{"username":"p1","currency":"MYR"}]
+  DEPOSIT_PACKAGE_NAME        Deposit bonus package name      Stephen Turnover Package
+  DEPOSIT_ROLLOVER_MULTIPLIER Rollover multiplier             1
+
 ---
- 
+
 ## Troubleshooting
- 
+
 ### PowerShell execution policy error
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
- 
-### Port 3333 already in use
+
+### Port already in use
   netstat -ano | findstr :3333
-  taskkill /PID <PID number> /F
-  node captcha-server.js
- 
-### Port 4000 already in use
   netstat -ano | findstr :4000
-  taskkill /PID <PID number> /F
- 
+  taskkill /PID <PID> /F
+
 ### ddddocr not found
-  pip install ddddocr Pillow
- 
-### otpauth not found
-  npm install otpauth
- 
-### Git not recognized
-  Download and install Git from https://git-scm.com/download/win
- 
-### Session expired error
-  Each test logs in fresh automatically
-  Just make sure captcha server is running (use start-dashboard.bat)
- 
+  pip install ddddocr
+
+### openpyxl not found
+  pip install openpyxl
+
+### Playwright browser install hangs at 100% 0.0s
+  Add C:\Users\<you>\AppData\Local\ms-playwright to Windows Defender exclusions,
+  then re-run: npx playwright install chromium
+
 ### 2FA code rejected
-  - Make sure secret key in .env matches the one in BO Profile > Google Authenticator
-  - Make sure your system clock is correct (TOTP is time-based)
- 
-### ngrok email not verified
-  Go to https://dashboard.ngrok.com/user/settings and verify your email
-  Then run: ngrok config upgrade
- 
-### ngrok config version error
-  Run: ngrok config upgrade
- 
+  - Confirm 2FA secret in .env matches BO > Profile > Google Authenticator
+  - Ensure system clock is accurate
+
+### Withdrawal test hangs at submit
+  - Disable payment gateway in BO settings (manual withdrawal tests only)
+  - Cancel any pending withdrawal in BO before re-running
+
+### Deposit test fails on bank selection
+  - Set deposit page to All-in-One mode in BO settings (not Compact)
+  - Allow ~5 minutes after changing the setting
+
+### Paygate resume button not appearing
+  - Restart server (node server.js) — ANSI fix requires a fresh server process
+
+### Paygate txNo not found in BO deposit list
+  - For rejected transactions the test tries Rejected first, then Pending/InProcess
+  - If still not found, check BO manually — vendor callback may not have updated yet
+
+### ngrok authentication failed / version too old
+  - Run: ngrok update
+  - Then retry: ngrok http 4000
+
 ---
- 
-## Playwright Config Projects
- 
-  Project         Description
-  -----------------------------------------------------------------------
-  chromium        Runs all tests except CreateMemberAndSaveSession
-  member-setup    Runs CreateMemberAndSaveSession only (no dependencies)
- 
-Run specific project:
-  npx playwright test tests/CreateMemberAndSaveSession.spec.js --headed --project=member-setup
-  npx playwright test tests/ManualApproveDeposit.spec.js --headed
- 
----
- 
+
 ## Tech Stack
- 
+
   Tool              Purpose
-  -----------------------------------------------------------------------
+  --------------------------------------------------------
   Playwright        Browser automation
   Node.js           Runtime environment
-  Python            Captcha OCR + game automation
+  Python            Captcha OCR
   ddddocr           Captcha recognition
+  openpyxl          Excel report generation
   otpauth           2FA TOTP code generation
   Page Object Model Test architecture pattern
-  config.js         Centralized test configuration
   dotenv            Environment variable management
   ngrok             Remote dashboard access via public URL
- 
+
 ---

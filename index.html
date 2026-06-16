@@ -806,6 +806,34 @@
           </div>
         </div>
 
+        <div class="section-hdr">Payment Gateway</div>
+
+        <div class="test-row" id="row-paygate-deposit" onclick="selectTest('paygate-deposit', this)">
+          <div class="tr-icon">&#128179;</div>
+          <div class="tr-body">
+            <div class="tr-name">Paygate Deposit</div>
+            <div class="tr-desc">VaderPay C2 &#8594; submit &#8594; BO verify</div>
+          </div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-paygate-deposit">IDLE</span>
+            <button class="icon-btn run" id="btn-paygate-deposit" title="Run"
+              onclick="event.stopPropagation(); handleRun('paygate-deposit')">&#9654;</button>
+          </div>
+        </div>
+
+        <div class="test-row" id="row-paygate-withdraw" onclick="selectTest('paygate-withdraw', this)">
+          <div class="tr-icon">&#128184;</div>
+          <div class="tr-body">
+            <div class="tr-name">Paygate Withdraw</div>
+            <div class="tr-desc">VaderPay C2 &#8594; submit &#8594; BO verify</div>
+          </div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-paygate-withdraw">IDLE</span>
+            <button class="icon-btn run" id="btn-paygate-withdraw" title="Run"
+              onclick="event.stopPropagation(); handleRun('paygate-withdraw')">&#9654;</button>
+          </div>
+        </div>
+
         <div class="section-hdr">Members</div>
 
         <div class="test-row" id="row-create-members" onclick="selectTest('create-members', this)">
@@ -853,6 +881,18 @@
         <div class="output-label" id="outputLabel">OUTPUT</div>
         <button class="tb-btn" onclick="clearLog()">clear</button>
       </div>
+      <!-- Pause state: shown when paygate test waits for vendor callback -->
+      <div id="pauseState" style="display:none;padding:10px 14px;background:#1c1a2e;border-bottom:2px solid #f59e0b;flex-shrink:0;">
+        <div style="color:#f59e0b;font-weight:600;font-size:13px;margin-bottom:6px;">&#9646;&#9646; Waiting for vendor callback&hellip;</div>
+        <div style="color:#a0aec0;font-size:12px;margin-bottom:2px;">TxNo: <span id="pauseTxNo" style="color:#e2e8f0;font-family:monospace;"></span></div>
+        <div style="color:#a0aec0;font-size:12px;margin-bottom:8px;">Amount: <span id="pauseAmount" style="color:#e2e8f0;"></span> &nbsp;&nbsp; Method: <span id="pauseMethodName" style="color:#e2e8f0;"></span></div>
+        <div style="color:#718096;font-size:11px;margin-bottom:8px;">Ask vendor to approve or reject, then click the matching button below.</div>
+        <div style="display:flex;gap:8px;">
+          <button id="resumeApprovedBtn" onclick="resumeTest('approved')" style="padding:6px 14px;background:#276749;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10003; Approved</button>
+          <button id="resumeRejectedBtn" onclick="resumeTest('rejected')" style="padding:6px 14px;background:#9b2335;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10005; Rejected</button>
+        </div>
+      </div>
+
       <div class="output-log" id="outputLog">
         <div class="output-empty">
           <div class="output-empty-icon">&#9655;</div>
@@ -1074,6 +1114,14 @@ var TEST_CONFIG = {
   'create-members': {
     label: 'Create Members',
     fields: [], hasMembers: true
+  },
+  'paygate-deposit': {
+    label: 'Paygate Deposit',
+    fields: [], hasPaygateDepositConfig: true,
+  },
+  'paygate-withdraw': {
+    label: 'Paygate Withdraw',
+    fields: [], hasPlayer: false,
   }
 };
 
@@ -1084,6 +1132,37 @@ function makeCurrencySelect() {
     return '<option value="' + c + '"' + (c === 'MYR' ? ' selected' : '') + '>' + c + '</option>';
   }).join('');
   return '<select style="flex:1;padding:5px 6px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:11px;font-family:var(--mono);outline:none;">' + opts + '</select>';
+}
+
+// ── VaderPay C2 — available methods per currency (from BO Deposit Settings) ──
+var PAYGATE_CURRENCY_METHODS = {
+  'MYR':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }],
+  'INR':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'UPI',    tab: 'online-transfer' }],
+  'HKD':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'Ewallet',tab: 'e-wallet' }],
+  'THB':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }],
+  'VND':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
+  'BRL':    [{ label: 'QR Pay',           tab: 'qr-code-payment' }],
+  'BDT':    [{ label: 'Ewallet',          tab: 'e-wallet' }],
+  'IDR':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
+  'IDN':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
+  'PHP':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
+  'SGD':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }],
+  'AUD':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }],
+  'KHR':    [{ label: 'QR Pay',           tab: 'qr-code-payment' }],
+  'USD':    [{ label: 'QR Pay',           tab: 'qr-code-payment' }],
+  'Crypto': [{ label: 'Crypto',           tab: 'crypto-payment'  }],
+};
+
+function updatePaygateMethods() {
+  var sel      = document.getElementById('cfg-paygate-currency');
+  var container = document.getElementById('cfg-paygate-methods');
+  if (!sel || !container) return;
+  var methods = PAYGATE_CURRENCY_METHODS[sel.value] || [];
+  container.innerHTML = methods.map(function(m, i) {
+    return '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);cursor:pointer;padding:3px 0;">'
+      + '<input type="radio" name="paygate-method" value="' + m.tab + '" data-label="' + m.label + '"' + (i === 0 ? ' checked' : '') + ' style="accent-color:var(--accent);">'
+      + m.label + '</label>';
+  }).join('');
 }
 
 var selectedTest = null;
@@ -1121,6 +1200,27 @@ function selectTest(testId, rowEl) {
       + '</div></div>'
       + '<button class="add-row-btn" onclick="addMemberRow()">+ Add Member</button>';
     fields.appendChild(ms);
+  }
+
+  if (cfg.hasPaygateDepositConfig) {
+    var currencies = Object.keys(PAYGATE_CURRENCY_METHODS);
+    var currOpts = currencies.map(function(c) {
+      return '<option value="' + c + '"' + (c === 'MYR' ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+    var pg = document.createElement('div');
+    pg.innerHTML = '<div class="field-row"><span class="field-label">Currency</span>'
+      + '<select class="field-input" id="cfg-paygate-currency" onchange="updatePaygateMethods()">' + currOpts + '</select></div>'
+      + '<div class="field-row"><span class="field-label">Method</span>'
+      + '<div id="cfg-paygate-methods" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div></div>'
+      + '<div class="field-row"><span class="field-label">Amount</span>'
+      + '<input class="field-input" type="number" id="cfg-paygate-amount" value="50"></div>'
+      + '<div style="margin-top:4px;margin-bottom:6px;font-size:9.5px;font-family:var(--mono);color:var(--text-faint);letter-spacing:0.1em;text-transform:uppercase;">Player Override <span style="font-weight:400;">(optional)</span></div>'
+      + '<div class="field-row"><span class="field-label">Username</span>'
+      + '<input class="field-input" type="text" id="cfg-paygate-username" placeholder="default from config"></div>'
+      + '<div class="field-row"><span class="field-label">Password</span>'
+      + '<input class="field-input" type="password" id="cfg-paygate-password" placeholder="default from config"></div>';
+    fields.appendChild(pg);
+    updatePaygateMethods();
   }
 
   if (cfg.hasPlayer) {
@@ -1188,6 +1288,24 @@ function getConfigValues() {
     if (p && p.value.trim()) vals.customPlayerPassword = p.value.trim();
   }
 
+  if (cfg.hasPaygateDepositConfig) {
+    var pgCur    = document.getElementById('cfg-paygate-currency');
+    var pgMethod = document.querySelector('input[name="paygate-method"]:checked');
+    var pgAmt    = document.getElementById('cfg-paygate-amount');
+    var pgUser   = document.getElementById('cfg-paygate-username');
+    var pgPass   = document.getElementById('cfg-paygate-password');
+    if (pgCur && pgMethod && pgAmt) {
+      vals.paygateConfig = JSON.stringify({
+        currency: pgCur.value,
+        method:   pgMethod.dataset.label,
+        tab:      pgMethod.value,
+        amount:   parseFloat(pgAmt.value) || 50,
+        username: pgUser && pgUser.value.trim() ? pgUser.value.trim() : '',
+        password: pgPass && pgPass.value.trim() ? pgPass.value.trim() : '',
+      });
+    }
+  }
+
   return vals;
 }
 
@@ -1196,6 +1314,7 @@ function getConfigValues() {
 // ════════════════════════════════════════════
 var stats        = { total: 0, passed: 0, failed: 0 };
 var lastLogLines = [];
+var pauseTestId  = null;
 
 function handleRun(testId) {
   var row = document.getElementById('row-' + testId);
@@ -1221,12 +1340,13 @@ function runTest(testId, configVals) {
     members:              configVals.members,
     customPlayerUsername: configVals.customPlayerUsername,
     customPlayerPassword: configVals.customPlayerPassword,
+    paygateConfig:        configVals.paygateConfig,
   };
 
   setOutputLabel('RUNNING &#8212; ' + testId + ' [' + currentEnv.toUpperCase() + ']', 'running');
-  addLog('sep',  '&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;');
+  addLog('sep',  '────────────────────────────────────────');
   addLog('info', '>> ' + testId + '  env:' + currentEnv.toUpperCase() + '  ' + new Date().toLocaleTimeString('en-MY'));
-  addLog('sep',  '&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;');
+  addLog('sep',  '────────────────────────────────────────');
 
   fetch('/run', {
     method: 'POST',
@@ -1247,7 +1367,7 @@ function runTest(testId, configVals) {
           if (!line.startsWith('data: ')) return;
           try {
             var data = JSON.parse(line.slice(6));
-            if (data.type === 'done') return;
+            if (data.type === 'done') { hidePauseState(); return; }
             if (data.type === 'success') {
               setTestState(testId, 'passed');
               setOutputLabel('PASSED &#8212; ' + testId, 'passed');
@@ -1259,7 +1379,13 @@ function runTest(testId, configVals) {
               updateStats('failed');
             }
             if (data.type === 'report') { onNewReport(data.env, data.file); }
-            if (data.msg) addLog(data.type, data.msg);
+            if (data.msg && data.msg.startsWith('>> PAUSE:')) {
+              try {
+                var pd = JSON.parse(data.msg.substring('>> PAUSE:'.length));
+                showPauseState(pd, testId);
+                addLog('info', '⏸ Waiting for vendor callback — txNo: ' + (pd.txNo || '') + '  amount: ' + (pd.amount || ''));
+              } catch(e) { addLog(data.type, data.msg); }
+            } else if (data.msg) { addLog(data.type, data.msg); }
           } catch(e) {}
         });
         read();
@@ -1280,9 +1406,43 @@ function stopTest(testId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ test: testId })
   });
+  hidePauseState();
   setTestState(testId, 'idle');
   setOutputLabel('OUTPUT', '');
-  addLog('err', '&#9632; Stopped by user');
+  addLog('err', '■ Stopped by user');
+}
+
+function showPauseState(data, testId) {
+  pauseTestId = testId;
+  document.getElementById('pauseTxNo').textContent      = data.txNo    || '';
+  document.getElementById('pauseAmount').textContent    = data.amount  || '';
+  document.getElementById('pauseMethodName').textContent = data.method || '';
+  document.getElementById('resumeApprovedBtn').disabled = false;
+  document.getElementById('resumeRejectedBtn').disabled = false;
+  document.getElementById('pauseState').style.display   = '';
+}
+
+function hidePauseState() {
+  document.getElementById('pauseState').style.display = 'none';
+  pauseTestId = null;
+}
+
+function resumeTest(action) {
+  if (!pauseTestId) return;
+  document.getElementById('resumeApprovedBtn').disabled = true;
+  document.getElementById('resumeRejectedBtn').disabled = true;
+  fetch('/resume', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ test: pauseTestId, action: action })
+  }).then(function() {
+    addLog('info', '>> Resume triggered: ' + action + ' — test continuing…');
+    hidePauseState();
+  }).catch(function(err) {
+    addLog('err', '>> Resume failed: ' + err.message);
+    document.getElementById('resumeApprovedBtn').disabled = false;
+    document.getElementById('resumeRejectedBtn').disabled = false;
+  });
 }
 
 function setTestState(testId, state) {
@@ -1693,7 +1853,9 @@ var TEST_LABELS = {
   'reject-deposit':     'Reject Deposit',
   'approve-withdrawal': 'Approve Withdrawal',
   'reject-withdrawal':  'Reject Withdrawal',
-  'create-members':     'Create Members'
+  'create-members':     'Create Members',
+  'paygate-deposit':    'Paygate Deposit',
+  'paygate-withdraw':   'Paygate Withdraw'
 };
 
 var SYSTEM_PROMPT = 'You are an expert QA automation assistant embedded in a Playwright-based QA Dashboard for an iGaming platform.\n\n'
@@ -1705,7 +1867,9 @@ var SYSTEM_PROMPT = 'You are an expert QA automation assistant embedded in a Pla
   + '- reject-deposit: Player submits deposit, backoffice rejects, balance unchanged\n'
   + '- approve-withdrawal: Submit withdrawal (rollover + balance checks), BO approves, balance decreases, rollover resets\n'
   + '- reject-withdrawal: Submit withdrawal, BO rejects, balance unchanged\n'
-  + '- create-members: Create in BO + bank account + playsite password change\n\n'
+  + '- create-members: Create in BO + bank account + playsite password change\n'
+  + '- paygate-deposit: VaderPay C2 deposit — loops enabled methods, verifies in BO Cash Deposit List\n'
+  + '- paygate-withdraw: VaderPay C2 withdrawal — loops enabled methods, verifies in BO Cash Withdraw List\n\n'
   + '## Environments\n'
   + '- staging (stage-mem.linkv2.com / stage-bo.linkv2.com, prefix: x9048_)\n'
   + '- uat (mem2.linkv2.com / ag-uat.linkv2.com)\n'
