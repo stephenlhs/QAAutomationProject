@@ -812,7 +812,7 @@
           <div class="tr-icon">&#128179;</div>
           <div class="tr-body">
             <div class="tr-name">Paygate Deposit</div>
-            <div class="tr-desc">VaderPay C2 &#8594; submit &#8594; BO verify</div>
+            <div class="tr-desc">Select gateway &#8594; submit &#8594; BO verify</div>
           </div>
           <div class="tr-actions">
             <span class="badge idle" id="badge-paygate-deposit">IDLE</span>
@@ -825,12 +825,25 @@
           <div class="tr-icon">&#128184;</div>
           <div class="tr-body">
             <div class="tr-name">Paygate Withdraw</div>
-            <div class="tr-desc">VaderPay C2 &#8594; submit &#8594; BO verify</div>
+            <div class="tr-desc">Select gateway &#8594; submit &#8594; BO verify</div>
           </div>
           <div class="tr-actions">
             <span class="badge idle" id="badge-paygate-withdraw">IDLE</span>
             <button class="icon-btn run" id="btn-paygate-withdraw" title="Run"
               onclick="event.stopPropagation(); handleRun('paygate-withdraw')">&#9654;</button>
+          </div>
+        </div>
+
+        <div class="test-row" id="row-paygate-deposit-settings" onclick="selectTest('paygate-deposit-settings', this)">
+          <div class="tr-icon">&#128203;</div>
+          <div class="tr-body">
+            <div class="tr-name">Deposit Settings</div>
+            <div class="tr-desc">Min/Max validation &#8594; In Process status</div>
+          </div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-paygate-deposit-settings">IDLE</span>
+            <button class="icon-btn run" id="btn-paygate-deposit-settings" title="Run"
+              onclick="event.stopPropagation(); handleRun('paygate-deposit-settings')">&#9654;</button>
           </div>
         </div>
 
@@ -1046,6 +1059,7 @@ document.querySelectorAll('.nav-tab').forEach(function(tab) {
       if (b) b.remove();
       loadReports();
     }
+
   });
 });
 
@@ -1085,6 +1099,7 @@ function setEnv(env, btn) {
   btn.classList.add('active');
   document.getElementById('ctx-env').textContent = env.charAt(0).toUpperCase() + env.slice(1);
   addLog('info', '>> Environment: ' + env.toUpperCase());
+  loadPaygateGateways(env);
 }
 
 // ════════════════════════════════════════════
@@ -1117,11 +1132,15 @@ var TEST_CONFIG = {
   },
   'paygate-deposit': {
     label: 'Paygate Deposit',
-    fields: [], hasPaygateDepositConfig: true,
+    fields: [], hasPaygateConfig: 'deposit',
   },
   'paygate-withdraw': {
     label: 'Paygate Withdraw',
-    fields: [], hasPlayer: false,
+    fields: [], hasPaygateConfig: 'withdrawal',
+  },
+  'paygate-deposit-settings': {
+    label: 'Paygate Deposit Settings',
+    fields: [], hasPaygateConfig: 'deposit',
   }
 };
 
@@ -1134,35 +1153,118 @@ function makeCurrencySelect() {
   return '<select style="flex:1;padding:5px 6px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:11px;font-family:var(--mono);outline:none;">' + opts + '</select>';
 }
 
-// ── VaderPay C2 — available methods per currency (from BO Deposit Settings) ──
-var PAYGATE_CURRENCY_METHODS = {
-  'MYR':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }],
-  'INR':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'UPI',    tab: 'online-transfer' }],
-  'HKD':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'Ewallet',tab: 'e-wallet' }],
-  'THB':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }],
-  'VND':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
-  'BRL':    [{ label: 'QR Pay',           tab: 'qr-code-payment' }],
-  'BDT':    [{ label: 'Ewallet',          tab: 'e-wallet' }],
-  'IDR':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
-  'IDN':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
-  'PHP':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }, { label: 'Ewallet', tab: 'e-wallet' }],
-  'SGD':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }, { label: 'QR Pay', tab: 'qr-code-payment' }],
-  'AUD':    [{ label: 'Gateway Transfer', tab: 'online-transfer' }],
-  'KHR':    [{ label: 'QR Pay',           tab: 'qr-code-payment' }],
-  'USD':    [{ label: 'QR Pay',           tab: 'qr-code-payment' }],
-  'Crypto': [{ label: 'Crypto',           tab: 'crypto-payment'  }],
-};
+var paygateGateways = [];
+var _pgLoadGen = 0;
 
-function updatePaygateMethods() {
-  var sel      = document.getElementById('cfg-paygate-currency');
-  var container = document.getElementById('cfg-paygate-methods');
-  if (!sel || !container) return;
-  var methods = PAYGATE_CURRENCY_METHODS[sel.value] || [];
-  container.innerHTML = methods.map(function(m, i) {
-    return '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);cursor:pointer;padding:3px 0;">'
-      + '<input type="radio" name="paygate-method" value="' + m.tab + '" data-label="' + m.label + '"' + (i === 0 ? ' checked' : '') + ' style="accent-color:var(--accent);">'
-      + m.label + '</label>';
+function loadPaygateGateways(env) {
+  var gen = ++_pgLoadGen;
+  fetch('/fixtures?env=' + env)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(configs) {
+      if (gen !== _pgLoadGen) return;
+      paygateGateways = configs || [];
+      var typeMap = {
+        'paygate-deposit':          'deposit',
+        'paygate-withdraw':         'withdrawal',
+        'paygate-deposit-settings': 'deposit'
+      };
+      if (typeMap[selectedTest]) rebuildPaygateGatewaySelect(typeMap[selectedTest]);
+    })
+    .catch(function(err) {
+      if (gen !== _pgLoadGen) return;
+      paygateGateways = [];
+      console.warn('>> loadPaygateGateways failed:', err.message);
+      var gwSel = document.getElementById('cfg-paygate-gateway');
+      if (gwSel) {
+        gwSel.innerHTML = '<option value="">Failed to load</option>';
+        var container = document.getElementById('cfg-paygate-methods');
+        if (container) container.innerHTML =
+          '<button onclick="loadPaygateGateways(currentEnv)" style="margin-top:4px;padding:4px 10px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:4px;cursor:pointer;">&#8635; Reload gateways</button>';
+      }
+    });
+}
+
+function onPaygateGatewayChange(type) {
+  updatePaygateCurrencies(type);
+  updatePaygateMethods(type);
+}
+
+function updatePaygateCurrencies(type) {
+  var gwSel  = document.getElementById('cfg-paygate-gateway');
+  var curSel = document.getElementById('cfg-paygate-currency');
+  if (!gwSel || !curSel) return;
+  var gw = paygateGateways.find(function(g) { return g.classIdentifier === gwSel.value; });
+  if (!gw) { curSel.innerHTML = '<option value="">—</option>'; return; }
+  var section = gw[type] || {};
+  var methods = section.methods || {};
+  var currencySet = {};
+  Object.values(methods).forEach(function(m) {
+    (m.currencies || []).forEach(function(c) { currencySet[c] = true; });
+  });
+  var currencies = Object.keys(currencySet).sort();
+  var prevVal = curSel.value;
+  curSel.innerHTML = currencies.map(function(c) {
+    return '<option value="' + c + '">' + c + '</option>';
   }).join('');
+  if (prevVal && currencySet[prevVal]) {
+    curSel.value = prevVal;
+  } else if (currencySet['MYR']) {
+    curSel.value = 'MYR';
+  }
+}
+
+function rebuildPaygateGatewaySelect(type) {
+  var gwSel = document.getElementById('cfg-paygate-gateway');
+  if (!gwSel) return;
+  var prevVal = gwSel.value;
+  gwSel.innerHTML = paygateGateways.map(function(g) {
+    return '<option value="' + g.classIdentifier + '">' + g.gatewayName + '</option>';
+  }).join('');
+  if (prevVal) gwSel.value = prevVal;
+  updatePaygateCurrencies(type);
+  updatePaygateMethods(type);
+}
+
+function updatePaygateMethods(type) {
+  var gwSel     = document.getElementById('cfg-paygate-gateway');
+  var curSel    = document.getElementById('cfg-paygate-currency');
+  var container = document.getElementById('cfg-paygate-methods');
+  if (!gwSel || !container) return;
+  var gw = paygateGateways.find(function(g) { return g.classIdentifier === gwSel.value; });
+  if (!gw) {
+    container.innerHTML = '<span style="color:var(--text-faint);font-size:11px;">No gateway loaded</span>';
+    return;
+  }
+  var selectedCurrency = curSel ? curSel.value : '';
+  var section = gw[type] || {};
+  var methods = section.methods || {};
+  var amtEl = document.getElementById('cfg-paygate-amount');
+  if (amtEl && section.amount) amtEl.value = section.amount;
+  var methodNames = Object.keys(methods).filter(function(name) {
+    if (!selectedCurrency) return true;
+    return (methods[name].currencies || []).indexOf(selectedCurrency) !== -1;
+  });
+  if (methodNames.length === 0) {
+    container.innerHTML = '<span style="color:var(--text-faint);font-size:11px;">No methods support ' + selectedCurrency + '</span>';
+    return;
+  }
+  container.innerHTML =
+    '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);cursor:pointer;padding:3px 0;">'
+    + '<input type="radio" name="paygate-method" value="" checked style="accent-color:var(--accent);">All enabled</label>'
+    + methodNames.map(function(name) {
+        var m = methods[name];
+        var labelStyle = m.enabled
+          ? 'display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;padding:3px 0;'
+          : 'display:flex;align-items:center;gap:7px;font-size:12px;cursor:not-allowed;padding:3px 0;color:var(--text-faint);';
+        var inputExtra = m.enabled ? '' : ' disabled';
+        var tag = m.enabled ? '' : ' <span style="font-size:10px;">(disabled)</span>';
+        return '<label style="' + labelStyle + '">'
+          + '<input type="radio" name="paygate-method" value="' + name + '" style="accent-color:var(--accent);"' + inputExtra + '>'
+          + name + tag + '</label>';
+      }).join('');
 }
 
 var selectedTest = null;
@@ -1202,25 +1304,30 @@ function selectTest(testId, rowEl) {
     fields.appendChild(ms);
   }
 
-  if (cfg.hasPaygateDepositConfig) {
-    var currencies = Object.keys(PAYGATE_CURRENCY_METHODS);
-    var currOpts = currencies.map(function(c) {
-      return '<option value="' + c + '"' + (c === 'MYR' ? ' selected' : '') + '>' + c + '</option>';
+  if (cfg.hasPaygateConfig) {
+    var pgType = cfg.hasPaygateConfig;
+    var gwOpts = paygateGateways.map(function(g) {
+      return '<option value="' + g.classIdentifier + '">' + g.gatewayName + '</option>';
     }).join('');
     var pg = document.createElement('div');
-    pg.innerHTML = '<div class="field-row"><span class="field-label">Currency</span>'
-      + '<select class="field-input" id="cfg-paygate-currency" onchange="updatePaygateMethods()">' + currOpts + '</select></div>'
+    pg.innerHTML = '<div class="field-row"><span class="field-label">Gateway</span>'
+      + '<select class="field-input" id="cfg-paygate-gateway" onchange="onPaygateGatewayChange(\'' + pgType + '\')">'
+      + (gwOpts || '<option value="">Loading…</option>')
+      + '</select></div>'
+      + '<div class="field-row"><span class="field-label">Currency</span>'
+      + '<select class="field-input" id="cfg-paygate-currency" onchange="updatePaygateMethods(\'' + pgType + '\')">'
+      + '</select></div>'
       + '<div class="field-row"><span class="field-label">Method</span>'
       + '<div id="cfg-paygate-methods" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div></div>'
       + '<div class="field-row"><span class="field-label">Amount</span>'
-      + '<input class="field-input" type="number" id="cfg-paygate-amount" value="50"></div>'
-      + '<div style="margin-top:4px;margin-bottom:6px;font-size:9.5px;font-family:var(--mono);color:var(--text-faint);letter-spacing:0.1em;text-transform:uppercase;">Player Override <span style="font-weight:400;">(optional)</span></div>'
-      + '<div class="field-row"><span class="field-label">Username</span>'
-      + '<input class="field-input" type="text" id="cfg-paygate-username" placeholder="default from config"></div>'
-      + '<div class="field-row"><span class="field-label">Password</span>'
-      + '<input class="field-input" type="password" id="cfg-paygate-password" placeholder="default from config"></div>';
+      + '<input class="field-input" type="number" id="cfg-paygate-amount" value="50"></div>';
     fields.appendChild(pg);
-    updatePaygateMethods();
+    if (paygateGateways.length === 0) {
+      loadPaygateGateways(currentEnv);
+    } else {
+      updatePaygateCurrencies(pgType);
+      updatePaygateMethods(pgType);
+    }
   }
 
   if (cfg.hasPlayer) {
@@ -1288,22 +1395,15 @@ function getConfigValues() {
     if (p && p.value.trim()) vals.customPlayerPassword = p.value.trim();
   }
 
-  if (cfg.hasPaygateDepositConfig) {
-    var pgCur    = document.getElementById('cfg-paygate-currency');
+  if (cfg.hasPaygateConfig) {
+    var pgGw     = document.getElementById('cfg-paygate-gateway');
     var pgMethod = document.querySelector('input[name="paygate-method"]:checked');
     var pgAmt    = document.getElementById('cfg-paygate-amount');
-    var pgUser   = document.getElementById('cfg-paygate-username');
-    var pgPass   = document.getElementById('cfg-paygate-password');
-    if (pgCur && pgMethod && pgAmt) {
-      vals.paygateConfig = JSON.stringify({
-        currency: pgCur.value,
-        method:   pgMethod.dataset.label,
-        tab:      pgMethod.value,
-        amount:   parseFloat(pgAmt.value) || 50,
-        username: pgUser && pgUser.value.trim() ? pgUser.value.trim() : '',
-        password: pgPass && pgPass.value.trim() ? pgPass.value.trim() : '',
-      });
-    }
+    var pgCur    = document.getElementById('cfg-paygate-currency');
+    if (pgGw && pgGw.value)         vals.paygateGateway      = pgGw.value;
+    if (pgMethod && pgMethod.value) vals.paygateMethod        = pgMethod.value;
+    if (pgAmt && pgAmt.value)       vals.paygateAmount        = pgAmt.value;
+    if (pgCur && pgCur.value)       vals.paygateTestCurrency  = pgCur.value;
   }
 
   return vals;
@@ -1325,6 +1425,26 @@ function handleRun(testId) {
 
 function runSelectedTest() {
   if (!selectedTest) return;
+
+  var cfg = TEST_CONFIG[selectedTest];
+  if (cfg && cfg.hasPaygateConfig) {
+    var pgGw = document.getElementById('cfg-paygate-gateway');
+    if (!pgGw || !pgGw.value) {
+      addLog('err', '>> Cannot run: no gateway selected. Load gateways first.');
+      return;
+    }
+    var pgMethod = document.querySelector('input[name="paygate-method"]:checked');
+    if (pgMethod && pgMethod.value) {
+      var gw = paygateGateways.find(function(g) { return g.classIdentifier === pgGw.value; });
+      var pgType = cfg.hasPaygateConfig;
+      var methodCfg = gw && gw[pgType] && gw[pgType].methods && gw[pgType].methods[pgMethod.value];
+      if (methodCfg && !methodCfg.enabled) {
+        addLog('err', '>> Cannot run: "' + pgMethod.value + '" is disabled in the gateway config. Select a different method.');
+        return;
+      }
+    }
+  }
+
   runTest(selectedTest, getConfigValues());
 }
 
@@ -1340,7 +1460,9 @@ function runTest(testId, configVals) {
     members:              configVals.members,
     customPlayerUsername: configVals.customPlayerUsername,
     customPlayerPassword: configVals.customPlayerPassword,
-    paygateConfig:        configVals.paygateConfig,
+    paygateGateway:       configVals.paygateGateway,
+    paygateMethod:        configVals.paygateMethod,
+    paygateTestCurrency:  configVals.paygateTestCurrency,
   };
 
   setOutputLabel('RUNNING &#8212; ' + testId + ' [' + currentEnv.toUpperCase() + ']', 'running');
@@ -1761,6 +1883,7 @@ function onNewReport(env, file) {
 }
 
 loadReports();
+loadPaygateGateways('staging');
 
 // ════════════════════════════════════════════
 //  PREVIEW MODAL
@@ -1854,8 +1977,9 @@ var TEST_LABELS = {
   'approve-withdrawal': 'Approve Withdrawal',
   'reject-withdrawal':  'Reject Withdrawal',
   'create-members':     'Create Members',
-  'paygate-deposit':    'Paygate Deposit',
-  'paygate-withdraw':   'Paygate Withdraw'
+  'paygate-deposit':          'Paygate Deposit',
+  'paygate-withdraw':         'Paygate Withdraw',
+  'paygate-deposit-settings': 'Paygate Deposit Settings'
 };
 
 var SYSTEM_PROMPT = 'You are an expert QA automation assistant embedded in a Playwright-based QA Dashboard for an iGaming platform.\n\n'
@@ -1868,8 +1992,9 @@ var SYSTEM_PROMPT = 'You are an expert QA automation assistant embedded in a Pla
   + '- approve-withdrawal: Submit withdrawal (rollover + balance checks), BO approves, balance decreases, rollover resets\n'
   + '- reject-withdrawal: Submit withdrawal, BO rejects, balance unchanged\n'
   + '- create-members: Create in BO + bank account + playsite password change\n'
-  + '- paygate-deposit: VaderPay C2 deposit — loops enabled methods, verifies in BO Cash Deposit List\n'
-  + '- paygate-withdraw: VaderPay C2 withdrawal — loops enabled methods, verifies in BO Cash Withdraw List\n\n'
+  + '- paygate-deposit: Paygate deposit — select gateway (e.g. vaderpayc2), loops enabled methods, pause for vendor callback, verifies balance/rollover in BO\n'
+  + '- paygate-withdraw: Paygate withdrawal — select gateway, loops enabled methods, verifies in BO Cash Withdraw List\n'
+  + '- paygate-deposit-settings: Paygate deposit settings validation — min/max amount enforcement + In Process status check; specify gateway, method (optional), amount, currency (e.g. MYR)\n\n'
   + '## Environments\n'
   + '- staging (stage-mem.linkv2.com / stage-bo.linkv2.com, prefix: x9048_)\n'
   + '- uat (mem2.linkv2.com / ag-uat.linkv2.com)\n'

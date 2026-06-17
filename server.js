@@ -15,8 +15,9 @@ const TEST_FILES = {
   'approve-withdrawal': 'ManualApproveWithdrawal.spec.js',
   'reject-withdrawal':  'ManualRejectWithdrawal.spec.js',
   'create-members':     'CreateMemberAndSaveSession.spec.js',
-  'paygate-deposit':    'PaygateDepositTest.spec.js',
-  'paygate-withdraw':   'PaygateWithdrawTest.spec.js',
+  'paygate-deposit':          'PaygateDepositTest.spec.js',
+  'paygate-withdraw':         'PaygateWithdrawTest.spec.js',
+  'paygate-deposit-settings': 'PaygateDepositSettingsTest.spec.js',
 };
 
 const activeProcesses = {};
@@ -57,6 +58,24 @@ const server = createServer((req, res) => {
     });
     probe.on('error', () => reply(false));
     probe.setTimeout(2000, () => { probe.destroy(); reply(false); });
+    return;
+  }
+
+  // ── List fixture gateway configs for a given env ──
+  if (req.method === 'GET' && url.pathname === '/fixtures') {
+    const env = url.searchParams.get('env') || 'staging';
+    const fixturesDir = join(__dirname, 'AutomationProject', env, 'fixtures');
+    try {
+      const files = readdirSync(fixturesDir).filter(f => f.endsWith('.json'));
+      const configs = files.map(f => {
+        try { return JSON.parse(readFileSync(join(fixturesDir, f), 'utf-8')); } catch { return null; }
+      }).filter(Boolean).filter(c => c.classIdentifier);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(configs));
+    } catch {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify([]));
+    }
     return;
   }
 
@@ -176,35 +195,13 @@ const server = createServer((req, res) => {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
-      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword, paygateConfig } = JSON.parse(body);
+      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword, paygateGateway, paygateMethod, paygateTestCurrency } = JSON.parse(body);
 
       const fileName = TEST_FILES[test];
       if (!fileName) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unknown test' }));
         return;
-      }
-
-      // ── Paygate deposit: write selected method to config before running ──
-      if (test === 'paygate-deposit' && paygateConfig) {
-        try {
-          const pg = typeof paygateConfig === 'string' ? JSON.parse(paygateConfig) : paygateConfig;
-          const cfgPath = join(__dirname, 'AutomationProject', env, 'fixtures', 'VaderpayC2Config.json');
-          const vc = JSON.parse(readFileSync(cfgPath, 'utf-8'));
-          for (const k of Object.keys(vc.deposit)) vc.deposit[k].enabled = false;
-          const tabToKey = { 'online-transfer': 'Bank', 'qr-code-payment': 'QR', 'e-wallet': 'EWallet', 'crypto-payment': 'Crypto' };
-          const key = tabToKey[pg.tab] || 'Bank';
-          if (vc.deposit[key]) {
-            vc.deposit[key].enabled  = true;
-            vc.deposit[key].tab      = pg.tab;
-            vc.deposit[key].amount   = pg.amount || vc.deposit[key].amount;
-            if (pg.username) vc.deposit[key].username = pg.username;
-            if (pg.password) vc.deposit[key].password = pg.password;
-          }
-          writeFileSync(cfgPath, JSON.stringify(vc, null, 2), 'utf-8');
-        } catch (e) {
-          console.error('Failed to update VaderpayC2Config:', e.message);
-        }
       }
 
       const testFile = `AutomationProject/${env}/${fileName}`;
@@ -238,6 +235,9 @@ const server = createServer((req, res) => {
       if (members)              customEnv.CUSTOM_MEMBERS           = members;
       if (customPlayerUsername) customEnv.CUSTOM_PLAYER_USERNAME   = customPlayerUsername;
       if (customPlayerPassword) customEnv.CUSTOM_PLAYER_PASSWORD   = customPlayerPassword;
+      if (paygateGateway)        customEnv.PAYGATE_GATEWAY          = paygateGateway;
+      if (paygateMethod)         customEnv.PAYGATE_METHOD           = paygateMethod;
+      if (paygateTestCurrency)   customEnv.PAYGATE_TEST_CURRENCY    = paygateTestCurrency;
 
       const startTime = Date.now();
       const logLines  = [];   // ← collect all output for the report

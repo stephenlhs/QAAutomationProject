@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { CaptchaHelper } from '../helpers/CaptchaHelper.js';
@@ -10,7 +10,21 @@ import { WithdrawalPage } from './pages/WithdrawalPage.js';
 import { PLAYER, BACKOFFICE, DEPOSIT, URLS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CONFIG = JSON.parse(readFileSync(join(__dirname, 'fixtures', 'VaderpayC2Config.json'), 'utf-8'));
+
+// Load gateway config by classIdentifier (PAYGATE_GATEWAY env var, default: 'vaderpayc2')
+const gatewayId      = process.env.PAYGATE_GATEWAY || 'vaderpayc2';
+const methodOverride = process.env.PAYGATE_METHOD  || null;
+
+const fixturesDir = join(__dirname, 'fixtures');
+let CONFIG = null;
+for (const f of readdirSync(fixturesDir).filter(f => f.endsWith('.json'))) {
+  const c = JSON.parse(readFileSync(join(fixturesDir, f), 'utf-8'));
+  if (c.classIdentifier === gatewayId) { CONFIG = c; break; }
+}
+if (!CONFIG) {
+  console.error(`No gateway config found for classIdentifier: "${gatewayId}"`);
+  process.exit(1);
+}
 
 const screenshots = [];
 const MANIFEST_NAME = 'manifest-paygate-deposit.json';
@@ -29,7 +43,7 @@ async function snap(page, label) {
 async function waitForResumeSignal(page) {
   try { unlinkSync(RESUME_SIGNAL); } catch {}
 
-  const maxWaitMs = 30 * 60 * 1000; // 30 minutes
+  const maxWaitMs = 30 * 60 * 1000;
   const pollMs    = 3000;
   const start     = Date.now();
 
@@ -44,26 +58,31 @@ async function waitForResumeSignal(page) {
     await page.waitForTimeout(pollMs);
   }
 
-  return null; // timed out — balance check will be skipped
+  return null;
 }
 
-test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
+// Disable Playwright's built-in trace/video/screenshot — this test manages its own artifacts
+test.use({ trace: 'off', video: 'off', screenshot: 'off' });
+
+test('Paygate deposit — all enabled methods', async ({ browser }) => {
   test.setTimeout(0);
 
+  const amount = parseInt(process.env.CUSTOM_DEPOSIT_AMOUNT) || CONFIG.deposit.amount;
+
   const results = {};
-  const enabledMethods = Object.entries(CONFIG.deposit).filter(([, m]) => m.enabled);
+  const enabledMethods = Object.entries(CONFIG.deposit.methods).filter(([name, m]) => {
+    if (methodOverride) return name === methodOverride;
+    return m.enabled;
+  });
 
   if (enabledMethods.length === 0) {
-    console.log('>> No deposit methods enabled in VaderpayC2Config.json');
+    console.log(`>> No deposit methods enabled for gateway "${CONFIG.gatewayName}"`);
     console.log('>> RESULT: PASS');
     process.exit(0);
   }
 
   for (const [methodName, method] of enabledMethods) {
     console.log(`\n>> ===== Testing ${CONFIG.gatewayName} Deposit — ${methodName} =====`);
-
-    const username = method.username || PLAYER.username;
-    const password = method.password || PLAYER.password;
 
     let playerContext, playerPage, boContext, boPage;
     try {
@@ -75,7 +94,7 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       const statementPage  = new StatementPage(playerPage);
       const captcha        = new CaptchaHelper(playerPage, 'player');
 
-      await loginPage.loginAndSaveSession(username, password, captcha, PLAYER.sessionPath);
+      await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
       await snap(playerPage, `${methodName}-01 - Player Login`);
 
       // ── PART 2: Record BEFORE stats ──
@@ -90,27 +109,24 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       await playerPage.locator('.fa.fa-times').click().catch(() => {});
 
       // Select package — try button cards first, then the Package* combobox (first <select> on page)
-      const pkgBtn = playerPage.locator('button, [role="button"]').filter({ hasText: CONFIG.packageName }).first();
+      const pkgBtn = playerPage.locator('button, [role="button"]').filter({ hasText: CONFIG.deposit.packageName }).first();
       const pkgBtnVisible = await pkgBtn.isVisible({ timeout: 5000 }).catch(() => false);
       if (pkgBtnVisible) {
         await pkgBtn.click();
         await playerPage.waitForTimeout(500);
-        console.log(`>> Package selected via button: ${CONFIG.packageName}`);
+        console.log(`>> Package selected via button: ${CONFIG.deposit.packageName}`);
       } else {
-        // Package shown as <select> dropdown (combobox role) — first combobox is always the Package* select
         const pkgSelect = playerPage.getByRole('combobox').first();
         await pkgSelect.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-        await pkgSelect.selectOption({ label: CONFIG.packageName });
+        await pkgSelect.selectOption({ label: CONFIG.deposit.packageName });
         await playerPage.waitForTimeout(500);
         const chosen = await pkgSelect.locator('option:checked').innerText().catch(() => '?');
         console.log(`>> Package selected via dropdown: "${chosen}"`);
       }
-      // Wait for Vue to finish re-rendering the deposit form after package selection
       await playerPage.waitForTimeout(2500);
       await snap(playerPage, `${methodName}-03 - Package Selected`);
 
-      // Select payment method category from dropdown
-      // Find by option content (more reliable than class name which varies per account)
+      // Select payment method category
       const tabValueMap = { 'crypto-payment': 'crypto' };
       const tabValue = tabValueMap[method.tab] || method.tab;
       console.log(`>> method.tab="${method.tab}" → tabValue="${tabValue}"`);
@@ -128,10 +144,6 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
         continue;
       }
 
-      const beforeValue = await categorySelect.inputValue();
-      console.log(`>> Dropdown before: "${beforeValue}"`);
-
-      // Retry up to 2 times — package re-render can reset the select back to default
       for (let attempt = 1; attempt <= 2; attempt++) {
         await categorySelect.selectOption(tabValue);
         await playerPage.waitForTimeout(800);
@@ -150,8 +162,7 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
 
       await snap(playerPage, `${methodName}-04 - Payment Method Selected`);
 
-      // Find gateway card by data-paygate-name (partial match on each word of gatewayName)
-      // e.g. "VaderPay C2" matches data-paygate-name="VaderPay (C2)"
+      // Find gateway card
       const nameParts = CONFIG.gatewayName.split(' ');
       const nameSelector = nameParts.map(p => `[data-paygate-name*="${p}"]`).join('');
       const gatewayCard = playerPage.locator(nameSelector).first();
@@ -165,21 +176,21 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       await gatewayCard.click({ force: true });
       await playerPage.waitForTimeout(1000);
 
-      // If bank selection table appears, pick the first row (online transfer flow)
+      // Bank row (online transfer only)
       const bankRow = playerPage.locator('.redeposit__bank-table tbody tr').first();
       if (await bankRow.count()) {
         await bankRow.click({ force: true });
         console.log(`>> Bank row selected`);
       }
 
-      // Click next step button if present (online transfer flow only — QR goes straight to amount)
+      // Next step button (online transfer only)
       const nextBtn = playerPage.locator('.redeposit__step3-selection .redeposit__button').first();
       if (await nextBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
         await nextBtn.click({ force: true });
         await playerPage.waitForTimeout(1000);
       }
 
-      // Adjust amount if min/max validation error appears
+      // Fill amount (auto-adjust if min/max validation fires)
       const validateMsg = playerPage.locator('.redeposit__validate-wrapper span, .redeposit2__validate-wrapper span').first();
       if (await validateMsg.isVisible().catch(() => false)) {
         const msg = await validateMsg.innerText();
@@ -189,15 +200,14 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
           console.log(`>> Amount adjusted to ${adj} based on validation message`);
         }
       } else {
-        await playerPage.locator('#txtAmount[name="txtAmount"]').fill(String(method.amount));
+        await playerPage.locator('#txtAmount[name="txtAmount"]').fill(String(amount));
       }
 
-      // Click confirm amount (works for both redeposit__ and redeposit2__ page variants)
       await playerPage.locator('.multi-lang[data-lang="DEPOSITWITHDRAW.Confirm"]').first().click({ force: true });
       await playerPage.waitForTimeout(3000);
       await snap(playerPage, `${methodName}-05 - Amount Entered`);
 
-      // Wait for "Do you want to continue?" confirmation modal
+      // Confirmation modal
       const continueModal = playerPage.locator('.swal2-content', { hasText: 'Do you want to continue?' });
       await continueModal.waitFor({ state: 'visible', timeout: 120000 }).catch(() => {});
       await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true });
@@ -213,7 +223,7 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       if (await qrBody.isVisible().catch(() => false)) {
         depositResult = 'success-qr';
         await snap(playerPage, `${methodName}-06 - QR Code Displayed`);
-        console.log(`>> QR code displayed — ${CONFIG.gatewayName} ${methodName} submission success`);
+        console.log(`>> QR code displayed — submission success`);
         await playerPage.locator('.redeposit__a9wallet-body .multi-lang[data-lang="GAMESPAGE.Close"]').click({ force: true }).catch(() => {});
       } else if (await errModal.isVisible().catch(() => false)) {
         depositError = (await errModal.innerText().catch(() => '')).trim();
@@ -224,10 +234,10 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       } else {
         depositResult = 'success-redirect';
         await snap(playerPage, `${methodName}-06 - Redirected to Vendor`);
-        console.log(`>> Redirected to vendor — ${CONFIG.gatewayName} ${methodName} submission success`);
+        console.log(`>> Redirected to vendor — submission success`);
       }
 
-      // ── Early exit if deposit was blocked (e.g. pending ticket exists) ──
+      // Early exit if deposit blocked (e.g. pending ticket exists)
       if (depositResult === 'error') {
         console.log(`>> Deposit submission blocked — ending ${methodName}`);
         console.log(`>> Error: ${depositError}`);
@@ -246,7 +256,7 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       const tx = await statementPage.getLatestTransaction();
       console.log(`>> Transaction: ${tx.txNo} | Status: ${tx.status} | Amount: ${tx.amount}`);
 
-      // ── PART 5: Pause — signal dashboard and wait for vendor callback ──
+      // ── PART 5: Pause — wait for vendor callback ──
       console.log(`>> PAUSE:${JSON.stringify({ txNo: tx.txNo, amount: tx.amount, method: methodName })}`);
       const resumeAction = await waitForResumeSignal(playerPage);
 
@@ -255,14 +265,12 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       if (resumeAction) {
         console.log(`>> Resume signal received: ${resumeAction}`);
 
-        // Cash History — final transaction status after vendor action
         await playerPage.goto(`${URLS.playsite}user/cash-history`);
         await playerPage.waitForTimeout(2000);
         const txAfter = await statementPage.getLatestTransaction();
         await snap(playerPage, `${methodName}-08 - Cash History After`);
         console.log(`>> Cash History (after) — txNo: ${txAfter.txNo} | Status: ${txAfter.status} | Amount: ${txAfter.amount}`);
 
-        // Stats After — balance / rollover / target
         await withdrawalPage.navigate();
         after = await withdrawalPage.getStats('after');
         await snap(playerPage, `${methodName}-09 - Stats After`);
@@ -287,32 +295,47 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       await backoffice.closeAnnouncements();
       await snap(boPage, `${methodName}-10 - BO Login`);
 
-      // For approved: fetch outstanding balance (used in rollover calculation)
       if (resumeAction === 'approved') {
-        outstanding = await backoffice.getMemberOutstandingBalance(username);
+        outstanding = await backoffice.getMemberOutstandingBalance(PLAYER.username);
       }
 
-      // Navigate to Cash Deposit List via direct URL (avoids sidebar toggle conflicts)
       await boPage.goto(`${backoffice.boBase}/dashboard/cash/deposit-list`, { waitUntil: 'domcontentloaded' });
       await boPage.waitForTimeout(1500);
 
-      // Search — try expected status first; for rejected fall back to Pending/InProcess
-      // (vendor callback to BO may not have processed yet when we check)
-      const boUsername    = `${URLS.memberPrefix || ''}${username.replace(/^x9048_/, '')}`;
-      const statusOptions = resumeAction === 'approved'
-        ? ['Approved']
-        : ['Rejected', 'Pending/InProcess'];
+      const boUsername     = `${URLS.memberPrefix || ''}${PLAYER.username.replace(/^x9048_/, '')}`;
+      const expectedStatus = resumeAction === 'approved' ? 'Approved' : 'Rejected';
 
-      let txFound = false;
-      for (const statusFilter of statusOptions) {
+      const searchBO = async () => {
         await boPage.locator('input[name="txtUserName"]').fill(boUsername);
-        await boPage.locator('select[name="ddlFilterStatus"]').selectOption(statusFilter).catch(() => {});
+        await boPage.locator('select[name="ddlFilterStatus"]').selectOption(expectedStatus).catch(() => {});
         await boPage.locator('button[type="submit"]:has-text("Search")').click({ force: true });
         await boPage.waitForTimeout(2000);
-        const txRow = boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`);
-        txFound = (await txRow.count()) > 0;
-        console.log(`>> BO search status="${statusFilter}" — txNo "${tx.txNo}" found: ${txFound}`);
-        if (txFound) break;
+        return (await boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`).count()) > 0;
+      };
+
+      let txFound = await searchBO();
+      console.log(`>> BO search status="${expectedStatus}" date=default — txNo "${tx.txNo}" found: ${txFound}`);
+
+      if (!txFound) {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const fmtDate = (d) => `${pad(d.getMonth()+1)}/${pad(d.getDate())}/${d.getFullYear()}`;
+        const startD = new Date(now);
+        startD.setDate(startD.getDate() - 1);
+        const boStartDate = `${fmtDate(startD)} 00:00:00`;
+        const boEndDate   = `${fmtDate(now)} 23:59:59`;
+
+        const dateInputs = boPage.locator('.input-group:has(.fa-calendar) input');
+        if (await dateInputs.count() >= 2) {
+          await dateInputs.first().fill(boStartDate);
+          await dateInputs.nth(1).fill(boEndDate);
+          await boPage.locator('.ibox-title, h2, h3').first().click({ force: true }).catch(() => {});
+          await boPage.waitForTimeout(500);
+          console.log(`>> Date range extended: ${boStartDate} → ${boEndDate}`);
+        }
+
+        txFound = await searchBO();
+        console.log(`>> BO search status="${expectedStatus}" date=extended — txNo "${tx.txNo}" found: ${txFound}`);
       }
       await snap(boPage, `${methodName}-11 - BO Deposit List`);
 
@@ -324,7 +347,7 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
       if (resumeAction && after) {
         if (resumeAction === 'approved') {
           const txBonusAmount = parseFloat(tx.bonus) || 0;
-          const totalCredit   = method.amount + txBonusAmount;
+          const totalCredit   = amount + txBonusAmount;
           const effectiveBal  = before.balance + outstanding.total;
           const rolloverInc   = totalCredit * DEPOSIT.rolloverMultiplier;
 
@@ -370,18 +393,13 @@ test('VaderpayC2 deposit — all enabled methods', async ({ browser }) => {
     }
   }
 
-  // ── Final summary ──
-  console.log('\n>> ===== VaderpayC2 Deposit Summary =====');
+  console.log('\n>> ===== Paygate Deposit Summary =====');
   for (const [m, r] of Object.entries(results)) {
     console.log(`>>   ${m}: ${r}`);
   }
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
 
   const allPassed = Object.values(results).every(r => r === 'PASS' || r.startsWith('SKIP'));
-  if (allPassed) {
-    console.log('>> RESULT: PASS');
-  } else {
-    console.log('>> RESULT: FAIL');
-  }
+  console.log(allPassed ? '>> RESULT: PASS' : '>> RESULT: FAIL');
   process.exit(0);
 });

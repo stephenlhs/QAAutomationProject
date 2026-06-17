@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { CaptchaHelper } from '../helpers/CaptchaHelper.js';
@@ -10,10 +10,25 @@ import { StatementPage } from './pages/StatementPage.js';
 import { PLAYER, BACKOFFICE, URLS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CONFIG = JSON.parse(readFileSync(join(__dirname, 'fixtures', 'VaderpayC2Config.json'), 'utf-8'));
+
+// Load gateway config by classIdentifier (PAYGATE_GATEWAY env var, default: 'vaderpayc2')
+const gatewayId      = process.env.PAYGATE_GATEWAY || 'vaderpayc2';
+const methodOverride = process.env.PAYGATE_METHOD  || null;
+
+const fixturesDir = join(__dirname, 'fixtures');
+let CONFIG = null;
+for (const f of readdirSync(fixturesDir).filter(f => f.endsWith('.json'))) {
+  const c = JSON.parse(readFileSync(join(fixturesDir, f), 'utf-8'));
+  if (c.classIdentifier === gatewayId) { CONFIG = c; break; }
+}
+if (!CONFIG) {
+  console.error(`No gateway config found for classIdentifier: "${gatewayId}"`);
+  process.exit(1);
+}
 
 const screenshots = [];
 const MANIFEST_NAME = 'manifest-paygate-withdraw.json';
+
 async function snap(page, label) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
@@ -24,23 +39,28 @@ async function snap(page, label) {
   console.log(`>> Screenshot: ${label}`);
 }
 
-test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
+// Disable Playwright's built-in trace/video/screenshot — this test manages its own artifacts
+test.use({ trace: 'off', video: 'off', screenshot: 'off' });
+
+test('Paygate withdraw — all enabled methods', async ({ browser }) => {
   test.setTimeout(0);
 
+  const amount = parseInt(process.env.CUSTOM_WITHDRAWAL_AMOUNT) || CONFIG.withdrawal.amount;
+
   const results = {};
-  const enabledMethods = Object.entries(CONFIG.withdraw).filter(([, m]) => m.enabled);
+  const enabledMethods = Object.entries(CONFIG.withdrawal.methods).filter(([name, m]) => {
+    if (methodOverride) return name === methodOverride;
+    return m.enabled;
+  });
 
   if (enabledMethods.length === 0) {
-    console.log('>> No withdraw methods enabled in VaderpayC2Config.json');
+    console.log(`>> No withdrawal methods enabled for gateway "${CONFIG.gatewayName}"`);
     console.log('>> RESULT: PASS');
     process.exit(0);
   }
 
-  for (const [methodName, method] of enabledMethods) {
+  for (const [methodName] of enabledMethods) {
     console.log(`\n>> ===== Testing ${CONFIG.gatewayName} Withdraw — ${methodName} =====`);
-
-    const username = method.username || PLAYER.username;
-    const password = method.password || PLAYER.password;
 
     let playerContext, playerPage, boContext, boPage;
     try {
@@ -52,7 +72,7 @@ test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
       const statementPage  = new StatementPage(playerPage);
       const captcha        = new CaptchaHelper(playerPage, 'player');
 
-      await loginPage.loginAndSaveSession(username, password, captcha, PLAYER.sessionPath);
+      await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
       await snap(playerPage, `${methodName}-01 - Player Login`);
 
       // ── PART 2: Record BEFORE stats ──
@@ -64,7 +84,7 @@ test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
       // ── Rollover gate check ──
       if (before.rollover < before.target) {
         console.log(`>> Rollover not met: ${before.rollover} < ${before.target}`);
-        await withdrawalPage.verifyRolloverError(method.amount);
+        await withdrawalPage.verifyRolloverError(amount);
         await snap(playerPage, `${methodName}-03 - Rollover Gate`);
         results[methodName] = 'SKIP: rollover not met';
         await playerPage.close({ runBeforeUnload: false }).catch(() => {});
@@ -77,13 +97,10 @@ test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
       await withdrawalPage.navigate();
       await snap(playerPage, `${methodName}-03 - Withdrawal Form`);
 
-      // Enter amount and submit
-      // VaderpayC2 uses standard withdrawal input
-      await playerPage.locator('input.field__value').first().fill(String(method.amount));
+      await playerPage.locator('input.field__value').first().fill(String(amount));
       await playerPage.locator('.multi-lang[data-lang="DEPOSITWITHDRAW.Submit"]').first().click({ force: true });
       await playerPage.waitForTimeout(2000);
 
-      // "Do you want to continue?" confirmation
       const continueModal = playerPage.locator('.swal2-content', { hasText: 'Do you want to continue?' });
       await continueModal.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {});
       await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true });
@@ -138,47 +155,43 @@ test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
       const boCaptcha  = new CaptchaHelper(boPage, 'backoffice');
 
       await backoffice.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, boCaptcha, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
+      await backoffice.closeExtraTabs();
+      await backoffice.closeAnnouncements();
       await snap(boPage, `${methodName}-07 - BO Login`);
 
-      // Navigate to Cash Withdraw List
-      await boPage.locator('.nav-label', { hasText: 'Cash Transactions' }).click({ force: true });
-      await boPage.locator('.in a', { hasText: 'Cash Withdraw List' }).click({ force: true });
+      // Navigate to Cash Withdraw List via direct URL (avoids sidebar toggle conflicts)
+      await boPage.goto(`${backoffice.boBase}/dashboard/cash/withdraw-list`, { waitUntil: 'domcontentloaded' });
       await boPage.waitForTimeout(1500);
 
-      // Search for player
-      const boUsername = `${URLS.memberPrefix || ''}${username.replace(/^x9048_/, '')}`;
-      await boPage.locator('input[name="txtUserName"]').fill(boUsername);
-      // Select status based on what we received
+      const boUsername = `${URLS.memberPrefix || ''}${PLAYER.username.replace(/^x9048_/, '')}`;
       const statusFilter = tx.status.toLowerCase().includes('pending') || tx.status.toLowerCase().includes('inprocess')
         ? 'Pending/InProcess'
         : tx.status.toLowerCase().includes('approved')
           ? 'Approved'
           : 'Pending/InProcess';
+
+      await boPage.locator('input[name="txtUserName"]').fill(boUsername);
       await boPage.locator('select[name="ddlFilterStatus"]').selectOption(statusFilter).catch(() => {});
       await boPage.locator('button[type="submit"]:has-text("Search")').click({ force: true });
       await boPage.waitForTimeout(2000);
       await snap(boPage, `${methodName}-08 - BO Withdraw List`);
 
-      // Find the transaction row by txNo
-      const txRow = boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`);
+      const txRow   = boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`);
       const txFound = (await txRow.count()) > 0;
       console.log(`>> BO withdraw list — txNo "${tx.txNo}" found: ${txFound}`);
 
-      // If found, check the paygate column for VaderpayC2
       let paygateVerified = false;
       if (txFound) {
         const txRowParent = boPage.locator(`.table-responsive tbody tr:has(td:has-text("${tx.txNo}"))`).first();
-        // Click edit to open detail modal and check paygate
         await txRowParent.locator('i.fa.fa-edit').click({ force: true });
         await boPage.waitForTimeout(2000);
 
         const paygateLabel = boPage.locator('form[name="ticketDetailForm"] .modal-body .form-group label:has-text("PayGate")').locator('..').locator('label').last();
         const paygateText  = await paygateLabel.innerText().catch(() => '');
-        paygateVerified = paygateText.toLowerCase().includes('vader');
-        console.log(`>> BO paygate on transaction: "${paygateText}" — contains VaderPay: ${paygateVerified}`);
+        paygateVerified = paygateText.toLowerCase().includes(CONFIG.classIdentifier.replace(/[^a-z]/g, '').substring(0, 5));
+        console.log(`>> BO paygate on transaction: "${paygateText}" — verified: ${paygateVerified}`);
         await snap(boPage, `${methodName}-09 - BO Transaction Detail`);
 
-        // Close modal
         await boPage.locator('form[name="ticketDetailForm"] .modal-header button.close').click({ force: true }).catch(() => {});
         await boPage.waitForTimeout(500);
       }
@@ -188,7 +201,7 @@ test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
       boContext = null;
 
       // ── PART 7: Validate balance / rollover / target ──
-      const expectedBalance = before.balance - method.amount;
+      const expectedBalance = before.balance - amount;
 
       if (tx.status.toLowerCase().includes('approved')) {
         expect(after.balance).toBeCloseTo(expectedBalance, 1);
@@ -201,7 +214,6 @@ test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
         expect(after.target).toBeCloseTo(before.target, 1);
         console.log(`>> Balance/Rollover/Target assertions: Rejected path ✅`);
       } else {
-        // Pending/InProcess — balance may or may not be deducted yet
         console.log(`>> Transaction status "${tx.status}" — balance assertion skipped for pending state`);
       }
 
@@ -219,18 +231,13 @@ test('VaderpayC2 withdraw — all enabled methods', async ({ browser }) => {
     }
   }
 
-  // ── Final summary ──
-  console.log('\n>> ===== VaderpayC2 Withdraw Summary =====');
+  console.log('\n>> ===== Paygate Withdraw Summary =====');
   for (const [m, r] of Object.entries(results)) {
     console.log(`>>   ${m}: ${r}`);
   }
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
 
   const allPassed = Object.values(results).every(r => r === 'PASS' || r.startsWith('SKIP'));
-  if (allPassed) {
-    console.log('>> RESULT: PASS');
-  } else {
-    console.log('>> RESULT: FAIL');
-  }
+  console.log(allPassed ? '>> RESULT: PASS' : '>> RESULT: FAIL');
   process.exit(0);
 });

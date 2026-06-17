@@ -1,0 +1,117 @@
+{
+  "gatewayName": "VaderPay C2",
+  "classIdentifier": "vaderpayc2",
+  "deposit": {
+    "packageName": "Stephen Turnover Package",
+    "amount": 50,
+    "methods": {
+      "Bank": {
+        "enabled": false,
+        "tab": "online-transfer",
+        "currencies": ["AUD", "HKD", "IDR", "JPY", "MXN", "MYR", "PHP", "SGD", "VND"],
+        "limits": {
+          "AUD": { "min": 10,    "max": 5000     },
+          "HKD": { "min": 50,    "max": 30000    },
+          "IDR": { "min": 10000, "max": 500000   },
+          "JPY": { "min": 500,   "max": 300000   },
+          "MXN": { "min": 50,    "max": 10000    },
+          "MYR": { "min": 30,    "max": 30000    },
+          "PHP": { "min": 200,   "max": 100000   },
+          "SGD": { "min": 10,    "max": 10000    },
+          "VND": { "min": 50000, "max": 10000000 }
+        }
+      },
+      "EWallet": {
+        "enabled": false,
+        "tab": "e-wallet",
+        "currencies": ["BDT", "HKD", "IDR", "PHP", "PKR", "VND"],
+        "limits": {
+          "BDT": { "min": 200,   "max": 30000    },
+          "HKD": { "min": 50,    "max": 30000    },
+          "IDR": { "min": 10000, "max": 500000   },
+          "PHP": { "min": 200,   "max": 100000   },
+          "PKR": { "min": 500,   "max": 50000    },
+          "VND": { "min": 50000, "max": 10000000 }
+        }
+      },
+      "QR": {
+        "enabled": true,
+        "tab": "qr-code-payment",
+        "currencies": ["BRL", "IDR", "INR", "KHR", "MYR", "PHP", "SGD", "THB", "USD", "VND"],
+        "limits": {
+          "BRL": { "min": 10,    "max": 5000     },
+          "IDR": { "min": 10000, "max": 500000   },
+          "INR": { "min": 100,   "max": 100000   },
+          "KHR": { "min": 5000,  "max": 2000000  },
+          "MYR": { "min": 10,    "max": 30000    },
+          "PHP": { "min": 200,   "max": 100000   },
+          "SGD": { "min": 10,    "max": 10000    },
+          "THB": { "min": 100,   "max": 50000    },
+          "USD": { "min": 5,     "max": 5000     },
+          "VND": { "min": 50000, "max": 10000000 }
+        }
+      },
+      "Crypto": {
+        "enabled": false,
+        "tab": "crypto-payment",
+        "currencies": ["MYR", "IDR", "THB", "USD", "VND", "INR", "HKD"],
+        "limits": {
+          "MYR": { "min": 10,    "max": 30000    },
+          "IDR": { "min": 10000, "max": 500000   },
+          "THB": { "min": 100,   "max": 50000    },
+          "USD": { "min": 5,     "max": 5000     },
+          "VND": { "min": 50000, "max": 10000000 },
+          "INR": { "min": 100,   "max": 100000   },
+          "HKD": { "min": 50,    "max": 30000    }
+        }
+      }
+    }
+  },
+  "withdrawal": {
+    "amount": 50,
+    "methods": {
+      "Bank": {
+        "enabled": true,
+        "currencies": ["AUD", "BRL", "HKD", "KHR", "IDR", "INR", "MYR", "PHP", "SGD", "THB", "USD", "VND", "ZAR"],
+        "limits": {
+          "AUD": { "min": 20,     "max": 5000     },
+          "BRL": { "min": 20,     "max": 5000     },
+          "HKD": { "min": 100,    "max": 30000    },
+          "KHR": { "min": 20000,  "max": 5000000  },
+          "IDR": { "min": 50000,  "max": 5000000  },
+          "INR": { "min": 500,    "max": 100000   },
+          "MYR": { "min": 50,     "max": 50000    },
+          "PHP": { "min": 500,    "max": 100000   },
+          "SGD": { "min": 20,     "max": 10000    },
+          "THB": { "min": 500,    "max": 50000    },
+          "USD": { "min": 10,     "max": 5000     },
+          "VND": { "min": 200000, "max": 50000000 },
+          "ZAR": { "min": 100,    "max": 20000    }
+        }
+      },
+      "EWallet": {
+        "enabled": false,
+        "currencies": ["BDT", "HKD", "IDR", "PKR"],
+        "limits": {
+          "BDT": { "min": 200,   "max": 30000   },
+          "HKD": { "min": 100,   "max": 30000   },
+          "IDR": { "min": 50000, "max": 5000000 },
+          "PKR": { "min": 500,   "max": 50000   }
+        }
+      },
+      "Crypto": {
+        "enabled": false,
+        "currencies": ["MYR", "IDR", "THB", "USD", "VND", "INR", "HKD"],
+        "limits": {
+          "MYR": { "min": 50,     "max": 50000    },
+          "IDR": { "min": 50000,  "max": 5000000  },
+          "THB": { "min": 500,    "max": 50000    },
+          "USD": { "min": 10,     "max": 5000     },
+          "VND": { "min": 200000, "max": 50000000 },
+          "INR": { "min": 500,    "max": 100000   },
+          "HKD": { "min": 100,    "max": 30000    }
+        }
+      }
+    }
+  }
+}
