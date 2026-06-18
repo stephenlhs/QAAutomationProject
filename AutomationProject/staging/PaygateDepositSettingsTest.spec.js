@@ -109,33 +109,56 @@ async function navigateToAmountStep(page, config, method) {
 
 // Enter an amount and check whether validation fires (returns { passed, message })
 async function checkAmountValidation(page, amt, label) {
-  await page.locator('#txtAmount[name="txtAmount"]').fill(String(amt));
-  await page.waitForTimeout(500);
-
-  // Some platforms fire inline validation without needing a Confirm click
   const validateSelector = '.redeposit__validate-wrapper span, .redeposit2__validate-wrapper span';
-  const inlineVisible = await page.locator(validateSelector).first().isVisible().catch(() => false);
-  if (!inlineVisible) {
-    await page.locator('.multi-lang[data-lang="DEPOSITWITHDRAW.Confirm"]').first().click({ force: true });
-    await page.waitForTimeout(2000);
+  const confirmBtn       = page.locator('.multi-lang[data-lang="DEPOSITWITHDRAW.Confirm"]').first();
+  const continueModal    = page.locator('.swal2-content', { hasText: 'Do you want to continue?' });
+  const validateMsg      = page.locator(validateSelector).first();
+  const swal2Modal       = page.locator('.swal2-modal');
+
+  await page.locator('#txtAmount[name="txtAmount"]').fill(String(amt));
+  await page.waitForTimeout(800);
+
+  // Check for immediate inline validation after fill
+  if (await validateMsg.isVisible().catch(() => false)) {
+    const msg = (await validateMsg.innerText().catch(() => '')).trim();
+    return { passed: true, message: `${label} (inline): "${msg}"` };
   }
 
-  const continueModal = page.locator('.swal2-content', { hasText: 'Do you want to continue?' });
-  const validateMsg   = page.locator(validateSelector).first();
-  const swal2Modal    = page.locator('.swal2-modal');
+  // Click Confirm and wait for any response
+  await confirmBtn.click({ force: true });
+  await page.locator('.swal2-popup, .redeposit__validate-wrapper span, .redeposit2__validate-wrapper span')
+    .first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(300);
 
-  if (await continueModal.isVisible().catch(() => false)) {
-    // Amount bypassed validation — dismiss and report failure
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
-    return { passed: false, message: `${label}: validation BYPASSED — continue modal appeared for amount ${amt}` };
-  }
-
+  // Client-side inline validation appeared
   if (await validateMsg.isVisible().catch(() => false)) {
     const msg = (await validateMsg.innerText().catch(() => '')).trim();
     return { passed: true, message: `${label}: "${msg}"` };
   }
 
+  // Gateway shows "Do you want to continue?" for all amounts — proceed and check server response
+  if (await continueModal.isVisible().catch(() => false)) {
+    await page.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true });
+    await page.locator('.swal2-popup').first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(300);
+
+    if (await swal2Modal.isVisible().catch(() => false)) {
+      const msg = (await swal2Modal.locator('.swal2-content').innerText().catch(() => '')).trim();
+      await page.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true }).catch(() => {});
+      await page.waitForTimeout(500);
+      return { passed: true, message: `${label} (server rejected): "${msg}"` };
+    }
+
+    // Server accepted the invalid amount — close QR if shown
+    const qrBody = page.locator('.redeposit__a9wallet-body');
+    if (await qrBody.isVisible().catch(() => false)) {
+      await qrBody.locator('.multi-lang[data-lang="GAMESPAGE.Close"]').click({ force: true }).catch(() => {});
+      await page.waitForTimeout(1000);
+    }
+    return { passed: false, message: `${label}: validation BYPASSED — amount ${amt} accepted by server` };
+  }
+
+  // Error modal appeared directly (no continue prompt)
   if (await swal2Modal.isVisible().catch(() => false)) {
     const msg = (await swal2Modal.locator('.swal2-content').innerText().catch(() => '')).trim();
     await page.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true }).catch(() => {});

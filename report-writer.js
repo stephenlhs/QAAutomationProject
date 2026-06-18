@@ -12,13 +12,36 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function writeReport({ testName, env, result, durationMs, depositAmount, withdrawalAmount, members, logLines }) {
+  // ── Read transaction summary early so we can embed method+action in the filename ──
+  let txnDataEarly = null;
+  const txnManifestNamesEarly = [`manifest-${testName}-txn.json`, 'manifest-paygate-deposit-txn.json'];
+  for (const name of txnManifestNamesEarly) {
+    const p1 = join(__dirname, '.screenshots-tmp', name);
+    const p2 = join(process.cwd(), '.screenshots-tmp', name);
+    const tp = existsSync(p1) ? p1 : existsSync(p2) ? p2 : null;
+    if (tp) {
+      try { txnDataEarly = JSON.parse(readFileSync(tp, 'utf-8')); } catch {}
+      break;
+    }
+  }
+
   // ── Build filename ──
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   const timeStr = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
   const resultTag = result === 'passed' ? 'PASS' : 'FAIL';
-  const filename = `${testName}_${dateStr}_${timeStr}_${resultTag}.xlsx`;
+
+  // Append method and action when available (e.g. paygate-deposit_QR_approved_..._PASS.xlsx)
+  let runLabel = '';
+  if (txnDataEarly) {
+    const method = (txnDataEarly.method || '').replace(/\s+/g, '-');
+    const action = (txnDataEarly.txStatus || '').replace(/\s+/g, '-');
+    if (method) runLabel += `_${method}`;
+    if (action) runLabel += `_${action}`;
+  }
+
+  const filename = `${testName}${runLabel}_${dateStr}_${timeStr}_${resultTag}.xlsx`;
 
   // ── Ensure folder exists ──
   const folder = join(__dirname, 'reports', env);
@@ -44,6 +67,20 @@ export async function writeReport({ testName, env, result, durationMs, depositAm
     console.log(`>> Manifest read error: ${e.message}`);
   }
 
+  // ── Transaction summary already read above (txnDataEarly) ──
+  // Delete the file now that we have the data
+  let txnData = txnDataEarly;
+  if (txnData) {
+    const txnManifestNames = [`manifest-${testName}-txn.json`, 'manifest-paygate-deposit-txn.json'];
+    for (const name of txnManifestNames) {
+      const p1 = join(__dirname, '.screenshots-tmp', name);
+      const p2 = join(process.cwd(), '.screenshots-tmp', name);
+      const tp = existsSync(p1) ? p1 : existsSync(p2) ? p2 : null;
+      if (tp) { try { unlinkSync(tp); } catch {} break; }
+    }
+    console.log(`>> Txn data: method=${txnData.method}, status=${txnData.txStatus}`);
+  }
+
   // ── Build payload for Python ──
   const payload = {
     outPath,
@@ -57,6 +94,7 @@ export async function writeReport({ testName, env, result, durationMs, depositAm
       withdrawalAmount: withdrawalAmount || '—',
       members:          members          || '—',
     },
+    txnData:         txnData         || null,
     logLines:        logLines        || [],
     screenshotPaths: screenshotPaths || [],
   };

@@ -226,10 +226,18 @@
       flex-shrink: 0; display: none;
     }
     .config-drawer.open { display: block; }
+    .config-drawer.collapsed #configFields { display: none; }
     .config-title {
       font-size: 10px; font-weight: 700; font-family: var(--mono);
       color: var(--text-faint); letter-spacing: 0.1em;
       text-transform: uppercase; margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+      user-select: none;
+    }
+    .config-title:hover { color: var(--text); }
+    .config-collapse-btn {
+      font-size: 10px; line-height: 1; padding: 0; background: none; border: none;
+      color: inherit; cursor: pointer;
     }
     .field-row {
       display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
@@ -720,11 +728,12 @@
 <div class="header">
   <div class="logo">
     <div class="logo-icon">&#9889;</div>
-    <div class="logo-text">QA Dashboard <span>/ iGaming</span></div>
+    <div class="logo-text">QA Dashboard</div>
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" data-tab="runner">&#129514; Test Runner</div>
-    <div class="nav-tab" data-tab="terminal">&#129302; Claude Terminal</div>
+    <!-- Claude Terminal tab hidden temporarily — restore by removing comment tags -->
+    <!-- <div class="nav-tab" data-tab="terminal">&#129302; Claude Terminal</div> -->
     <div class="nav-tab" data-tab="reports">&#128202; Reports</div>
   </div>
   <div class="captcha-pill offline" id="captchaPill">
@@ -866,9 +875,12 @@
 
       <!-- Config drawer -->
       <div class="config-drawer" id="configDrawer">
-        <div class="config-title" id="configTitle">CONFIG</div>
+        <div class="config-title" id="configTitle" onclick="toggleConfigDrawer()">
+          <span id="configTitleText">CONFIG</span>
+          <button class="config-collapse-btn" id="configCollapseBtn" title="Collapse">&#9650;</button>
+        </div>
         <div id="configFields"></div>
-        <button class="run-main-btn" id="runMainBtn" onclick="runSelectedTest()">&#9654; Run Test</button>
+        <button class="run-main-btn" id="runMainBtn" onclick="runSelectedTest()">Run Test</button>
       </div>
 
       <!-- Stats -->
@@ -1132,15 +1144,15 @@ var TEST_CONFIG = {
   },
   'paygate-deposit': {
     label: 'Paygate Deposit',
-    fields: [], hasPaygateConfig: 'deposit',
+    fields: [], hasPaygateConfig: 'deposit', hasPlayer: true,
   },
   'paygate-withdraw': {
     label: 'Paygate Withdraw',
-    fields: [], hasPaygateConfig: 'withdrawal',
+    fields: [], hasPaygateConfig: 'withdrawal', hasPlayer: true,
   },
   'paygate-deposit-settings': {
     label: 'Paygate Deposit Settings',
-    fields: [], hasPaygateConfig: 'deposit',
+    fields: [], hasPaygateConfig: 'deposit', hasPlayer: true,
   }
 };
 
@@ -1251,18 +1263,18 @@ function updatePaygateMethods(type) {
     container.innerHTML = '<span style="color:var(--text-faint);font-size:11px;">No methods support ' + selectedCurrency + '</span>';
     return;
   }
+  var firstEnabled = methodNames.find(function(n) { return methods[n].enabled; }) || '';
   container.innerHTML =
-    '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);cursor:pointer;padding:3px 0;">'
-    + '<input type="radio" name="paygate-method" value="" checked style="accent-color:var(--accent);">All enabled</label>'
-    + methodNames.map(function(name) {
+    methodNames.map(function(name) {
         var m = methods[name];
         var labelStyle = m.enabled
           ? 'display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;padding:3px 0;'
           : 'display:flex;align-items:center;gap:7px;font-size:12px;cursor:not-allowed;padding:3px 0;color:var(--text-faint);';
         var inputExtra = m.enabled ? '' : ' disabled';
+        var checked     = (name === firstEnabled) ? ' checked' : '';
         var tag = m.enabled ? '' : ' <span style="font-size:10px;">(disabled)</span>';
         return '<label style="' + labelStyle + '">'
-          + '<input type="radio" name="paygate-method" value="' + name + '" style="accent-color:var(--accent);"' + inputExtra + '>'
+          + '<input type="radio" name="paygate-method" value="' + name + '" style="accent-color:var(--accent);"' + inputExtra + checked + '>'
           + name + tag + '</label>';
       }).join('');
 }
@@ -1346,7 +1358,7 @@ function selectTest(testId, rowEl) {
     runBtn.className   = 'run-main-btn stop-mode';
     runBtn.onclick     = function() { stopTest(testId); };
   } else {
-    runBtn.textContent = '&#9654; Run Test';
+    runBtn.textContent = 'Run Test';
     runBtn.className   = 'run-main-btn';
     runBtn.onclick     = runSelectedTest;
   }
@@ -1421,6 +1433,14 @@ function handleRun(testId) {
   if (row && row.dataset.state === 'running') { stopTest(testId); return; }
   if (row) selectTest(testId, row);
   runTest(testId, getConfigValues());
+}
+
+function toggleConfigDrawer() {
+  var drawer = document.getElementById('configDrawer');
+  var btn    = document.getElementById('configCollapseBtn');
+  if (!drawer) return;
+  var collapsed = drawer.classList.toggle('collapsed');
+  if (btn) btn.innerHTML = collapsed ? '&#9660;' : '&#9650;';
 }
 
 function runSelectedTest() {
@@ -1594,7 +1614,7 @@ function setTestState(testId, state) {
       runBtn.className   = 'run-main-btn stop-mode';
       runBtn.onclick     = function() { stopTest(testId); };
     } else {
-      runBtn.innerHTML   = '&#9654; Run Test';
+      runBtn.innerHTML   = 'Run Test';
       runBtn.className   = 'run-main-btn';
       runBtn.onclick     = runSelectedTest;
     }

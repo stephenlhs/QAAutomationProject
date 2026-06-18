@@ -15,6 +15,7 @@ with open(sys.argv[1], encoding='utf-8') as f:
 out_path  = data['outPath']
 s         = data['summary']
 log_lines = data['logLines']
+txn       = data.get('txnData')   # optional — present for paygate deposit tests
 
 # ── Strip ANSI codes and illegal XML characters ───────────────
 ANSI_RE    = re.compile(r'\x1B\[[0-9;]*[A-Za-z]|\r')
@@ -127,6 +128,68 @@ ws[f'A{fr}'].font      = font(C_TEXT_DIM, size=9)
 ws[f'A{fr}'].fill      = fill(C_BG_HEADER)
 ws[f'A{fr}'].alignment = left()
 ws.row_dimensions[fr].height = 18
+
+# ── Transaction Details section (paygate deposit tests) ──────────
+if txn:
+    tr_start = fr + 2  # one blank row gap
+
+    # Section header
+    ws.merge_cells(f'A{tr_start}:B{tr_start}')
+    ws[f'A{tr_start}'] = '  TRANSACTION DETAILS'
+    ws[f'A{tr_start}'].font      = Font(name='Arial', size=12, bold=True, color=C_ACCENT)
+    ws[f'A{tr_start}'].fill      = fill(C_BG_HEADER)
+    ws[f'A{tr_start}'].alignment = left()
+    ws.row_dimensions[tr_start].height = 26
+
+    def _txn_status_colour(status):
+        s_lower = str(status).lower()
+        if 'approv' in s_lower:  return C_GREEN
+        if 'reject' in s_lower:  return C_RED
+        if 'timeout' in s_lower: return C_AMBER
+        return C_TEXT_LIGHT
+
+    txn_rows = [
+        ('Player',             txn.get('player', '—')),
+        ('Gateway',            txn.get('gateway', '—')),
+        ('Method',             txn.get('method', '—')),
+        ('Package',            txn.get('packageName', '—')),
+        ('Transaction No',     txn.get('txNo', '—')),
+        ('Transaction Date',   txn.get('txDateTime', '—')),
+        ('Amount',             txn.get('txAmount', '—')),
+        ('Bonus',              txn.get('bonus', '—')),
+        ('Transaction Status', txn.get('txStatus', '—')),
+        ('Outstanding Total',  txn.get('outstandingTotal', '—')),
+        ('Balance Before',     txn.get('balanceBefore', '—')),
+        ('Balance After',      txn.get('balanceAfter', '—')),
+        ('Rollover Before',    txn.get('rolloverBefore', '—')),
+        ('Rollover After',     txn.get('rolloverAfter', '—')),
+        ('Target Before',      txn.get('targetBefore', '—')),
+        ('Target After',       txn.get('targetAfter', '—')),
+    ]
+
+    for i, (label, value) in enumerate(txn_rows):
+        r  = tr_start + 1 + i
+        bg = C_BG_ROW_A if i % 2 == 0 else C_BG_ROW_B
+        ws.row_dimensions[r].height = 22
+
+        ws[f'A{r}'] = f'  {label}'
+        ws[f'A{r}'].font      = font(C_TEXT_DIM, size=10, bold=True)
+        ws[f'A{r}'].fill      = fill(bg)
+        ws[f'A{r}'].alignment = left()
+
+        val_col = C_TEXT_LIGHT
+        if label == 'Transaction Status':
+            val_col = _txn_status_colour(value)
+        elif label in ('Balance After', 'Rollover After', 'Target After'):
+            val_col = C_GREEN if value != '—' else C_TEXT_DIM
+        elif label in ('Balance Before', 'Rollover Before', 'Target Before'):
+            val_col = C_AMBER
+
+        ws[f'B{r}'] = f'  {value}'
+        ws[f'B{r}'].font      = font(val_col, size=11, bold=(label == 'Transaction Status'))
+        ws[f'B{r}'].fill      = fill(bg)
+        ws[f'B{r}'].alignment = left()
+
 ws.sheet_properties.tabColor = C_ACCENT if is_pass else 'F87171'
 
 # ═══════════════════════════════════════════════════

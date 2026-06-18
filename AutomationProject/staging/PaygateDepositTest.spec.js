@@ -27,20 +27,27 @@ if (!CONFIG) {
 }
 
 const screenshots = [];
-const MANIFEST_NAME = 'manifest-paygate-deposit.json';
-const RESUME_SIGNAL = join(process.cwd(), '.screenshots-tmp', 'paygate-resume-signal.json');
+const MANIFEST_NAME     = 'manifest-paygate-deposit.json';
+const TXN_MANIFEST_NAME = 'manifest-paygate-deposit-txn.json';
+const RESUME_SIGNAL     = join(process.cwd(), '.screenshots-tmp', 'paygate-resume-signal.json');
 
-async function snap(page, label) {
+// Optional el: if provided, takes an element-level screenshot (independent of screen size)
+async function snap(page, label, el = null) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${Date.now()}-${label.replace(/\s+/g, '-')}.png`);
-  await page.screenshot({ path: file, fullPage: false });
+  if (el) {
+    await el.screenshot({ path: file }).catch(() => page.screenshot({ path: file, fullPage: false }));
+  } else {
+    await page.screenshot({ path: file, fullPage: false });
+  }
   screenshots.push({ label, path: file });
   writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), 'utf-8');
   console.log(`>> Screenshot: ${label}`);
 }
 
-async function waitForResumeSignal(page) {
+// Page-independent signal polling — works while BO or player page is active
+async function waitForResumeSignal() {
   try { unlinkSync(RESUME_SIGNAL); } catch {}
 
   const maxWaitMs = 30 * 60 * 1000;
@@ -55,7 +62,7 @@ async function waitForResumeSignal(page) {
         return sig.action;
       }
     } catch {}
-    await page.waitForTimeout(pollMs);
+    await new Promise(r => setTimeout(r, pollMs));
   }
 
   return null;
@@ -95,12 +102,11 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
       const captcha        = new CaptchaHelper(playerPage, 'player');
 
       await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
-      await snap(playerPage, `${methodName}-01 - Player Login`);
 
       // ── PART 2: Record BEFORE stats ──
       await withdrawalPage.navigate();
       const before = await withdrawalPage.getStats('before');
-      await snap(playerPage, `${methodName}-02 - Stats Before`);
+      await snap(playerPage, `${methodName}-01 - Stats Before`);
       console.log(`>> BEFORE — Balance: ${before.balance}, Rollover: ${before.rollover}, Target: ${before.target}`);
 
       // ── PART 3: Navigate to deposit page ──
@@ -124,7 +130,6 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
         console.log(`>> Package selected via dropdown: "${chosen}"`);
       }
       await playerPage.waitForTimeout(2500);
-      await snap(playerPage, `${methodName}-03 - Package Selected`);
 
       // Select payment method category
       const tabValueMap = { 'crypto-payment': 'crypto' };
@@ -159,8 +164,6 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
           await playerPage.waitForTimeout(800);
         }
       }
-
-      await snap(playerPage, `${methodName}-04 - Payment Method Selected`);
 
       // Find gateway card
       const nameParts = CONFIG.gatewayName.split(' ');
@@ -203,9 +206,9 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
         await playerPage.locator('#txtAmount[name="txtAmount"]').fill(String(amount));
       }
 
+      await snap(playerPage, `${methodName}-02 - Deposit Amount`);
       await playerPage.locator('.multi-lang[data-lang="DEPOSITWITHDRAW.Confirm"]').first().click({ force: true });
       await playerPage.waitForTimeout(3000);
-      await snap(playerPage, `${methodName}-05 - Amount Entered`);
 
       // Confirmation modal
       const continueModal = playerPage.locator('.swal2-content', { hasText: 'Do you want to continue?' });
@@ -222,18 +225,15 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
 
       if (await qrBody.isVisible().catch(() => false)) {
         depositResult = 'success-qr';
-        await snap(playerPage, `${methodName}-06 - QR Code Displayed`);
         console.log(`>> QR code displayed — submission success`);
         await playerPage.locator('.redeposit__a9wallet-body .multi-lang[data-lang="GAMESPAGE.Close"]').click({ force: true }).catch(() => {});
       } else if (await errModal.isVisible().catch(() => false)) {
         depositError = (await errModal.innerText().catch(() => '')).trim();
         depositResult = 'error';
-        await snap(playerPage, `${methodName}-06 - Error Modal`);
         console.log(`>> Gateway error: ${depositError}`);
         await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true }).catch(() => {});
       } else {
         depositResult = 'success-redirect';
-        await snap(playerPage, `${methodName}-06 - Redirected to Vendor`);
         console.log(`>> Redirected to vendor — submission success`);
       }
 
@@ -248,42 +248,20 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
         continue;
       }
 
-      // ── PART 4: Verify transaction in Cash History ──
+      // ── PART 4: Cash History — In Process ──
       await playerPage.goto(`${URLS.playsite}user/cash-history`);
       await playerPage.waitForTimeout(2000);
-      await snap(playerPage, `${methodName}-07 - Cash History`);
+      await snap(playerPage, `${methodName}-03 - Cash History`);
 
       const tx = await statementPage.getLatestTransaction();
       console.log(`>> Transaction: ${tx.txNo} | Status: ${tx.status} | Amount: ${tx.amount}`);
 
-      // ── PART 5: Pause — wait for vendor callback ──
-      console.log(`>> PAUSE:${JSON.stringify({ txNo: tx.txNo, amount: tx.amount, method: methodName })}`);
-      const resumeAction = await waitForResumeSignal(playerPage);
-
-      // ── PART 6: Cash History After → Stats After ──
-      let after = null;
-      if (resumeAction) {
-        console.log(`>> Resume signal received: ${resumeAction}`);
-
-        await playerPage.goto(`${URLS.playsite}user/cash-history`);
-        await playerPage.waitForTimeout(2000);
-        const txAfter = await statementPage.getLatestTransaction();
-        await snap(playerPage, `${methodName}-08 - Cash History After`);
-        console.log(`>> Cash History (after) — txNo: ${txAfter.txNo} | Status: ${txAfter.status} | Amount: ${txAfter.amount}`);
-
-        await withdrawalPage.navigate();
-        after = await withdrawalPage.getStats('after');
-        await snap(playerPage, `${methodName}-09 - Stats After`);
-        console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
-      } else {
-        console.log(`>> Resume timeout — balance/rollover check skipped`);
-      }
-
+      // Close player — BO will run before the pause
       await playerPage.close({ runBeforeUnload: false }).catch(() => {});
       await playerContext.close();
       playerContext = null;
 
-      // ── PART 7: BO — verify transaction in Cash Deposit List ──
+      // ── PART 5: BO — Login, check Member Account outstanding balance, view Deposit List ──
       let outstanding = { sport: 0, casino: 0, lottery: 0, games: 0, p2p: 0, total: 0 };
       boContext  = await browser.newContext();
       boPage     = await boContext.newPage();
@@ -293,57 +271,142 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
       await backoffice.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, boCaptcha, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
       await backoffice.closeExtraTabs();
       await backoffice.closeAnnouncements();
-      await snap(boPage, `${methodName}-10 - BO Login`);
 
-      if (resumeAction === 'approved') {
-        outstanding = await backoffice.getMemberOutstandingBalance(PLAYER.username);
-      }
+      // Always check outstanding balance before approve/reject to capture current rollover state
+      outstanding = await backoffice.getMemberOutstandingBalance(PLAYER.username);
+      console.log(`>> Outstanding balance (before decision) — Total: ${outstanding.total}`);
 
-      await boPage.goto(`${backoffice.boBase}/dashboard/cash/deposit-list`, { waitUntil: 'domcontentloaded' });
-      await boPage.waitForTimeout(1500);
+      const boUsername = `${URLS.memberPrefix || ''}${PLAYER.username.replace(/^x9048_/, '')}`;
 
-      const boUsername     = `${URLS.memberPrefix || ''}${PLAYER.username.replace(/^x9048_/, '')}`;
-      const expectedStatus = resumeAction === 'approved' ? 'Approved' : 'Rejected';
+      const extendDateRange = async () => {
+        const now2 = new Date();
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const fmtD = (d) => `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
+        const s2 = new Date(now2); s2.setDate(s2.getDate() - 1);
+        const dateInputs = boPage.locator('.input-group:has(.fa-calendar) input');
+        if (await dateInputs.count() >= 2) {
+          await dateInputs.first().fill(`${fmtD(s2)} 00:00:00`);
+          await dateInputs.nth(1).fill(`${fmtD(now2)} 23:59:59`);
+          await boPage.locator('.ibox-title, h2, h3').first().click({ force: true }).catch(() => {});
+          await boPage.waitForTimeout(500);
+        }
+      };
 
-      const searchBO = async () => {
+      const searchBO = async (status) => {
         await boPage.locator('input[name="txtUserName"]').fill(boUsername);
-        await boPage.locator('select[name="ddlFilterStatus"]').selectOption(expectedStatus).catch(() => {});
+        await boPage.locator('select[name="ddlFilterStatus"]').selectOption(status).catch(() => {});
         await boPage.locator('button[type="submit"]:has-text("Search")').click({ force: true });
         await boPage.waitForTimeout(2000);
         return (await boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`).count()) > 0;
       };
 
-      let txFound = await searchBO();
-      console.log(`>> BO search status="${expectedStatus}" date=default — txNo "${tx.txNo}" found: ${txFound}`);
+      // ── PART 6: PAUSE — wait for tester to approve or reject via dashboard ──
+      console.log(`>> PAUSE:${JSON.stringify({ txNo: tx.txNo, amount: tx.amount, method: methodName })}`);
+      const resumeAction = await waitForResumeSignal();
 
-      if (!txFound) {
-        const now = new Date();
-        const pad = (n) => String(n).padStart(2, '0');
-        const fmtDate = (d) => `${pad(d.getMonth()+1)}/${pad(d.getDate())}/${d.getFullYear()}`;
-        const startD = new Date(now);
-        startD.setDate(startD.getDate() - 1);
-        const boStartDate = `${fmtDate(startD)} 00:00:00`;
-        const boEndDate   = `${fmtDate(now)} 23:59:59`;
-
-        const dateInputs = boPage.locator('.input-group:has(.fa-calendar) input');
-        if (await dateInputs.count() >= 2) {
-          await dateInputs.first().fill(boStartDate);
-          await dateInputs.nth(1).fill(boEndDate);
-          await boPage.locator('.ibox-title, h2, h3').first().click({ force: true }).catch(() => {});
-          await boPage.waitForTimeout(500);
-          console.log(`>> Date range extended: ${boStartDate} → ${boEndDate}`);
-        }
-
-        txFound = await searchBO();
-        console.log(`>> BO search status="${expectedStatus}" date=extended — txNo "${tx.txNo}" found: ${txFound}`);
+      if (resumeAction) {
+        console.log(`>> Resume signal received: ${resumeAction}`);
+      } else {
+        console.log(`>> Resume timeout — skipping post-action checks`);
       }
-      await snap(boPage, `${methodName}-11 - BO Deposit List`);
+
+      // ── PART 7: BO — Search deposit list and open detail modal after approve/reject ──
+      let txFoundAfter = false;
+      if (resumeAction) {
+        await boPage.goto(`${backoffice.boBase}/dashboard/cash/deposit-list`, { waitUntil: 'domcontentloaded' });
+        await boPage.waitForTimeout(1500);
+
+        const expectedStatus = resumeAction === 'approved' ? 'Approved' : 'Rejected';
+        txFoundAfter = await searchBO(expectedStatus);
+        if (!txFoundAfter) {
+          await extendDateRange();
+          txFoundAfter = await searchBO(expectedStatus);
+        }
+        console.log(`>> BO deposit list (${expectedStatus}) — txNo "${tx.txNo}" found: ${txFoundAfter}`);
+        await snap(boPage, `${methodName}-04 - BO Deposit List`,
+          boPage.locator('.ibox-content').first());
+
+        if (txFoundAfter) {
+          const txRow   = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
+          const rowText = (await txRow.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+          console.log(`>> BO row data: ${rowText}`);
+
+          const editBtn = txRow.locator('[title="Edit"]').first();
+          if (await editBtn.count()) {
+            await editBtn.click({ force: true });
+          } else {
+            await boPage.getByTitle('Edit').first().click();
+          }
+          await boPage.waitForTimeout(2000);
+
+          const modal = boPage.locator('#ticket-detail');
+          if (await modal.isVisible({ timeout: 5000 }).catch(() => false)) {
+            const modalText = (await modal.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+            console.log(`>> BO deposit detail: ${modalText}`);
+            // Element-level screenshot of just the modal — screen-size independent
+            await snap(boPage, `${methodName}-05 - BO Deposit Detail Modal`, modal);
+            await modal.getByText('× Close').click({ force: true }).catch(() => {});
+            await boPage.waitForTimeout(500);
+          } else {
+            console.log('>> WARNING: BO detail modal did not appear');
+          }
+        }
+      }
 
       await boPage.close({ runBeforeUnload: false }).catch(() => {});
       await boContext.close();
       boContext = null;
 
-      // ── PART 8: Balance / Rollover / Target assertions ──
+      // ── PART 8: Playsite after screenshots (cash history + stats) ──
+      let after = null;
+      if (resumeAction) {
+        playerContext = await browser.newContext({ storageState: PLAYER.sessionPath });
+        playerPage    = await playerContext.newPage();
+        const statementPageAfter  = new StatementPage(playerPage);
+        const withdrawalPageAfter = new WithdrawalPage(playerPage);
+
+        await playerPage.goto(`${URLS.playsite}user/cash-history`);
+        await playerPage.waitForTimeout(2000);
+        const txAfter = await statementPageAfter.getLatestTransaction();
+        await snap(playerPage, `${methodName}-06 - Cash History After`);
+        console.log(`>> Cash History (after) — txNo: ${txAfter.txNo} | Status: ${txAfter.status} | Amount: ${txAfter.amount}`);
+
+        await withdrawalPageAfter.navigate();
+        after = await withdrawalPageAfter.getStats('after');
+        await snap(playerPage, `${methodName}-07 - Stats After`);
+        console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
+
+        await playerPage.close({ runBeforeUnload: false }).catch(() => {});
+        await playerContext.close();
+        playerContext = null;
+      }
+
+      // ── PART 9: Write transaction summary for Excel report ──
+      const txnSummary = {
+        gateway:        CONFIG.gatewayName,
+        method:         methodName,
+        packageName:    CONFIG.deposit.packageName,
+        player:         PLAYER.username,
+        txNo:           tx.txNo,
+        txDateTime:     tx.dateTime,
+        txAmount:       tx.amount,
+        bonus:          tx.bonus || '0',
+        txStatus:       resumeAction || 'timeout',
+        balanceBefore:  before.balance,
+        balanceAfter:   after?.balance  ?? '—',
+        rolloverBefore: before.rollover,
+        rolloverAfter:  after?.rollover ?? '—',
+        targetBefore:   before.target,
+        targetAfter:    after?.target   ?? '—',
+        outstandingTotal: outstanding.total,
+      };
+      writeFileSync(
+        join(process.cwd(), '.screenshots-tmp', TXN_MANIFEST_NAME),
+        JSON.stringify(txnSummary), 'utf-8'
+      );
+      console.log(`>> Txn summary written`);
+
+      // ── PART 10: Balance / Rollover / Target assertions ──
       if (resumeAction && after) {
         if (resumeAction === 'approved') {
           const txBonusAmount = parseFloat(tx.bonus) || 0;
@@ -380,7 +443,7 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
       }
 
       expect(['success-redirect', 'success-qr'], `${methodName}: expected redirect or QR, got error: ${depositError}`).toContain(depositResult);
-      expect(txFound, `${methodName}: transaction ${tx.txNo} not found in BO deposit list`).toBe(true);
+      expect(txFoundAfter, `${methodName}: transaction ${tx.txNo} not found in BO deposit list after ${resumeAction}`).toBe(true);
 
       results[methodName] = 'PASS';
       console.log(`>> ${CONFIG.gatewayName} ${methodName}: PASS ✅`);
