@@ -464,5 +464,7 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
 
   const allPassed = Object.values(results).every(r => r === 'PASS' || r.startsWith('SKIP'));
   console.log(allPassed ? '>> RESULT: PASS' : '>> RESULT: FAIL');
-  process.exit(0);
+  if (!allPassed) {
+    throw new Error(`One or more methods failed: ${Object.entries(results).filter(([,v]) => !v.startsWith('PASS') && !v.startsWith('SKIP')).map(([k,v]) => `${k}: ${v}`).join(', ')}`);
+  }
 });
