@@ -46,9 +46,14 @@ export class DepositPage {
     await this.bankDropdown.click();
     await this.page.locator('.dropdown-option').filter({ hasText: bankName }).first().click();
     console.log(`>> Selected bank: ${bankName}`);
+    // Wait for form to settle after bank selection before amount input becomes interactive
+    await this.amountInput.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
+    await this.page.waitForTimeout(800);
   }
 
   async submit(amount) {
+    await this.amountInput.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
+    await this.amountInput.click();
     await this.amountInput.fill(String(amount));
     await this.submitButton.click();
     await this.page.waitForTimeout(3000);
