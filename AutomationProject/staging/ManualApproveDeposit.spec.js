@@ -12,11 +12,15 @@ import { PLAYER, BACKOFFICE, DEPOSIT } from './config.js';
 // ── Screenshot helper ──────────────────────────────────────────
 const screenshots = [];
 const MANIFEST_NAME = 'manifest-approve-deposit.json';
-async function snap(page, label) {
+async function snap(page, label, el = null) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${Date.now()}-${label.replace(/\s+/g, '-')}.png`);
-  await page.screenshot({ path: file, fullPage: false });
+  if (el) {
+    await el.screenshot({ path: file }).catch(() => page.screenshot({ path: file, fullPage: false }));
+  } else {
+    await page.screenshot({ path: file, fullPage: false });
+  }
   screenshots.push({ label, path: file });
   writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), 'utf-8');
   console.log(`>> Screenshot: ${label}`);
@@ -37,42 +41,69 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
   const actualUsername = PLAYER.username;
   console.log(`>> Logged in as: ${actualUsername}`);
-  await snap(playerPage, '01 - Player Login');
 
   await withdrawalPage.navigate();
   const before = await withdrawalPage.getStats('before');
-  await snap(playerPage, '02 - Stats Before');
+  await snap(playerPage, '01 - Stats Before');
   console.log(`>> BEFORE — Balance: ${before.balance}, Rollover: ${before.rollover}, Target: ${before.target}`);
 
   // ── PART 2: Submit deposit ──
   await depositPage.navigate();
   await depositPage.selectBankTransfer(DEPOSIT.bankName);
-  await snap(playerPage, '03 - Deposit Form');
+  await snap(playerPage, '02 - Deposit Form');
   await depositPage.submit(DEPOSIT.amount);
-  await snap(playerPage, '04 - Deposit Submitted');
 
-  // ── PART 3: Verify pending ──
+  // ── PART 3: Cash History — Pending ──
   await statementPage.navigateToCashHistory();
   const tx = await statementPage.getLatestTransaction();
   await statementPage.verifyLatestStatus('Pending');
-  await snap(playerPage, '05 - Cash History Pending');
+  await snap(playerPage, '03 - Cash History Pending');
   console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
   await playerPage.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext.close();
 
-  // ── PART 4: Backoffice approve ──
+  // ── PART 4: Backoffice — outstanding balance + approve ──
   const boContext  = await browser.newContext();
   const boPage     = await boContext.newPage();
   const backoffice = new BackofficePage(boPage, 'backoffice');
   const boCaptcha  = new CaptchaHelper(boPage, 'backoffice');
 
   await backoffice.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, boCaptcha, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
-  await snap(boPage, '06 - Backoffice Login');
+  await backoffice.closeExtraTabs();
+  await backoffice.closeAnnouncements();
 
   const outstanding = await backoffice.getMemberOutstandingBalance(actualUsername);
   await backoffice.approveDeposit(actualUsername, 'test manual approve');
-  await snap(boPage, '07 - Deposit Approved in BO');
+
+  // Close success modal if still open
+  await boPage.getByRole('button', { name: 'OK' }).click({ force: true }).catch(() => {});
+  await boPage.waitForTimeout(1000);
+
+  // Navigate to deposit list filtered by Approved and screenshot
+  await boPage.goto(`${backoffice.boBase}/dashboard/cash/deposit-list`, { waitUntil: 'domcontentloaded' });
+  await boPage.waitForTimeout(1500);
+  await boPage.locator('#txtUserName').fill(`${backoffice.memberPrefix}${actualUsername}`);
+  await boPage.locator('select[name="ddlFilterStatus"]').selectOption('Approved').catch(() => {});
+  await boPage.locator('button[type="submit"]:has-text("Search")').click({ force: true });
+  await boPage.waitForTimeout(2000);
+  await snap(boPage, '04 - BO Deposit List Approved', boPage.locator('.ibox-content').first());
+
+  // Open detail modal
+  const txRow  = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
+  const editBtn = txRow.locator('[title="Edit"]').first();
+  if (await editBtn.count()) {
+    await editBtn.click({ force: true });
+  } else {
+    await boPage.getByTitle('Edit').first().click();
+  }
+  await boPage.waitForTimeout(2000);
+  const modal = boPage.locator('#ticket-detail');
+  if (await modal.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await snap(boPage, '05 - BO Deposit Detail Modal', modal);
+    await modal.getByText('× Close').click({ force: true }).catch(() => {});
+    await boPage.waitForTimeout(500);
+  }
 
   await boPage.close({ runBeforeUnload: false }).catch(() => {});
   await boContext.close();
@@ -87,14 +118,14 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   await loginPage2.loginWithSession();
   await statementPage2.navigateToCashHistory();
   await statementPage2.verifyLatestStatus('Approved');
-  await snap(playerPage2, '08 - Cash History Approved');
+  await snap(playerPage2, '06 - Cash History Approved');
 
   await withdrawalPage2.navigate();
   const after = await withdrawalPage2.getStats('after');
-  await snap(playerPage2, '09 - Stats After');
+  await snap(playerPage2, '07 - Stats After');
   console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
 
-  // ── Calculations ──
+  // ── Assertions ──
   const txBonusAmount  = parseFloat(tx.bonus) || 0;
   const totalCredit    = DEPOSIT.amount + txBonusAmount;
   const effectiveBal   = before.balance + outstanding.total;
@@ -114,21 +145,13 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   }
   const expectedBalance = before.balance + totalCredit;
 
-  // ── Assertions ──
   expect(after.balance).toBeCloseTo(expectedBalance, 1);
   expect(after.rollover).toBeCloseTo(expectedRollover, 1);
   expect(after.target).toBeCloseTo(expectedTarget, 1);
   console.log('>> All assertions passed ✅');
 
-  // ── Pass screenshots to report writer ──
-  // Write manifest for report-writer.js
-  const manifestDir = join(process.cwd(), ".screenshots-tmp");
-  mkdirSync(manifestDir, { recursive: true });
-  writeFileSync(join(manifestDir, "manifest-approve-deposit.json"), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), "utf-8");
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
-
   console.log('>> RESULT: PASS');
   await playerPage2.close({ runBeforeUnload: false }).catch(() => {});
   await playerContext2.close();
-  process.exit(0);
 });
