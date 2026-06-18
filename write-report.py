@@ -161,10 +161,8 @@ if txn:
         ('Outstanding Total',  txn.get('outstandingTotal', '—')),
         ('Balance Before',     txn.get('balanceBefore', '—')),
         ('Balance After',      txn.get('balanceAfter', '—')),
-        ('Rollover Before',    txn.get('rolloverBefore', '—')),
-        ('Rollover After',     txn.get('rolloverAfter', '—')),
-        ('Target Before',      txn.get('targetBefore', '—')),
-        ('Target After',       txn.get('targetAfter', '—')),
+        ('Rollover / Target Before', f"{txn.get('rolloverBefore', '—')} / {txn.get('targetBefore', '—')}"),
+        ('Rollover / Target After',  f"{txn.get('rolloverAfter', '—')} / {txn.get('targetAfter', '—')}"),
     ]
 
     for i, (label, value) in enumerate(txn_rows):
@@ -180,9 +178,9 @@ if txn:
         val_col = C_TEXT_LIGHT
         if label == 'Transaction Status':
             val_col = _txn_status_colour(value)
-        elif label in ('Balance After', 'Rollover After', 'Target After'):
+        elif label in ('Balance After', 'Rollover / Target After'):
             val_col = C_GREEN if value != '—' else C_TEXT_DIM
-        elif label in ('Balance Before', 'Rollover Before', 'Target Before'):
+        elif label in ('Balance Before', 'Rollover / Target Before'):
             val_col = C_AMBER
 
         ws[f'B{r}'] = f'  {value}'

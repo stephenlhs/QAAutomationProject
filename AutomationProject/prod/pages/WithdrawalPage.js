@@ -12,7 +12,7 @@ export class WithdrawalPage {
     this.confirmYesButton = page.getByRole('button', { name: 'Yes' });
     this.confirmOkButton  = page.getByRole('button', { name: 'OK' });
     this.withdrawalRoot   = page.locator('#withdrawalAppRoot');
-    this.balanceDisplay   = page.locator('text=/MYR \\d+\\.\\d+/');
+    this.balanceDisplay   = page.locator('text=/[A-Z]{2,4}\\s+[\\d,]+\\.\\d+/');
   }
 
   async navigate() {

@@ -187,6 +187,7 @@ export class BackofficePage {
 
   async getMemberOutstandingBalance(username) {
     await this.closeExtraTabs();
+    await this.closeAnnouncements();
 
     // Only staging has member outstanding balance feature
     if (ENV_NAME !== 'staging') {

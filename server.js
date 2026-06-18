@@ -195,7 +195,7 @@ const server = createServer((req, res) => {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
-      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword, paygateGateway, paygateMethod, paygateTestCurrency } = JSON.parse(body);
+      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword, paygateGateway, paygateMethod, paygateTestCurrency, paygateAmount, paygateBanks } = JSON.parse(body);
 
       const fileName = TEST_FILES[test];
       if (!fileName) {
@@ -238,6 +238,8 @@ const server = createServer((req, res) => {
       if (paygateGateway)        customEnv.PAYGATE_GATEWAY          = paygateGateway;
       if (paygateMethod)         customEnv.PAYGATE_METHOD           = paygateMethod;
       if (paygateTestCurrency)   customEnv.PAYGATE_TEST_CURRENCY    = paygateTestCurrency;
+      if (paygateAmount)         customEnv.CUSTOM_DEPOSIT_AMOUNT    = paygateAmount;
+      if (paygateBanks)          customEnv.PAYGATE_BANKS            = paygateBanks;
 
       const startTime = Date.now();
       const logLines  = [];   // ← collect all output for the report

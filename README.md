@@ -142,19 +142,32 @@ Replace `staging` with `uat` or `prod` for other environments.
 
 ### Paygate Tests (VaderPay C2)
 
-Tests end-to-end paygate deposit and withdrawal flows with a manual pause/resume step for vendor callbacks.
+Tests end-to-end paygate deposit flows with a manual pause/resume step for vendor callbacks.
 
-Configure which payment methods to test and which player to use by editing:
+Configure which payment methods and banks to test by editing the fixture file for each environment:
 ```
-AutomationProject/staging/fixtures/VaderpayC2Config.json
+AutomationProject/staging/fixtures/VaderpayC2.json
+AutomationProject/uat/fixtures/VaderpayC2.json
+AutomationProject/prod/fixtures/VaderpayC2.json
 ```
 
 ```
 # Paygate Deposit — staging
 npx playwright test AutomationProject/staging/PaygateDepositTest.spec.js --headed --project=staging
 
-# Paygate Withdrawal — staging
+# Paygate Deposit — UAT
+npx playwright test AutomationProject/uat/PaygateDepositTest.spec.js --headed --project=uat
+
+# Paygate Deposit — Prod
+npx playwright test AutomationProject/prod/PaygateDepositTest.spec.js --headed --project=prod
+
+# Paygate Withdrawal — staging only
 npx playwright test AutomationProject/staging/PaygateWithdrawTest.spec.js --headed --project=staging
+```
+
+Override the bank and currency at run time:
+```
+PAYGATE_TEST_CURRENCY=THB PAYGATE_BANKS=BangkokBank npx playwright test AutomationProject/staging/PaygateDepositTest.spec.js --headed --project=staging
 ```
 
 > See **Paygate Test Flow** below for details on the pause/resume mechanism.
@@ -175,11 +188,15 @@ Pass these as prefixes on any test command to override defaults without editing 
 |----------|---------|---------|
 | `CUSTOM_PLAYER_USERNAME` | Player to log in as | `<member_prefix>player1` |
 | `CUSTOM_PLAYER_PASSWORD` | Player password | `your_password` |
-| `CUSTOM_DEPOSIT_AMOUNT` | Deposit amount in MYR | `50` |
-| `CUSTOM_WITHDRAWAL_AMOUNT` | Withdrawal amount in MYR | `10` |
+| `CUSTOM_DEPOSIT_AMOUNT` | Deposit amount | `50` |
+| `CUSTOM_WITHDRAWAL_AMOUNT` | Withdrawal amount | `10` |
 | `CUSTOM_MEMBERS` | JSON array for CreateMember | `[{"username":"abc","currency":"MYR"}]` |
 | `DEPOSIT_PACKAGE_NAME` | Deposit bonus package name | `Stephen Turnover Package` |
 | `DEPOSIT_ROLLOVER_MULTIPLIER` | Rollover multiplier for assertions | `1` |
+| `PAYGATE_GATEWAY` | Gateway classIdentifier to test | `vaderpayc2` |
+| `PAYGATE_METHOD` | Limit to one method (Bank/QR/EWallet/Crypto) | `Bank` |
+| `PAYGATE_TEST_CURRENCY` | Currency for bank list lookup | `THB` |
+| `PAYGATE_BANKS` | Comma-separated bank name(s) to select | `BangkokBank` |
 
 ---
 
@@ -192,8 +209,8 @@ QAAutomationProject/
 │   │   └── CaptchaHelper.js          Auto captcha solver (shared across all envs)
 │   ├── staging/
 │   │   ├── fixtures/
-│   │   │   └── VaderpayC2Config.json  Paygate method config (enabled methods, amounts, credentials)
-│   │   ├── pages/                    Page Object Models for staging
+│   │   │   └── VaderpayC2.json       Gateway config — methods, banks per currency, limits
+│   │   ├── pages/                    Page Object Models
 │   │   │   ├── BackofficePage.js
 │   │   │   ├── DepositPage.js
 │   │   │   ├── LoginPage.js
@@ -206,9 +223,10 @@ QAAutomationProject/
 │   │   ├── ManualApproveWithdrawal.spec.js
 │   │   ├── ManualRejectWithdrawal.spec.js
 │   │   ├── PaygateDepositTest.spec.js
+│   │   ├── PaygateDepositSettingsTest.spec.js
 │   │   └── PaygateWithdrawTest.spec.js
-│   ├── uat/                          Same structure as staging
-│   └── prod/                         Same structure as staging
+│   ├── uat/                          Same structure as staging (excl. PaygateWithdrawTest)
+│   └── prod/                         Same structure as staging (excl. PaygateWithdrawTest)
 ├── reports/                          Auto-generated Excel reports per env
 ├── .auth/                            Saved login sessions (not committed to git)
 ├── .env                              Your credentials (not committed to git)
@@ -216,6 +234,7 @@ QAAutomationProject/
 ├── captcha-server.js                 Captcha OCR server on port 3333
 ├── server.js                         QA Dashboard backend on port 4000
 ├── index.html                        Dashboard UI
+├── write-report.py                   Excel report generator (openpyxl)
 ├── start-dashboard.bat               One-click launcher (Windows) — starts all servers + ngrok
 ├── playwright.config.js              Playwright project config
 └── README.md                         This file
@@ -283,30 +302,47 @@ QAAutomationProject/
 
 ---
 
-## VaderpayC2Config.json
+## VaderpayC2.json
 
-Located at `AutomationProject/<env>/fixtures/VaderpayC2Config.json`.
+Located at `AutomationProject/<env>/fixtures/VaderpayC2.json` (staging, uat, prod each have their own copy).
 
-Controls which payment methods are tested and with which credentials:
+Controls which payment methods are tested, the deposit amount per method, and which banks/wallets are available per currency:
 
 ```json
 {
   "gatewayName": "VaderPay C2",
-  "packageName": "Stephen Turnover Package",
+  "classIdentifier": "vaderpayc2",
   "deposit": {
-    "Bank":    { "enabled": false, "tab": "online-transfer",  "amount": 50, "username": "", "password": "" },
-    "EWallet": { "enabled": false, "tab": "e-wallet",         "amount": 50, "username": "", "password": "" },
-    "QR":      { "enabled": true,  "tab": "qr-code-payment",  "amount": 50, "username": "your_player", "password": "your_password" },
-    "Crypto":  { "enabled": false, "tab": "crypto-payment",   "amount": 50, "username": "", "password": "" }
-  },
-  "withdraw": {
-    "Bank":    { "enabled": true,  "amount": 50, "username": "", "password": "" },
-    "EWallet": { "enabled": false, "amount": 50, "username": "", "password": "" }
+    "packageName": "Stephen Turnover Package",
+    "amount": 50,
+    "methods": {
+      "Bank": {
+        "enabled": true,
+        "tab": "online-transfer",
+        "amount": 100,
+        "banks": {
+          "MYR": [
+            { "name": "CIMB",          "enabled": true  },
+            { "name": "Maybank Berhad","enabled": true  },
+            { "name": "RHB Bank Berhad","enabled": false }
+          ],
+          "THB": [
+            { "name": "BangkokBank",   "enabled": true  }
+          ]
+        }
+      },
+      "QR":     { "enabled": true,  "tab": "qr-code-payment" },
+      "EWallet":{ "enabled": false, "tab": "e-wallet" },
+      "Crypto": { "enabled": false, "tab": "crypto-payment" }
+    }
   }
 }
 ```
 
-Set `enabled: true` for the methods you want to test. Leave `username`/`password` blank to use the default player from `.env`.
+- Set `enabled: true/false` on each **method** to include/exclude it from the test run.
+- The `amount` field on a method overrides the global deposit amount for that method (e.g. Bank minimum is 100 MYR).
+- Under `banks`, each currency lists the banks available for that currency. Set `enabled: false` to hide a bank from the dashboard and skip it during automated selection.
+- The dashboard bank list updates automatically when you change the currency selector — only `enabled: true` banks are shown.
 
 ---
 

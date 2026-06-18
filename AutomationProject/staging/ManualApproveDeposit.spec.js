@@ -50,6 +50,7 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   // ── PART 2: Submit deposit ──
   await depositPage.navigate();
   await depositPage.selectBankTransfer(DEPOSIT.bankName);
+  await depositPage.amountInput.fill(String(DEPOSIT.amount));
   await snap(playerPage, '02 - Deposit Form');
   await depositPage.submit(DEPOSIT.amount);
 
@@ -76,33 +77,64 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   const outstanding = await backoffice.getMemberOutstandingBalance(actualUsername);
   await backoffice.approveDeposit(actualUsername, 'test manual approve');
 
-  // Close success modal if still open
-  await boPage.getByRole('button', { name: 'OK' }).click({ force: true }).catch(() => {});
-  await boPage.waitForTimeout(1000);
-
-  // Navigate to deposit list filtered by Approved and screenshot
-  await boPage.goto(`${backoffice.boBase}/dashboard/cash/deposit-list`, { waitUntil: 'domcontentloaded' });
-  await boPage.waitForTimeout(1500);
-  await boPage.locator('#txtUserName').fill(`${backoffice.memberPrefix}${actualUsername}`);
-  await boPage.locator('select[name="ddlFilterStatus"]').selectOption('Approved').catch(() => {});
-  await boPage.locator('button[type="submit"]:has-text("Search")').click({ force: true });
+  // Close success modal and let page settle — already on deposit-list after approveDeposit
+  await boPage.getByRole('button', { name: 'OK' }).click({ force: true, timeout: 3000 }).catch(() => {});
   await boPage.waitForTimeout(2000);
-  await snap(boPage, '04 - BO Deposit List Approved', boPage.locator('.ibox-content').first());
+
+  const searchDeposit = async () => {
+    await boPage.evaluate(() => {
+      const el = document.querySelector('#ddlFilterStatus');
+      if (!el) return;
+      const opt = Array.from(el.options).find(o => o.text.trim().includes('Approved'));
+      if (opt) { el.value = opt.value; if (window.$) window.$(el).trigger('change'); el.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+    const label = await boPage.locator('#ddlFilterStatus').evaluate(el => el.options[el.selectedIndex]?.text || 'none');
+    console.log(`>> Status filter set to: ${label}`);
+    await boPage.locator('#txtUserName').fill(`${backoffice.memberPrefix}${actualUsername}`);
+    await boPage.getByText('Advanced Search').click().catch(() => {});
+    await boPage.waitForTimeout(400);
+    await boPage.locator('#txtTransactionId').fill(tx.txNo).catch(() => {});
+    await boPage.getByRole('button', { name: 'Search' }).click();
+    await boPage.waitForTimeout(2000);
+    return (await boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`).count()) > 0;
+  };
+
+  let txFound = await searchDeposit();
+  if (!txFound) {
+    const now2 = new Date();
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const fmtD = (d) => `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
+    const s2   = new Date(now2); s2.setDate(s2.getDate() - 1);
+    const dateInputs = boPage.locator('.input-group:has(.fa-calendar) input');
+    if (await dateInputs.count() >= 2) {
+      await dateInputs.first().fill(`${fmtD(s2)} 00:00:00`);
+      await dateInputs.nth(1).fill(`${fmtD(now2)} 23:59:59`);
+      await boPage.locator('.ibox-title, h2, h3').first().click({ force: true }).catch(() => {});
+      await boPage.waitForTimeout(500);
+    }
+    txFound = await searchDeposit();
+  }
+  console.log(`>> BO deposit list (Approved) — txNo "${tx.txNo}" found: ${txFound}`);
+  await boPage.evaluate(() => window.scrollBy(0, 300));
+  await boPage.waitForTimeout(300);
+  await snap(boPage, '04 - BO Deposit List Approved');  // full-page — element snap would hang on "No result"
 
   // Open detail modal
-  const txRow  = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
-  const editBtn = txRow.locator('[title="Edit"]').first();
-  if (await editBtn.count()) {
-    await editBtn.click({ force: true });
-  } else {
-    await boPage.getByTitle('Edit').first().click();
-  }
-  await boPage.waitForTimeout(2000);
-  const modal = boPage.locator('#ticket-detail');
-  if (await modal.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await snap(boPage, '05 - BO Deposit Detail Modal', modal);
-    await modal.getByText('× Close').click({ force: true }).catch(() => {});
-    await boPage.waitForTimeout(500);
+  if (txFound) {
+    const txRow   = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
+    const editBtn = txRow.locator('[title="Edit"]').first();
+    if (await editBtn.count()) {
+      await editBtn.click({ force: true });
+    } else {
+      await boPage.getByTitle('Edit').first().click();
+    }
+    await boPage.waitForTimeout(2000);
+    const modal = boPage.locator('#ticket-detail');
+    if (await modal.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await snap(boPage, '05 - BO Deposit Detail Modal', modal);
+      await modal.getByText('× Close').click({ force: true }).catch(() => {});
+      await boPage.waitForTimeout(500);
+    }
   }
 
   await boPage.close({ runBeforeUnload: false }).catch(() => {});

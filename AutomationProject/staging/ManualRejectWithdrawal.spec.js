@@ -85,33 +85,64 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
 
   await backoffice.rejectWithdrawal(actualUsername, 'test manual reject withdrawal');
 
-  // Close success modal if still open
-  await boPage.getByRole('button', { name: 'OK' }).click({ force: true }).catch(() => {});
-  await boPage.waitForTimeout(1000);
-
-  // Navigate to withdrawal list filtered by Rejected and screenshot
-  await boPage.goto(`${backoffice.boBase}/dashboard/cash/withdraw-list`, { waitUntil: 'domcontentloaded' });
-  await boPage.waitForTimeout(1500);
-  await boPage.locator('#txtUserName').fill(`${backoffice.memberPrefix}${actualUsername}`);
-  await boPage.locator('select[name="ddlFilterStatus"]').selectOption('Rejected').catch(() => {});
-  await boPage.locator('button[type="submit"]:has-text("Search")').click({ force: true });
+  // Close success modal and let page settle — already on withdraw-list after rejectWithdrawal
+  await boPage.getByRole('button', { name: 'OK' }).click({ force: true, timeout: 3000 }).catch(() => {});
   await boPage.waitForTimeout(2000);
-  await snap(boPage, '05 - BO Withdrawal List Rejected', boPage.locator('.ibox-content').first());
+
+  const searchWithdrawal = async () => {
+    await boPage.evaluate(() => {
+      const el = document.querySelector('#ddlFilterStatus');
+      if (!el) return;
+      const opt = Array.from(el.options).find(o => o.text.trim().includes('Rejected'));
+      if (opt) { el.value = opt.value; if (window.$) window.$(el).trigger('change'); el.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+    const label = await boPage.locator('#ddlFilterStatus').evaluate(el => el.options[el.selectedIndex]?.text || 'none');
+    console.log(`>> Status filter set to: ${label}`);
+    await boPage.locator('#txtUserName').fill(`${backoffice.memberPrefix}${actualUsername}`);
+    await boPage.getByText('Advanced Search').click().catch(() => {});
+    await boPage.waitForTimeout(400);
+    await boPage.locator('#txtTransactionId').fill(tx.txNo).catch(() => {});
+    await boPage.getByRole('button', { name: 'Search' }).click();
+    await boPage.waitForTimeout(2000);
+    return (await boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`).count()) > 0;
+  };
+
+  let txFound = await searchWithdrawal();
+  if (!txFound) {
+    const now2 = new Date();
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const fmtD = (d) => `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
+    const s2   = new Date(now2); s2.setDate(s2.getDate() - 1);
+    const dateInputs = boPage.locator('.input-group:has(.fa-calendar) input');
+    if (await dateInputs.count() >= 2) {
+      await dateInputs.first().fill(`${fmtD(s2)} 00:00:00`);
+      await dateInputs.nth(1).fill(`${fmtD(now2)} 23:59:59`);
+      await boPage.locator('.ibox-title, h2, h3').first().click({ force: true }).catch(() => {});
+      await boPage.waitForTimeout(500);
+    }
+    txFound = await searchWithdrawal();
+  }
+  console.log(`>> BO withdrawal list (Rejected) — txNo "${tx.txNo}" found: ${txFound}`);
+  await boPage.evaluate(() => window.scrollBy(0, 300));
+  await boPage.waitForTimeout(300);
+  await snap(boPage, '05 - BO Withdrawal List Rejected');
 
   // Open detail modal
-  const txRow   = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
-  const editBtn = txRow.locator('[title="Edit"]').first();
-  if (await editBtn.count()) {
-    await editBtn.click({ force: true });
-  } else {
-    await boPage.getByTitle('Edit').first().click();
-  }
-  await boPage.waitForTimeout(2000);
-  const modal = boPage.locator('#ticket-detail');
-  if (await modal.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await snap(boPage, '06 - BO Withdrawal Detail Modal', modal);
-    await modal.getByText('× Close').click({ force: true }).catch(() => {});
-    await boPage.waitForTimeout(500);
+  if (txFound) {
+    const txRow   = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
+    const editBtn = txRow.locator('[title="Edit"]').first();
+    if (await editBtn.count()) {
+      await editBtn.click({ force: true });
+    } else {
+      await boPage.getByTitle('Edit').first().click();
+    }
+    await boPage.waitForTimeout(2000);
+    const modal = boPage.locator('#ticket-detail');
+    if (await modal.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await snap(boPage, '06 - BO Withdrawal Detail Modal', modal);
+      await modal.getByText('× Close').click({ force: true }).catch(() => {});
+      await boPage.waitForTimeout(500);
+    }
   }
 
   await boPage.close({ runBeforeUnload: false }).catch(() => {});

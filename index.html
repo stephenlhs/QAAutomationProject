@@ -634,8 +634,8 @@
       background: var(--surface);
       border: 1px solid var(--border2);
       border-radius: 12px;
-      width: 560px; max-width: 95vw;
-      max-height: 85vh;
+      width: 720px; max-width: 95vw;
+      max-height: 90vh;
       display: flex; flex-direction: column;
       overflow: hidden;
       animation: slideup 0.2s ease;
@@ -696,7 +696,9 @@
       border-radius: 8px;
       font-family: var(--mono); font-size: 11px;
       color: var(--text-dim); line-height: 1.7;
-      max-height: 180px; overflow-y: auto;
+      height: 320px; min-height: 120px; max-height: 60vh;
+      overflow-y: auto;
+      resize: vertical;
     }
 
     .modal-footer {
@@ -1253,8 +1255,6 @@ function updatePaygateMethods(type) {
   var selectedCurrency = curSel ? curSel.value : '';
   var section = gw[type] || {};
   var methods = section.methods || {};
-  var amtEl = document.getElementById('cfg-paygate-amount');
-  if (amtEl && section.amount) amtEl.value = section.amount;
   var methodNames = Object.keys(methods).filter(function(name) {
     if (!selectedCurrency) return true;
     return (methods[name].currencies || []).indexOf(selectedCurrency) !== -1;
@@ -1264,19 +1264,72 @@ function updatePaygateMethods(type) {
     return;
   }
   var firstEnabled = methodNames.find(function(n) { return methods[n].enabled; }) || '';
+
+  // Auto-set amount to first enabled method's amount (or section amount)
+  var amtEl = document.getElementById('cfg-paygate-amount');
+  if (amtEl) {
+    var fm = methods[firstEnabled] || {};
+    amtEl.value = fm.amount || section.amount || amtEl.value || 50;
+  }
+
   container.innerHTML =
     methodNames.map(function(name) {
         var m = methods[name];
         var labelStyle = m.enabled
           ? 'display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;padding:3px 0;'
           : 'display:flex;align-items:center;gap:7px;font-size:12px;cursor:not-allowed;padding:3px 0;color:var(--text-faint);';
-        var inputExtra = m.enabled ? '' : ' disabled';
+        var inputExtra  = m.enabled ? '' : ' disabled';
         var checked     = (name === firstEnabled) ? ' checked' : '';
-        var tag = m.enabled ? '' : ' <span style="font-size:10px;">(disabled)</span>';
+        var tag         = m.enabled ? '' : ' <span style="font-size:10px;">(disabled)</span>';
+        var amtAttr     = m.amount ? ' data-method-amount="' + m.amount + '"' : '';
+        var baseAmtAttr = section.amount ? ' data-section-amount="' + section.amount + '"' : '';
+        var onChange    = ' onchange="onPaygateMethodChange(\'' + type + '\', this)"';
+
+        // Banks/wallets sub-section — shown for any method that has a banks object
+        var banksHtml = '';
+        if (m.banks) {
+          // Resolve list: object keyed by currency, or legacy flat array
+          var allBanks = Array.isArray(m.banks)
+            ? m.banks
+            : (m.banks[selectedCurrency] || m.banks['MYR'] || []);
+          var bankList = allBanks.filter(function(b) { return b.enabled; });
+          if (bankList.length > 0) {
+            var showBanks = (name === firstEnabled) ? 'block' : 'none';
+            var curLabel  = selectedCurrency || 'MYR';
+            var sectionLabel = (name === 'EWallet') ? 'E-Wallets' : 'Banks';
+            banksHtml = '<div id="paygate-banks-list-' + name + '" style="display:' + showBanks + ';margin:2px 0 4px 22px;padding:6px 8px;background:var(--surface3);border-radius:4px;border:1px solid var(--border);">'
+              + '<div style="font-size:10px;color:var(--text-faint);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">' + sectionLabel + ' (' + curLabel + ')</div>'
+              + bankList.map(function(bank, idx) {
+                  var chk = (idx === 0) ? ' checked' : '';
+                  return '<label style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;cursor:pointer;">'
+                    + '<input type="radio" name="paygate-bank" value="' + bank.name + '"' + chk + ' style="accent-color:var(--accent);">'
+                    + bank.name + '</label>';
+                }).join('')
+              + '</div>';
+          }
+        }
+
         return '<label style="' + labelStyle + '">'
-          + '<input type="radio" name="paygate-method" value="' + name + '" style="accent-color:var(--accent);"' + inputExtra + checked + '>'
-          + name + tag + '</label>';
+          + '<input type="radio" name="paygate-method" value="' + name + '" style="accent-color:var(--accent);"' + inputExtra + checked + amtAttr + baseAmtAttr + onChange + '>'
+          + name + tag + '</label>'
+          + banksHtml;
       }).join('');
+}
+
+function onPaygateMethodChange(type, radioEl) {
+  // Update amount field
+  var amtEl = document.getElementById('cfg-paygate-amount');
+  if (amtEl) {
+    var methodAmt  = radioEl.getAttribute('data-method-amount');
+    var sectionAmt = radioEl.getAttribute('data-section-amount');
+    if (methodAmt)  amtEl.value = methodAmt;
+    else if (sectionAmt) amtEl.value = sectionAmt;
+  }
+  // Show active method's banks/wallets list, hide others
+  document.querySelectorAll('[id^="paygate-banks-list-"]').forEach(function(el) {
+    var methodName = el.id.replace('paygate-banks-list-', '');
+    el.style.display = (methodName === radioEl.value) ? 'block' : 'none';
+  });
 }
 
 var selectedTest = null;
@@ -1416,6 +1469,9 @@ function getConfigValues() {
     if (pgMethod && pgMethod.value) vals.paygateMethod        = pgMethod.value;
     if (pgAmt && pgAmt.value)       vals.paygateAmount        = pgAmt.value;
     if (pgCur && pgCur.value)       vals.paygateTestCurrency  = pgCur.value;
+    // Selected bank/wallet (radio — one at a time)
+    var pgBank = document.querySelector('input[name="paygate-bank"]:checked');
+    if (pgBank && pgBank.value) vals.paygateBanks = pgBank.value;
   }
 
   return vals;
@@ -1462,6 +1518,14 @@ function runSelectedTest() {
         addLog('err', '>> Cannot run: "' + pgMethod.value + '" is disabled in the gateway config. Select a different method.');
         return;
       }
+      // Bank/EWallet require a bank/wallet to be selected
+      if (methodCfg && methodCfg.banks) {
+        var pgBank = document.querySelector('input[name="paygate-bank"]:checked');
+        if (!pgBank || !pgBank.value) {
+          addLog('err', '>> Cannot run: no bank selected for "' + pgMethod.value + '". Please tick a bank before running.');
+          return;
+        }
+      }
     }
   }
 
@@ -1483,6 +1547,8 @@ function runTest(testId, configVals) {
     paygateGateway:       configVals.paygateGateway,
     paygateMethod:        configVals.paygateMethod,
     paygateTestCurrency:  configVals.paygateTestCurrency,
+    paygateAmount:        configVals.paygateAmount,
+    paygateBanks:         configVals.paygateBanks,
   };
 
   setOutputLabel('RUNNING &#8212; ' + testId + ' [' + currentEnv.toUpperCase() + ']', 'running');
@@ -1972,8 +2038,8 @@ function renderPreviewBody(body, data) {
 
   var logPreview = '';
   if (logs.length > 0) {
-    var recent = logs.slice(-20).join('\n');
-    logPreview = '<div style="margin-top:12px;font-size:10px;color:var(--text-faint);font-family:var(--mono);margin-bottom:4px;letter-spacing:0.08em;">LOG PREVIEW (last 20 of ' + data.totalLines + ' lines)</div>'
+    var recent = logs.slice(-50).join('\n');
+    logPreview = '<div style="margin-top:12px;font-size:10px;color:var(--text-faint);font-family:var(--mono);margin-bottom:4px;letter-spacing:0.08em;">LOG PREVIEW (last 50 of ' + data.totalLines + ' lines)</div>'
       + '<div class="modal-log-section">' + recent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</div>';
   }
 

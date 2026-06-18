@@ -22,8 +22,26 @@ export class DepositPage {
     console.log('>> Navigated to Deposit page');
   }
 
+  async selectPackage(packageName) {
+    const pkgBtn = this.page.locator('button, [role="button"]').filter({ hasText: packageName }).first();
+    const pkgBtnVisible = await pkgBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    if (pkgBtnVisible) {
+      await pkgBtn.click();
+      await this.page.waitForTimeout(500);
+      console.log(`>> Package selected via button: ${packageName}`);
+    } else {
+      const pkgSelect = this.page.getByRole('combobox').first();
+      await pkgSelect.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+      await pkgSelect.selectOption({ label: packageName });
+      await this.page.waitForTimeout(500);
+      const chosen = await pkgSelect.locator('option:checked').innerText().catch(() => '?');
+      console.log(`>> Package selected via dropdown: "${chosen}"`);
+    }
+    await this.page.waitForTimeout(2500);
+  }
+
   async selectBankTransfer(bankName) {
-    await this.packageButton.click();
+    await this.selectPackage(DEPOSIT.packageName);
     await this.methodDropdown.selectOption('bank-in-transfer');
     await this.bankDropdown.click();
     await this.page.locator('.dropdown-option').filter({ hasText: bankName }).first().click();
