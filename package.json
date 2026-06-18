@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "setup": "playwright test AutomationProject/auth.setup.js --headed"
+    "setup": "playwright test AutomationProject/auth.setup.js --headed",
+    "postinstall": "playwright install chromium"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0"
