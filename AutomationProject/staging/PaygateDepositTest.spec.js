@@ -380,7 +380,11 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
         txFoundAfter = await searchBO(expectedStatus);
         if (!txFoundAfter) {
           await extendDateRange();
-          txFoundAfter = await searchBO(expectedStatus);
+          await boPage.waitForLoadState('domcontentloaded').catch(() => {});
+          await boPage.waitForTimeout(1000);
+          await boPage.getByRole('button', { name: 'Search' }).click();
+          await boPage.waitForTimeout(2000);
+          txFoundAfter = (await boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`).count()) > 0;
         }
         console.log(`>> BO deposit list (${expectedStatus}) — txNo "${tx.txNo}" found: ${txFoundAfter}`);
         await boPage.evaluate(() => window.scrollBy(0, 300));

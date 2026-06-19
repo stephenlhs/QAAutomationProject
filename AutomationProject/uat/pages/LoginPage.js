@@ -17,13 +17,21 @@ export class LoginPage {
 
   // ── Close popups ───────────────────────────────────────────
   async closePopups() {
-    const selectors = ['text=x', '.fa.fa-times', 'text=×'];
-    for (const sel of selectors) {
-      const el = this.page.locator(sel).first();
-      if (await el.isVisible().catch(() => false)) {
-        await el.click().catch(() => {});
-        await this.page.waitForTimeout(300);
+    // Loop until no more .js-popup-close-btn visible (multiple banners can stack)
+    for (let i = 0; i < 10; i++) {
+      const btn = this.page.locator('.js-popup-close-btn').first();
+      if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
+        await btn.click({ force: true }).catch(() => {});
+        await this.page.waitForTimeout(400);
+      } else {
+        break;
       }
+    }
+    // Fallback for any other generic close icons
+    const fallback = this.page.locator('.fa.fa-times').first();
+    if (await fallback.isVisible({ timeout: 500 }).catch(() => false)) {
+      await fallback.click({ force: true }).catch(() => {});
+      await this.page.waitForTimeout(300);
     }
   }
 

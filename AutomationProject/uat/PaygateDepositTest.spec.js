@@ -112,7 +112,14 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
       // ── PART 3: Navigate to deposit page ──
       await playerPage.goto(`${URLS.playsite}user/deposit`);
       await playerPage.waitForTimeout(1500);
-      await playerPage.locator('.fa.fa-times').click().catch(() => {});
+      for (let _pi = 0; _pi < 10; _pi++) {
+        const _pb = playerPage.locator('.js-popup-close-btn').first();
+        if (await _pb.isVisible({ timeout: 500 }).catch(() => false)) {
+          await _pb.click({ force: true }).catch(() => {});
+          await playerPage.waitForTimeout(400);
+        } else { break; }
+      }
+      await playerPage.locator('.fa.fa-times').first().click({ force: true }).catch(() => {});
 
       // Select package — try button cards first, then the Package* combobox (first <select> on page)
       const pkgBtn = playerPage.locator('button, [role="button"]').filter({ hasText: CONFIG.deposit.packageName }).first();

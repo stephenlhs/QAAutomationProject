@@ -9,7 +9,8 @@ import { StatementPage } from './pages/StatementPage.js';
 import { PLAYER, BACKOFFICE, WITHDRAWAL } from './config.js';
 
 const screenshots = [];
-const MANIFEST_NAME = 'manifest-reject-withdrawal.json';
+const MANIFEST_NAME     = 'manifest-reject-withdrawal.json';
+const TXN_MANIFEST_NAME = 'manifest-reject-withdrawal-txn.json';
 async function snap(page, label, el = null) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });

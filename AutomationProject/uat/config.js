@@ -8,7 +8,7 @@ dotenv.config({ path: join(__dirname, '..', '..', '.env'), override: false });
 export const ENV_NAME = 'uat';
 
 export const URLS = {
-  playsite:   'https://mem2.linkv2.com/#',
+  playsite:   'https://mem2.linkv2.com/',
   backoffice: 'https://ag-uat.linkv2.com/login',
 };
 
@@ -28,8 +28,8 @@ export const BACKOFFICE = {
 
 export const DEPOSIT = {
   amount:             parseFloat(process.env.CUSTOM_DEPOSIT_AMOUNT) || 50,
-  bankName:           process.env.DEPOSIT_BANK_NAME || 'Maybank',
-  packageName:        process.env.DEPOSIT_PACKAGE_NAME || 'Normal Deposit',
+  bankName:           process.env.DEPOSIT_BANK_NAME || 'PUBLIC BANK - ESSENTIAL GOLDEN SDN BHD',
+  packageName:        process.env.DEPOSIT_PACKAGE_NAME || '# P1',
   rolloverMultiplier: parseFloat(process.env.DEPOSIT_ROLLOVER_MULTIPLIER) || 1,
 };
 

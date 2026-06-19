@@ -164,7 +164,7 @@
         }
       },
       "EWallet": {
-        "enabled": false,
+        "enabled": true,
         "tab": "e-wallet",
         "currencies": ["BDT", "HKD", "IDR", "PHP", "PKR", "VND"],
         "limits": {
@@ -217,7 +217,7 @@
         }
       },
       "Crypto": {
-        "enabled": false,
+        "enabled": true,
         "tab": "crypto-payment",
         "currencies": ["MYR", "IDR", "THB", "USD", "VND", "INR", "HKD"],
         "limits": {
@@ -259,7 +259,7 @@
         }
       },
       "EWallet": {
-        "enabled": false,
+        "enabled": true,
         "currencies": ["BDT", "HKD", "IDR", "PKR"],
         "limits": {
           "BDT": { "min": 200,   "max": 30000   },
@@ -269,7 +269,7 @@
         }
       },
       "Crypto": {
-        "enabled": false,
+        "enabled": true,
         "currencies": ["MYR", "IDR", "THB", "USD", "VND", "INR", "HKD"],
         "limits": {
           "MYR": { "min": 50,     "max": 50000    },

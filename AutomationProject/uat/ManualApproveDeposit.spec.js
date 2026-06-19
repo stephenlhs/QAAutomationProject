@@ -11,7 +11,8 @@ import { PLAYER, BACKOFFICE, DEPOSIT } from './config.js';
 
 // ── Screenshot helper ──────────────────────────────────────────
 const screenshots = [];
-const MANIFEST_NAME = 'manifest-approve-deposit.json';
+const MANIFEST_NAME     = 'manifest-approve-deposit.json';
+const TXN_MANIFEST_NAME = 'manifest-approve-deposit-txn.json';
 async function snap(page, label, el = null) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
@@ -61,8 +62,9 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   await snap(playerPage, '03 - Cash History Pending');
   console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
+  await playerPage.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await playerPage.close({ runBeforeUnload: false }).catch(() => {});
-  await playerContext.close();
+  await playerContext.close().catch(() => {});
 
   // ── PART 4: Backoffice — outstanding balance + approve ──
   const boContext  = await browser.newContext();
@@ -137,8 +139,9 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
     }
   }
 
+  await boPage.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await boPage.close({ runBeforeUnload: false }).catch(() => {});
-  await boContext.close();
+  await boContext.close().catch(() => {});
 
   // ── PART 5: Player verify after approval ──
   const playerContext2  = await browser.newContext({ storageState: PLAYER.sessionPath });
@@ -156,6 +159,29 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   const after = await withdrawalPage2.getStats('after');
   await snap(playerPage2, '07 - Stats After');
   console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
+
+  // ── Write transaction summary for Excel report ──
+  const txnSummary = {
+    player:           actualUsername,
+    gateway:          'Manual',
+    method:           'Bank Transfer',
+    packageName:      DEPOSIT.packageName,
+    txNo:             tx.txNo,
+    txDateTime:       tx.dateTime,
+    txAmount:         tx.amount,
+    bonus:            tx.bonus || '0',
+    txStatus:         'Approved',
+    outstandingTotal: String(outstanding.total),
+    balanceBefore:    String(before.balance),
+    balanceAfter:     String(after.balance),
+    rolloverBefore:   String(before.rollover),
+    rolloverAfter:    String(after.rollover),
+    targetBefore:     String(before.target),
+    targetAfter:      String(after.target),
+  };
+  mkdirSync(join(process.cwd(), '.screenshots-tmp'), { recursive: true });
+  writeFileSync(join(process.cwd(), '.screenshots-tmp', TXN_MANIFEST_NAME), JSON.stringify(txnSummary), 'utf-8');
+  console.log('>> Txn summary written');
 
   // ── Assertions ──
   const txBonusAmount  = parseFloat(tx.bonus) || 0;
@@ -184,6 +210,7 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
 
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
   console.log('>> RESULT: PASS');
+  await playerPage2.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await playerPage2.close({ runBeforeUnload: false }).catch(() => {});
-  await playerContext2.close();
+  await playerContext2.close().catch(() => {});
 });

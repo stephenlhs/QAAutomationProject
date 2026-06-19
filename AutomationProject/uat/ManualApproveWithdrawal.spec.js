@@ -9,7 +9,8 @@ import { StatementPage } from './pages/StatementPage.js';
 import { PLAYER, BACKOFFICE, WITHDRAWAL } from './config.js';
 
 const screenshots = [];
-const MANIFEST_NAME = 'manifest-approve-withdrawal.json';
+const MANIFEST_NAME     = 'manifest-approve-withdrawal.json';
+const TXN_MANIFEST_NAME = 'manifest-approve-withdrawal-txn.json';
 async function snap(page, label, el = null) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
@@ -50,8 +51,9 @@ test('withdrawal approve — verify balance decreases and rollover resets', asyn
     await snap(playerPage, '02 - Rollover Error');
     console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
     console.log('>> RESULT: PASS');
+    await playerPage.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
     await playerPage.close({ runBeforeUnload: false }).catch(() => {});
-    await playerContext.close();
+    await playerContext.close().catch(() => {});
     return;
   }
 
@@ -70,8 +72,9 @@ test('withdrawal approve — verify balance decreases and rollover resets', asyn
   await snap(playerPage, '04 - Cash History Pending');
   console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
+  await playerPage.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await playerPage.close({ runBeforeUnload: false }).catch(() => {});
-  await playerContext.close();
+  await playerContext.close().catch(() => {});
 
   // ── PART 4: Backoffice — approve ──
   const boContext  = await browser.newContext();
@@ -145,8 +148,9 @@ test('withdrawal approve — verify balance decreases and rollover resets', asyn
     }
   }
 
+  await boPage.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await boPage.close({ runBeforeUnload: false }).catch(() => {});
-  await boContext.close();
+  await boContext.close().catch(() => {});
 
   // ── PART 5: Player verify after approval ──
   const playerContext2  = await browser.newContext({ storageState: PLAYER.sessionPath });
@@ -165,6 +169,29 @@ test('withdrawal approve — verify balance decreases and rollover resets', asyn
   await snap(playerPage2, '08 - Stats After');
   console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
 
+  // ── Write transaction summary for Excel report ──
+  const txnSummary = {
+    player:           actualUsername,
+    gateway:          'Manual',
+    method:           'Bank Withdrawal',
+    packageName:      '—',
+    txNo:             tx.txNo,
+    txDateTime:       tx.dateTime,
+    txAmount:         tx.amount,
+    bonus:            '—',
+    txStatus:         'Approved',
+    outstandingTotal: '—',
+    balanceBefore:    String(before.balance),
+    balanceAfter:     String(after.balance),
+    rolloverBefore:   String(before.rollover),
+    rolloverAfter:    String(after.rollover),
+    targetBefore:     String(before.target),
+    targetAfter:      String(after.target),
+  };
+  mkdirSync(join(process.cwd(), '.screenshots-tmp'), { recursive: true });
+  writeFileSync(join(process.cwd(), '.screenshots-tmp', TXN_MANIFEST_NAME), JSON.stringify(txnSummary), 'utf-8');
+  console.log('>> Txn summary written');
+
   // ── Assertions ──
   const expectedBalance = before.balance - WITHDRAWAL.amount;
   expect(after.balance).toBeCloseTo(expectedBalance, 1);
@@ -174,6 +201,7 @@ test('withdrawal approve — verify balance decreases and rollover resets', asyn
 
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
   console.log('>> RESULT: PASS');
+  await playerPage2.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await playerPage2.close({ runBeforeUnload: false }).catch(() => {});
-  await playerContext2.close();
+  await playerContext2.close().catch(() => {});
 });

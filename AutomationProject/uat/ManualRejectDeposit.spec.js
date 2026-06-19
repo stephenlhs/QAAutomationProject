@@ -10,7 +10,8 @@ import { StatementPage } from './pages/StatementPage.js';
 import { PLAYER, BACKOFFICE, DEPOSIT } from './config.js';
 
 const screenshots = [];
-const MANIFEST_NAME = 'manifest-reject-deposit.json';
+const MANIFEST_NAME     = 'manifest-reject-deposit.json';
+const TXN_MANIFEST_NAME = 'manifest-reject-deposit-txn.json';
 async function snap(page, label, el = null) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
@@ -60,8 +61,9 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   await snap(playerPage, '03 - Cash History Pending');
   console.log(`>> Transaction: ${tx.txNo} | ${tx.dateTime}`);
 
+  await playerPage.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await playerPage.close({ runBeforeUnload: false }).catch(() => {});
-  await playerContext.close();
+  await playerContext.close().catch(() => {});
 
   // ── PART 4: Backoffice — reject ──
   const boContext  = await browser.newContext();
@@ -135,8 +137,9 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
     }
   }
 
+  await boPage.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await boPage.close({ runBeforeUnload: false }).catch(() => {});
-  await boContext.close();
+  await boContext.close().catch(() => {});
 
   // ── PART 5: Player verify after rejection ──
   const playerContext2  = await browser.newContext({ storageState: PLAYER.sessionPath });
@@ -155,6 +158,29 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   await snap(playerPage2, '07 - Stats After');
   console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
 
+  // ── Write transaction summary for Excel report ──
+  const txnSummary = {
+    player:           actualUsername,
+    gateway:          'Manual',
+    method:           'Bank Transfer',
+    packageName:      DEPOSIT.packageName,
+    txNo:             tx.txNo,
+    txDateTime:       tx.dateTime,
+    txAmount:         tx.amount,
+    bonus:            tx.bonus || '0',
+    txStatus:         'Rejected',
+    outstandingTotal: '—',
+    balanceBefore:    String(before.balance),
+    balanceAfter:     String(after.balance),
+    rolloverBefore:   String(before.rollover),
+    rolloverAfter:    String(after.rollover),
+    targetBefore:     String(before.target),
+    targetAfter:      String(after.target),
+  };
+  mkdirSync(join(process.cwd(), '.screenshots-tmp'), { recursive: true });
+  writeFileSync(join(process.cwd(), '.screenshots-tmp', TXN_MANIFEST_NAME), JSON.stringify(txnSummary), 'utf-8');
+  console.log('>> Txn summary written');
+
   // ── Assertions ──
   expect(after.balance).toBeCloseTo(before.balance, 1);
   expect(after.rollover).toBeCloseTo(before.rollover, 1);
@@ -163,6 +189,7 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
 
   console.log(`>> Screenshots manifest saved (${screenshots.length} screenshots)`);
   console.log('>> RESULT: PASS');
+  await playerPage2.goto('about:blank', { waitUntil: 'commit', timeout: 3000 }).catch(() => {});
   await playerPage2.close({ runBeforeUnload: false }).catch(() => {});
-  await playerContext2.close();
+  await playerContext2.close().catch(() => {});
 });

@@ -8,6 +8,7 @@ const sharedUse = {
   video: 'on',
   trace: 'on',
   viewport: null,
+  actionTimeout: 30000,
   launchOptions: {
     args: ['--start-maximized'],
   },
@@ -38,13 +39,14 @@ export default defineConfig({
     {
       name: 'uat',
       testMatch: '**/uat/!(CreateMemberAndSaveSession).spec.js',
-      use: { ...sharedUse },
+      timeout: 0,
+      use: { ...sharedUse, video: 'retain-on-failure', trace: 'retain-on-failure' },
     },
     {
       name: 'uat-member-setup',
       testMatch: '**/uat/CreateMemberAndSaveSession.spec.js',
       timeout: 0,
-      use: { ...sharedUse },
+      use: { ...sharedUse, video: 'retain-on-failure', trace: 'retain-on-failure' },
     },
 
     // ── PROD ──
