@@ -79,6 +79,15 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   await boPage.getByRole('button', { name: 'OK' }).click({ force: true, timeout: 3000 }).catch(() => {});
   await boPage.waitForTimeout(2000);
 
+  const expandAdvancedSearch = async () => {
+    const txInput = boPage.locator('#txtTransactionId');
+    const isVisible = await txInput.isVisible({ timeout: 500 }).catch(() => false);
+    if (!isVisible) {
+      await boPage.getByText('Advanced Search').first().click({ force: true }).catch(() => {});
+      await boPage.waitForTimeout(600);
+    }
+  };
+
   const searchDeposit = async () => {
     await boPage.evaluate(() => {
       const el = document.querySelector('#ddlFilterStatus');
@@ -89,8 +98,7 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
     const label = await boPage.locator('#ddlFilterStatus').evaluate(el => el.options[el.selectedIndex]?.text || 'none');
     console.log(`>> Status filter set to: ${label}`);
     await boPage.locator('#txtUserName').fill(`${backoffice.memberPrefix}${actualUsername}`);
-    await boPage.getByText('Advanced Search').click().catch(() => {});
-    await boPage.waitForTimeout(400);
+    await expandAdvancedSearch();
     await boPage.locator('#txtTransactionId').fill(tx.txNo).catch(() => {});
     await boPage.getByRole('button', { name: 'Search' }).click();
     await boPage.waitForTimeout(2000);
@@ -103,11 +111,13 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
     const pad2 = (n) => String(n).padStart(2, '0');
     const fmtD = (d) => `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
     const s2   = new Date(now2); s2.setDate(s2.getDate() - 1);
+    await expandAdvancedSearch();
     const dateInputs = boPage.locator('.input-group:has(.fa-calendar) input');
     if (await dateInputs.count() >= 2) {
       await dateInputs.first().fill(`${fmtD(s2)} 00:00:00`);
+      await dateInputs.first().press('Tab');
       await dateInputs.nth(1).fill(`${fmtD(now2)} 23:59:59`);
-      await boPage.locator('.ibox-title, h2, h3').first().click({ force: true }).catch(() => {});
+      await dateInputs.nth(1).press('Tab');
       await boPage.waitForTimeout(500);
     }
     txFound = await searchDeposit();

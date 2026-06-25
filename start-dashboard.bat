@@ -17,7 +17,7 @@ echo  [3/4] Opening local dashboard...
 start http://localhost:4000
 
 echo  [4/4] Starting ngrok tunnel (port 4000)...
-set NGROK=%LOCALAPPDATA%\Microsoft\WinGet\Packages\Ngrok.Ngrok_Microsoft.Winget.Source_8wekyb3d8bbwe\ngrok.exe
+set NGROK=%APPDATA%\npm\node_modules\ngrok\bin\ngrok.exe
 start "ngrok" cmd /k ""%NGROK%" http 4000"
 
 echo.

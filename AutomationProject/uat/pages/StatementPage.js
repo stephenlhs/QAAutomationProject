@@ -31,7 +31,13 @@ export class StatementPage {
 
   async verifyLatestStatus(status) {
     const latestRow = this.page.getByRole('row').nth(1);
-    await expect(latestRow.getByRole('cell', { name: status })).toBeVisible({ timeout: 5000 });
+    const found = await latestRow.getByRole('cell', { name: status }).isVisible({ timeout: 5000 }).catch(() => false);
+    if (!found) {
+      console.log(`>> Cash History status not "${status}" yet — reloading...`);
+      await this.page.reload({ waitUntil: 'domcontentloaded' });
+      await this.page.waitForTimeout(2000);
+    }
+    await expect(latestRow.getByRole('cell', { name: status })).toBeVisible({ timeout: 10000 });
     console.log(`>> Cash History status: ${status} ✅`);
   }
 

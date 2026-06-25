@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mkdirSync, writeFileSync, readFileSync, readdirSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { CaptchaHelper } from '../helpers/CaptchaHelper.js';
@@ -11,7 +11,6 @@ import { PLAYER, BACKOFFICE, URLS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Load gateway config by classIdentifier (PAYGATE_GATEWAY env var, default: 'vaderpayc2')
 const gatewayId      = process.env.PAYGATE_GATEWAY || 'vaderpayc2';
 const methodOverride = process.env.PAYGATE_METHOD  || null;
 
@@ -26,20 +25,20 @@ if (!CONFIG) {
   process.exit(1);
 }
 
-const screenshots = [];
-const MANIFEST_NAME = 'manifest-paygate-withdraw.json';
+const SCREENSHOTS_DIR = join(process.cwd(), '.screenshots-tmp');
+const RESUME_SIGNAL   = join(SCREENSHOTS_DIR, 'paygate-resume-signal.json');
+const MANIFEST_NAME   = 'manifest-paygate-withdraw.json';
 
+const screenshots = [];
 async function snap(page, label) {
-  const dir = join(process.cwd(), '.screenshots-tmp');
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, `${Date.now()}-${label.replace(/\s+/g, '-')}.png`);
+  mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+  const file = join(SCREENSHOTS_DIR, `${Date.now()}-${label.replace(/\s+/g, '-')}.png`);
   await page.screenshot({ path: file, fullPage: false });
   screenshots.push({ label, path: file });
-  writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), 'utf-8');
+  writeFileSync(join(SCREENSHOTS_DIR, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), 'utf-8');
   console.log(`>> Screenshot: ${label}`);
 }
 
-// Disable Playwright's built-in trace/video/screenshot — this test manages its own artifacts
 test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 
 test('Paygate withdraw — all enabled methods', async ({ browser }) => {
@@ -56,7 +55,7 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
   if (enabledMethods.length === 0) {
     console.log(`>> No withdrawal methods enabled for gateway "${CONFIG.gatewayName}"`);
     console.log('>> RESULT: PASS');
-    process.exit(0);
+    return;
   }
 
   for (const [methodName] of enabledMethods) {
@@ -64,7 +63,7 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
 
     let playerContext, playerPage, boContext, boPage;
     try {
-      // ── PART 1: Player login ──
+      // ── PART 1: Player login + stats before ──
       playerContext = await browser.newContext();
       playerPage    = await playerContext.newPage();
       const loginPage      = new LoginPage(playerPage, 'player');
@@ -73,19 +72,17 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
       const captcha        = new CaptchaHelper(playerPage, 'player');
 
       await loginPage.loginAndSaveSession(PLAYER.username, PLAYER.password, captcha, PLAYER.sessionPath);
-      await snap(playerPage, `${methodName}-01 - Player Login`);
 
-      // ── PART 2: Record BEFORE stats ──
       await withdrawalPage.navigate();
       const before = await withdrawalPage.getStats('before');
-      await snap(playerPage, `${methodName}-02 - Stats Before`);
+      await snap(playerPage, `${methodName}-01 - Stats Before`);
       console.log(`>> BEFORE — Balance: ${before.balance}, Rollover: ${before.rollover}, Target: ${before.target}`);
 
       // ── Rollover gate check ──
       if (before.rollover < before.target) {
         console.log(`>> Rollover not met: ${before.rollover} < ${before.target}`);
         await withdrawalPage.verifyRolloverError(amount);
-        await snap(playerPage, `${methodName}-03 - Rollover Gate`);
+        await snap(playerPage, `${methodName}-02 - Rollover Gate`);
         results[methodName] = 'SKIP: rollover not met';
         await playerPage.close({ runBeforeUnload: false }).catch(() => {});
         await playerContext.close();
@@ -93,11 +90,11 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
         continue;
       }
 
-      // ── PART 3: Submit paygate withdrawal ──
+      // ── PART 2: Submit paygate withdrawal ──
       await withdrawalPage.navigate();
-      await snap(playerPage, `${methodName}-03 - Withdrawal Form`);
-
       await playerPage.locator('input.field__value').first().fill(String(amount));
+      await snap(playerPage, `${methodName}-02 - Withdrawal Form`);
+
       await playerPage.locator('.multi-lang[data-lang="DEPOSITWITHDRAW.Submit"]').first().click({ force: true });
       await playerPage.waitForTimeout(2000);
 
@@ -106,49 +103,82 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
       await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true });
       await playerPage.waitForTimeout(3000);
 
-      // ── Determine withdrawal submission result ──
       let withdrawResult = 'unknown';
       let withdrawError  = '';
-
       const successModal = playerPage.locator('.swal2-content', { hasText: 'Send request successfully' });
       const errModal     = playerPage.locator('.swal2-modal .swal2-content');
 
       if (await successModal.isVisible().catch(() => false)) {
         withdrawResult = 'success';
         console.log(`>> Withdrawal request submitted successfully`);
-        await snap(playerPage, `${methodName}-04 - Withdrawal Submitted`);
         await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true });
       } else if (await errModal.isVisible().catch(() => false)) {
         withdrawError  = (await errModal.innerText().catch(() => '')).trim();
         withdrawResult = 'error';
         console.log(`>> Withdrawal error: ${withdrawError}`);
-        await snap(playerPage, `${methodName}-04 - Withdrawal Error`);
+        await snap(playerPage, `${methodName}-03 - Withdrawal Error`);
         await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true }).catch(() => {});
+        results[methodName] = `FAIL: ${withdrawError}`;
+        await playerPage.close({ runBeforeUnload: false }).catch(() => {});
+        await playerContext.close();
+        playerContext = null;
+        continue;
       } else {
         withdrawResult = 'success';
-        await snap(playerPage, `${methodName}-04 - Withdrawal Submitted`);
         console.log(`>> Withdrawal submitted (no explicit success modal)`);
       }
 
-      // ── PART 4: Get transaction from Cash History ──
+      // ── PART 3: Cash History — Pending ──
       await statementPage.navigateToCashHistory();
       await playerPage.waitForTimeout(2000);
-      await snap(playerPage, `${methodName}-05 - Cash History`);
-
       const tx = await statementPage.getLatestTransaction();
+      await snap(playerPage, `${methodName}-03 - Cash History Pending`);
       console.log(`>> Transaction: ${tx.txNo} | Status: ${tx.status} | Amount: ${tx.amount}`);
 
-      // ── PART 5: Record AFTER stats ──
+      // ── PART 4: PAUSE — wait for vendor callback ──
+      // Auto paygate:      vendor processes directly — just click Approved/Rejected in dashboard
+      // Semi-auto paygate: go to BO → Cash Withdraw List → open transaction → click Process Transaction
+      //                    wait for vendor callback, then click Approved/Rejected in dashboard
+      if (existsSync(RESUME_SIGNAL)) unlinkSync(RESUME_SIGNAL);
+
+      const pauseData = {
+        txNo:    tx.txNo,
+        amount:  String(amount),
+        method:  methodName,
+        gateway: CONFIG.gatewayName,
+      };
+      console.log(`>> PAUSE: ${JSON.stringify(pauseData)}`);
+
+      let resumeAction = null;
+      while (!resumeAction) {
+        await playerPage.waitForTimeout(2000);
+        if (existsSync(RESUME_SIGNAL)) {
+          try {
+            const sig = JSON.parse(readFileSync(RESUME_SIGNAL, 'utf-8'));
+            resumeAction = sig.action;
+            unlinkSync(RESUME_SIGNAL);
+          } catch {}
+        }
+      }
+      console.log(`>> RESUMED with action: ${resumeAction}`);
+
+      // ── PART 5: Cash History — final status ──
+      const expectedStatus = resumeAction === 'approved' ? 'Approved' : 'Rejected';
+      await statementPage.navigateToCashHistory();
+      await statementPage.verifyLatestStatus(expectedStatus);
+      await snap(playerPage, `${methodName}-04 - Cash History ${expectedStatus}`);
+
+      // ── PART 6: Stats after ──
       await withdrawalPage.navigate();
       const after = await withdrawalPage.getStats('after');
-      await snap(playerPage, `${methodName}-06 - Stats After`);
+      await snap(playerPage, `${methodName}-05 - Stats After`);
       console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
 
       await playerPage.close({ runBeforeUnload: false }).catch(() => {});
       await playerContext.close();
       playerContext = null;
 
-      // ── PART 6: BO — verify transaction in Cash Withdraw List ──
+      // ── PART 7: BO — verify transaction in Cash Withdraw List ──
       boContext  = await browser.newContext();
       boPage     = await boContext.newPage();
       const backoffice = new BackofficePage(boPage, 'backoffice');
@@ -157,24 +187,17 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
       await backoffice.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, boCaptcha, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
       await backoffice.closeExtraTabs();
       await backoffice.closeAnnouncements();
-      await snap(boPage, `${methodName}-07 - BO Login`);
 
-      // Navigate to Cash Withdraw List via direct URL (avoids sidebar toggle conflicts)
       await boPage.goto(`${backoffice.boBase}/dashboard/cash/withdraw-list`, { waitUntil: 'domcontentloaded' });
       await boPage.waitForTimeout(1500);
 
-      const boUsername = `${URLS.memberPrefix || ''}${PLAYER.username.replace(/^x9048_/, '')}`;
-      const statusFilter = tx.status.toLowerCase().includes('pending') || tx.status.toLowerCase().includes('inprocess')
-        ? 'Pending/InProcess'
-        : tx.status.toLowerCase().includes('approved')
-          ? 'Approved'
-          : 'Pending/InProcess';
-
+      const boUsername   = `${URLS.memberPrefix || ''}${PLAYER.username.replace(/^x9048_/, '')}`;
+      const boStatusFilter = resumeAction === 'approved' ? 'Approved' : 'Rejected';
       await boPage.locator('input[name="txtUserName"]').fill(boUsername);
-      await boPage.locator('select[name="ddlFilterStatus"]').selectOption(statusFilter).catch(() => {});
+      await boPage.locator('select[name="ddlFilterStatus"]').selectOption(boStatusFilter).catch(() => {});
       await boPage.locator('button[type="submit"]:has-text("Search")').click({ force: true });
       await boPage.waitForTimeout(2000);
-      await snap(boPage, `${methodName}-08 - BO Withdraw List`);
+      await snap(boPage, `${methodName}-06 - BO Withdraw List ${expectedStatus}`);
 
       const txRow   = boPage.locator(`.table-responsive tbody td:has-text("${tx.txNo}")`);
       const txFound = (await txRow.count()) > 0;
@@ -185,13 +208,11 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
         const txRowParent = boPage.locator(`.table-responsive tbody tr:has(td:has-text("${tx.txNo}"))`).first();
         await txRowParent.locator('i.fa.fa-edit').click({ force: true });
         await boPage.waitForTimeout(2000);
-
         const paygateLabel = boPage.locator('form[name="ticketDetailForm"] .modal-body .form-group label:has-text("PayGate")').locator('..').locator('label').last();
         const paygateText  = await paygateLabel.innerText().catch(() => '');
         paygateVerified = paygateText.toLowerCase().includes(CONFIG.classIdentifier.replace(/[^a-z]/g, '').substring(0, 5));
         console.log(`>> BO paygate on transaction: "${paygateText}" — verified: ${paygateVerified}`);
-        await snap(boPage, `${methodName}-09 - BO Transaction Detail`);
-
+        await snap(boPage, `${methodName}-07 - BO Transaction Detail`);
         await boPage.locator('form[name="ticketDetailForm"] .modal-header button.close').click({ force: true }).catch(() => {});
         await boPage.waitForTimeout(500);
       }
@@ -200,21 +221,17 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
       await boContext.close();
       boContext = null;
 
-      // ── PART 7: Validate balance / rollover / target ──
-      const expectedBalance = before.balance - amount;
-
-      if (tx.status.toLowerCase().includes('approved')) {
-        expect(after.balance).toBeCloseTo(expectedBalance, 1);
+      // ── PART 8: Assertions ──
+      if (resumeAction === 'approved') {
+        expect(after.balance).toBeCloseTo(before.balance - amount, 1);
         expect(after.rollover).toBeCloseTo(0, 1);
         expect(after.target).toBeCloseTo(0, 1);
         console.log(`>> Balance/Rollover/Target assertions: Approved path ✅`);
-      } else if (tx.status.toLowerCase().includes('rejected')) {
+      } else {
         expect(after.balance).toBeCloseTo(before.balance, 1);
         expect(after.rollover).toBeCloseTo(before.rollover, 1);
         expect(after.target).toBeCloseTo(before.target, 1);
         console.log(`>> Balance/Rollover/Target assertions: Rejected path ✅`);
-      } else {
-        console.log(`>> Transaction status "${tx.status}" — balance assertion skipped for pending state`);
       }
 
       expect(withdrawResult, `Expected successful withdrawal submission, got error: ${withdrawError}`).toBe('success');
@@ -239,5 +256,5 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
 
   const allPassed = Object.values(results).every(r => r === 'PASS' || r.startsWith('SKIP'));
   console.log(allPassed ? '>> RESULT: PASS' : '>> RESULT: FAIL');
-  process.exit(0);
+  if (!allPassed) throw new Error('One or more paygate withdraw methods failed — see summary above');
 });

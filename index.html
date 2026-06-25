@@ -913,7 +913,8 @@
         <div style="color:#f59e0b;font-weight:600;font-size:13px;margin-bottom:6px;">&#9646;&#9646; Waiting for vendor callback&hellip;</div>
         <div style="color:#a0aec0;font-size:12px;margin-bottom:2px;">TxNo: <span id="pauseTxNo" style="color:#e2e8f0;font-family:monospace;"></span></div>
         <div style="color:#a0aec0;font-size:12px;margin-bottom:8px;">Amount: <span id="pauseAmount" style="color:#e2e8f0;"></span> &nbsp;&nbsp; Method: <span id="pauseMethodName" style="color:#e2e8f0;"></span></div>
-        <div style="color:#718096;font-size:11px;margin-bottom:8px;">Ask vendor to approve or reject, then click the matching button below.</div>
+        <div style="color:#718096;font-size:11px;margin-bottom:4px;">Ask vendor to approve or reject, then click the matching button below.</div>
+        <div id="pauseNote" style="display:none;color:#f6ad55;font-size:11px;margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
           <button id="resumeApprovedBtn" onclick="resumeTest('approved')" style="padding:6px 14px;background:#276749;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10003; Approved</button>
           <button id="resumeRejectedBtn" onclick="resumeTest('rejected')" style="padding:6px 14px;background:#9b2335;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10005; Rejected</button>
@@ -1622,9 +1623,12 @@ function stopTest(testId) {
 
 function showPauseState(data, testId) {
   pauseTestId = testId;
-  document.getElementById('pauseTxNo').textContent      = data.txNo    || '';
-  document.getElementById('pauseAmount').textContent    = data.amount  || '';
-  document.getElementById('pauseMethodName').textContent = data.method || '';
+  document.getElementById('pauseTxNo').textContent       = data.txNo    || '';
+  document.getElementById('pauseAmount').textContent     = data.amount  || '';
+  document.getElementById('pauseMethodName').textContent = data.method  || '';
+  var noteEl = document.getElementById('pauseNote');
+  if (data.note) { noteEl.textContent = '⚠ ' + data.note; noteEl.style.display = ''; }
+  else { noteEl.textContent = ''; noteEl.style.display = 'none'; }
   document.getElementById('resumeApprovedBtn').disabled = false;
   document.getElementById('resumeRejectedBtn').disabled = false;
   document.getElementById('pauseState').style.display   = '';

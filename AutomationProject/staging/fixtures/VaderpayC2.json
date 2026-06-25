@@ -49,7 +49,7 @@
           ],
           "THB": [
             { "name": "BangkokBank",                                    "enabled": true  },
-            { "name": "BankofAyudhya(Krungsri)",                        "enabled": false },
+            { "name": "BankofAyudhya(Krungsri)",                        "enabled": true },
             { "name": "KasikornBank",                                   "enabled": false },
             { "name": "Bank for Agriculture and Agricultural Cooperatives", "enabled": false },
             { "name": "CIMB Thai",                                      "enabled": false },
