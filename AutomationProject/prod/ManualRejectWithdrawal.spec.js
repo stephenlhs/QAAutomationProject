@@ -9,7 +9,8 @@ import { StatementPage } from './pages/StatementPage.js';
 import { PLAYER, BACKOFFICE, WITHDRAWAL } from './config.js';
 
 const screenshots = [];
-const MANIFEST_NAME = 'manifest-reject-withdrawal.json';
+const MANIFEST_NAME     = 'manifest-reject-withdrawal.json';
+const TXN_MANIFEST_NAME = 'manifest-reject-withdrawal-txn.json';
 async function snap(page, label, el = null) {
   const dir = join(process.cwd(), '.screenshots-tmp');
   mkdirSync(dir, { recursive: true });
@@ -89,6 +90,15 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   await boPage.getByRole('button', { name: 'OK' }).click({ force: true, timeout: 3000 }).catch(() => {});
   await boPage.waitForTimeout(2000);
 
+  const expandAdvancedSearch = async () => {
+    const txInput = boPage.locator('#txtTransactionId');
+    const isVisible = await txInput.isVisible({ timeout: 500 }).catch(() => false);
+    if (!isVisible) {
+      await boPage.getByText('Advanced Search').first().click({ force: true }).catch(() => {});
+      await boPage.waitForTimeout(600);
+    }
+  };
+
   const searchWithdrawal = async () => {
     await boPage.evaluate(() => {
       const el = document.querySelector('#ddlFilterStatus');
@@ -99,8 +109,7 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
     const label = await boPage.locator('#ddlFilterStatus').evaluate(el => el.options[el.selectedIndex]?.text || 'none');
     console.log(`>> Status filter set to: ${label}`);
     await boPage.locator('#txtUserName').fill(`${backoffice.memberPrefix}${actualUsername}`);
-    await boPage.getByText('Advanced Search').click().catch(() => {});
-    await boPage.waitForTimeout(400);
+    await expandAdvancedSearch();
     await boPage.locator('#txtTransactionId').fill(tx.txNo).catch(() => {});
     await boPage.getByRole('button', { name: 'Search' }).click();
     await boPage.waitForTimeout(2000);
@@ -113,11 +122,13 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
     const pad2 = (n) => String(n).padStart(2, '0');
     const fmtD = (d) => `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
     const s2   = new Date(now2); s2.setDate(s2.getDate() - 1);
+    await expandAdvancedSearch();
     const dateInputs = boPage.locator('.input-group:has(.fa-calendar) input');
     if (await dateInputs.count() >= 2) {
       await dateInputs.first().fill(`${fmtD(s2)} 00:00:00`);
+      await dateInputs.first().press('Tab');
       await dateInputs.nth(1).fill(`${fmtD(now2)} 23:59:59`);
-      await boPage.locator('.ibox-title, h2, h3').first().click({ force: true }).catch(() => {});
+      await dateInputs.nth(1).press('Tab');
       await boPage.waitForTimeout(500);
     }
     txFound = await searchWithdrawal();
@@ -129,16 +140,11 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
 
   // Open detail modal
   if (txFound) {
-    const txRow   = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
-    const editBtn = txRow.locator('[title="Edit"]').first();
-    if (await editBtn.count()) {
-      await editBtn.click({ force: true });
-    } else {
-      await boPage.getByTitle('Edit').first().click();
-    }
-    await boPage.waitForTimeout(2000);
+    const txRow = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
+    await txRow.locator('i.fa.fa-edit').click({ force: true });
+    await boPage.waitForTimeout(1000);
     const modal = boPage.locator('#ticket-detail');
-    if (await modal.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await modal.isVisible({ timeout: 3000 }).catch(() => false)) {
       await snap(boPage, '06 - BO Withdrawal Detail Modal', modal);
       await modal.getByText('× Close').click({ force: true }).catch(() => {});
       await boPage.waitForTimeout(500);
@@ -161,9 +167,41 @@ test('withdrawal reject — verify balance and rollover unchanged', async ({ bro
   await snap(playerPage2, '07 - Cash History Rejected');
 
   await withdrawalPage2.navigate();
-  const after = await withdrawalPage2.getStats('after');
+  await playerPage2.reload({ waitUntil: 'domcontentloaded' });
+  await playerPage2.waitForTimeout(2000);
+  let after = await withdrawalPage2.getStats('after');
+  for (let i = 0; i < 5 && after.balance < before.balance; i++) {
+    console.log(`>> Balance not restored yet (${after.balance}), retry ${i + 1}...`);
+    await playerPage2.waitForTimeout(3000);
+    await playerPage2.reload({ waitUntil: 'domcontentloaded' });
+    await playerPage2.waitForTimeout(1500);
+    after = await withdrawalPage2.getStats('after');
+  }
   await snap(playerPage2, '08 - Stats After');
   console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
+
+  // ── Write transaction summary for Excel report ──
+  const txnSummary = {
+    player:           actualUsername,
+    gateway:          'Manual',
+    method:           'Bank Withdrawal',
+    packageName:      '—',
+    txNo:             tx.txNo,
+    txDateTime:       tx.dateTime,
+    txAmount:         tx.amount,
+    bonus:            '—',
+    txStatus:         'Rejected',
+    outstandingTotal: '—',
+    balanceBefore:    String(before.balance),
+    balanceAfter:     String(after.balance),
+    rolloverBefore:   String(before.rollover),
+    rolloverAfter:    String(after.rollover),
+    targetBefore:     String(before.target),
+    targetAfter:      String(after.target),
+  };
+  mkdirSync(join(process.cwd(), '.screenshots-tmp'), { recursive: true });
+  writeFileSync(join(process.cwd(), '.screenshots-tmp', TXN_MANIFEST_NAME), JSON.stringify(txnSummary), 'utf-8');
+  console.log('>> Txn summary written');
 
   // ── Assertions ──
   expect(after.balance).toBeCloseTo(before.balance, 1);

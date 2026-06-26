@@ -8,23 +8,23 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:        #080b10;
-      --surface:   #0e1218;
-      --surface2:  #141920;
-      --surface3:  #1b2230;
-      --border:    #1e2a38;
-      --border2:   #263040;
-      --text:      #c9d4e0;
-      --text-dim:  #5a6a7e;
-      --text-faint:#2e3d50;
-      --accent:    #3b8ee8;
-      --accent-dim:#1a3a5c;
-      --green:     #34d399;
-      --green-dim: #0d2e22;
-      --red:       #f87171;
-      --red-dim:   #2e0f0f;
-      --amber:     #fbbf24;
-      --amber-dim: #2e200a;
+      --bg:        #f8fafc;
+      --surface:   #ffffff;
+      --surface2:  #f1f5f9;
+      --surface3:  #e8edf2;
+      --border:    #e2e8f0;
+      --border2:   #cbd5e1;
+      --text:      #1e293b;
+      --text-dim:  #64748b;
+      --text-faint:#94a3b8;
+      --accent:    #2563eb;
+      --accent-dim:#eff6ff;
+      --green:     #16a34a;
+      --green-dim: #f0fdf4;
+      --red:       #dc2626;
+      --red-dim:   #fff1f2;
+      --amber:     #d97706;
+      --amber-dim: #fffbeb;
       --mono: 'JetBrains Mono', monospace;
       --sans: 'DM Sans', sans-serif;
     }
@@ -148,9 +148,9 @@
       transition: all 0.15s; letter-spacing: 0.03em;
     }
     .env-chip:hover { border-color: var(--accent); color: var(--text); }
-    .env-chip.active.staging { background: #0d2140; border-color: var(--accent); color: var(--accent); }
-    .env-chip.active.uat     { background: #1a2e0d; border-color: #6ee7b7; color: #6ee7b7; }
-    .env-chip.active.prod    { background: #2e1a0d; border-color: var(--amber); color: var(--amber); }
+    .env-chip.active.staging { background: #dbeafe; border-color: var(--accent); color: var(--accent); }
+    .env-chip.active.uat     { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+    .env-chip.active.prod    { background: #fef3c7; border-color: var(--amber); color: var(--amber); }
 
     .sidebar-scroll {
       flex: 1; overflow-y: auto;
@@ -352,7 +352,7 @@
       font-family: var(--mono); font-size: 12px; line-height: 1.9;
     }
     .log-line         { display: block; }
-    .log-line.info    { color: #4a6fa5; }
+    .log-line.info    { color: #3b82f6; }
     .log-line.log     { color: var(--text); }
     .log-line.err     { color: var(--red); }
     .log-line.success { color: var(--green); font-weight: 600; font-size: 13px; }
@@ -422,8 +422,8 @@
       white-space: pre-wrap; word-break: break-word;
     }
     .chat-msg.user .msg-body {
-      background: var(--accent-dim); border: 1px solid #1e4a80;
-      color: #9ec8f5; border-bottom-right-radius: 2px;
+      background: var(--accent-dim); border: 1px solid #bfdbfe;
+      color: #1d4ed8; border-bottom-right-radius: 2px;
     }
     .chat-msg.assistant .msg-body {
       background: var(--surface); border: 1px solid var(--border2);
@@ -501,9 +501,9 @@
       font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em;
     }
     .renv-tab:hover { border-color: var(--border2); color: var(--text); }
-    .renv-tab.active.staging { background: #0d2140; border-color: var(--accent); color: var(--accent); }
-    .renv-tab.active.uat     { background: #1a2e0d; border-color: #6ee7b7; color: #6ee7b7; }
-    .renv-tab.active.prod    { background: #2e1a0d; border-color: var(--amber); color: var(--amber); }
+    .renv-tab.active.staging { background: #dbeafe; border-color: var(--accent); color: var(--accent); }
+    .renv-tab.active.uat     { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+    .renv-tab.active.prod    { background: #fef3c7; border-color: var(--amber); color: var(--amber); }
 
     .rstatus-tabs { display: flex; gap: 6px; flex-shrink: 0; }
     .rstatus-tab {
@@ -538,7 +538,7 @@
     }
     .reports-table tr:last-child td { border-bottom: none; }
     .reports-table tbody tr:hover td { background: var(--surface2); }
-    .reports-table tbody tr.selected td { background: #0d1e30; }
+    .reports-table tbody tr.selected td { background: #dbeafe; }
     .reports-table td.mono { font-family: var(--mono); font-size: 12px; }
 
     /* Checkbox styling */
@@ -582,7 +582,7 @@
       font-size: 10px; font-family: var(--mono); font-weight: 700;
     }
     .env-pill.staging { background: var(--accent-dim); color: var(--accent); }
-    .env-pill.uat     { background: #1a2e0d; color: #6ee7b7; }
+    .env-pill.uat     { background: #dcfce7; color: #16a34a; }
     .env-pill.prod    { background: var(--amber-dim); color: var(--amber); }
 
     .result-pill {
@@ -685,7 +685,7 @@
     .modal-row-val.pass { color: var(--green); font-weight: 700; }
     .modal-row-val.fail { color: var(--red);   font-weight: 700; }
     .modal-row-val.env-staging { color: var(--accent); }
-    .modal-row-val.env-uat     { color: #6ee7b7; }
+    .modal-row-val.env-uat     { color: #16a34a; }
     .modal-row-val.env-prod    { color: var(--amber); }
 
     .modal-log-section {
@@ -909,15 +909,15 @@
         <button class="tb-btn" onclick="clearLog()">clear</button>
       </div>
       <!-- Pause state: shown when paygate test waits for vendor callback -->
-      <div id="pauseState" style="display:none;padding:10px 14px;background:#1c1a2e;border-bottom:2px solid #f59e0b;flex-shrink:0;">
-        <div style="color:#f59e0b;font-weight:600;font-size:13px;margin-bottom:6px;">&#9646;&#9646; Waiting for vendor callback&hellip;</div>
-        <div style="color:#a0aec0;font-size:12px;margin-bottom:2px;">TxNo: <span id="pauseTxNo" style="color:#e2e8f0;font-family:monospace;"></span></div>
-        <div style="color:#a0aec0;font-size:12px;margin-bottom:8px;">Amount: <span id="pauseAmount" style="color:#e2e8f0;"></span> &nbsp;&nbsp; Method: <span id="pauseMethodName" style="color:#e2e8f0;"></span></div>
-        <div style="color:#718096;font-size:11px;margin-bottom:4px;">Ask vendor to approve or reject, then click the matching button below.</div>
-        <div id="pauseNote" style="display:none;color:#f6ad55;font-size:11px;margin-bottom:8px;"></div>
+      <div id="pauseState" style="display:none;padding:10px 14px;background:#fffbeb;border-bottom:2px solid #d97706;flex-shrink:0;">
+        <div style="color:#d97706;font-weight:600;font-size:13px;margin-bottom:6px;">&#9646;&#9646; Waiting for vendor callback&hellip;</div>
+        <div style="color:#64748b;font-size:12px;margin-bottom:2px;">TxNo: <span id="pauseTxNo" style="color:#1e293b;font-family:monospace;"></span></div>
+        <div style="color:#64748b;font-size:12px;margin-bottom:8px;">Amount: <span id="pauseAmount" style="color:#1e293b;"></span> &nbsp;&nbsp; Method: <span id="pauseMethodName" style="color:#1e293b;"></span></div>
+        <div style="color:#64748b;font-size:11px;margin-bottom:4px;">Ask vendor to approve or reject, then click the matching button below.</div>
+        <div id="pauseNote" style="display:none;color:#d97706;font-size:11px;margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
-          <button id="resumeApprovedBtn" onclick="resumeTest('approved')" style="padding:6px 14px;background:#276749;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10003; Approved</button>
-          <button id="resumeRejectedBtn" onclick="resumeTest('rejected')" style="padding:6px 14px;background:#9b2335;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10005; Rejected</button>
+          <button id="resumeApprovedBtn" onclick="resumeTest('approved')" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10003; Approved</button>
+          <button id="resumeRejectedBtn" onclick="resumeTest('rejected')" style="padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">&#10005; Rejected</button>
         </div>
       </div>
 

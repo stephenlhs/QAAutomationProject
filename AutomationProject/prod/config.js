@@ -28,8 +28,8 @@ export const BACKOFFICE = {
 
 export const DEPOSIT = {
   amount:             parseFloat(process.env.CUSTOM_DEPOSIT_AMOUNT) || 50,
-  bankName:           process.env.DEPOSIT_BANK_NAME || 'Maybank',
-  packageName:        process.env.DEPOSIT_PACKAGE_NAME || 'Normal Deposit',
+  bankName:           process.env.DEPOSIT_BANK_NAME || 'PROD Banklog Bank',
+  packageName:        process.env.DEPOSIT_PACKAGE_NAME || 'SC rollover x1 package',
   rolloverMultiplier: parseFloat(process.env.DEPOSIT_ROLLOVER_MULTIPLIER) || 1,
 };
 
@@ -44,6 +44,7 @@ export const MEMBER_SETUP = {
   initialPassword: process.env.MEMBER_INITIAL_PASSWORD || '1234ssss',
   newPassword:     process.env.MEMBER_NEW_PASSWORD      || 'ssss1234',
   bankCode:        process.env.MEMBER_BANK_CODE         || '808',
+  bankName:        process.env.MEMBER_BANK_NAME         || 'sc maybank myr',
 };
 
 export const MEMBERS = (() => {

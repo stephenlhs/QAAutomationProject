@@ -185,6 +185,7 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
       const boCaptcha  = new CaptchaHelper(boPage, 'backoffice');
 
       await backoffice.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, boCaptcha, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
+      await boPage.waitForTimeout(2000);
       await backoffice.closeExtraTabs();
       await backoffice.closeAnnouncements();
 

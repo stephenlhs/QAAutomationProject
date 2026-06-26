@@ -72,6 +72,7 @@ test('deposit approve — verify balance and rollover', async ({ browser }) => {
   const boCaptcha  = new CaptchaHelper(boPage, 'backoffice');
 
   await backoffice.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, boCaptcha, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
+  await boPage.waitForTimeout(2000);
   await backoffice.closeExtraTabs();
   await backoffice.closeAnnouncements();
 

@@ -193,10 +193,13 @@ Pass these as prefixes on any test command to override defaults without editing 
 | `CUSTOM_MEMBERS` | JSON array for CreateMember | `[{"username":"abc","currency":"MYR"}]` |
 | `DEPOSIT_PACKAGE_NAME` | Deposit bonus package name | `Stephen Turnover Package` |
 | `DEPOSIT_ROLLOVER_MULTIPLIER` | Rollover multiplier for assertions | `1` |
+| `DEPOSIT_BANK_NAME` | Bank name for deposit bank transfer selection | `Maybank` |
 | `PAYGATE_GATEWAY` | Gateway classIdentifier to test | `vaderpayc2` |
 | `PAYGATE_METHOD` | Limit to one method (Bank/QR/EWallet/Crypto) | `Bank` |
 | `PAYGATE_TEST_CURRENCY` | Currency for bank list lookup | `THB` |
 | `PAYGATE_BANKS` | Comma-separated bank name(s) to select | `BangkokBank` |
+| `MEMBER_BANK_NAME` | Bank label for CreateMember bank account setup (label-based, works cross-env) | `sc maybank myr` |
+| `MEMBER_BANK_CODE` | Numeric bank code fallback if label match fails | `808` |
 
 ---
 
@@ -270,14 +273,16 @@ QAAutomationProject/
 5. Player verifies transaction status in Cash History
 6. Player records balance/rollover/target after
 7. Assertions: approve → balance increases + rollover recalculated; reject → balance/rollover unchanged
+8. Writes `manifest-approve-deposit-txn.json` / `manifest-reject-deposit-txn.json` to `.screenshots-tmp/` for Excel report generation
 
 ### ManualApproveWithdrawal / ManualRejectWithdrawal
 1. Player logs in and records balance/rollover/target before withdrawal
 2. If rollover not met → test verifies rollover-gate error and exits early
 3. Player attempts withdrawal above balance (verifies insufficient-balance error), then submits valid amount
 4. BO logs in and approves or rejects the pending transaction
-5. Player verifies transaction status and balance/rollover after
+5. Player verifies transaction status and balance/rollover after (retries up to 5× if balance cache hasn't cleared yet)
 6. Assertions: approve → balance decreases + rollover/target resets to 0; reject → balance/rollover unchanged
+7. Writes `manifest-approve-withdrawal-txn.json` / `manifest-reject-withdrawal-txn.json` to `.screenshots-tmp/` for Excel report generation
 
 ### PaygateDepositTest (VaderPay C2)
 1. Player logs in and records balance/rollover/target before deposit
@@ -401,6 +406,10 @@ pip install openpyxl
 **Withdrawal test hangs at submit**
 - Disable the payment gateway in BO settings — these tests are for manual withdrawal only
 - If a previous run left a pending withdrawal, cancel it in BO before rerunning
+
+**Withdrawal test — balance not updated after approve/reject (UAT/Prod)**
+- UAT and Prod have a server-side balance cache; the test automatically retries up to 5× (3s apart) before asserting
+- If it still fails, the cache may be longer than usual — re-run the test once the balance updates in the player site
 
 **Deposit test fails on bank selection**
 - Ensure deposit page mode is set to **All-in-One** in BO settings (not Compact)

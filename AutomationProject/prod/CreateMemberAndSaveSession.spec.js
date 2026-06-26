@@ -128,9 +128,12 @@ async function updateBankAccount(page, username) {
     // Bank account name should NOT include the staging prefix
     await page.locator('input[name="txtfullname"]').fill(stripPrefix(username));
 
-    // Select bank — wait for options to load first
+    // Select bank — prefer label text (prod codes differ from staging), fall back to value code
     await page.waitForTimeout(300);
-    await page.locator('select[name="bank"]').selectOption(MEMBER_SETUP.bankCode);
+    const bankSelect = page.locator('select[name="bank"]');
+    await bankSelect.selectOption({ label: MEMBER_SETUP.bankName }).catch(async () => {
+      await bankSelect.selectOption(MEMBER_SETUP.bankCode);
+    });
     await page.waitForTimeout(800);
 
     // Fill account number — try by name first, fallback to nth

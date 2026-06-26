@@ -71,6 +71,7 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   const boCaptcha  = new CaptchaHelper(boPage, 'backoffice');
 
   await backoffice.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, boCaptcha, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
+  await boPage.waitForTimeout(2000);
   await backoffice.closeExtraTabs();
   await backoffice.closeAnnouncements();
 
@@ -165,6 +166,29 @@ test('deposit reject — verify balance and rollover unchanged', async ({ browse
   const after = await withdrawalPage2.getStats('after');
   await snap(playerPage2, '07 - Stats After');
   console.log(`>> AFTER — Balance: ${after.balance}, Rollover: ${after.rollover}, Target: ${after.target}`);
+
+  // ── Write transaction summary for Excel report ──
+  const txnSummary = {
+    player:           actualUsername,
+    gateway:          'Manual',
+    method:           'Bank Transfer',
+    packageName:      DEPOSIT.packageName,
+    txNo:             tx.txNo,
+    txDateTime:       tx.dateTime,
+    txAmount:         tx.amount,
+    bonus:            '—',
+    txStatus:         'Rejected',
+    outstandingTotal: '—',
+    balanceBefore:    String(before.balance),
+    balanceAfter:     String(after.balance),
+    rolloverBefore:   String(before.rollover),
+    rolloverAfter:    String(after.rollover),
+    targetBefore:     String(before.target),
+    targetAfter:      String(after.target),
+  };
+  mkdirSync(join(process.cwd(), '.screenshots-tmp'), { recursive: true });
+  writeFileSync(join(process.cwd(), '.screenshots-tmp', TXN_MANIFEST_NAME), JSON.stringify(txnSummary), 'utf-8');
+  console.log('>> Txn summary written');
 
   // ── Assertions ──
   expect(after.balance).toBeCloseTo(before.balance, 1);
