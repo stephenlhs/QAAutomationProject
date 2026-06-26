@@ -722,6 +722,83 @@
       padding: 40px; color: var(--text-faint);
       font-family: var(--mono); font-size: 12px; gap: 10px;
     }
+
+    /* ════════════════════════════
+       MOBILE  (≤ 640 px)
+    ════════════════════════════ */
+    .mobile-toggle-bar { display: none; }
+
+    @media (max-width: 640px) {
+      /* Header — hide logo text, tighten spacing */
+      .logo-text { display: none; }
+      .logo { margin-right: 8px; }
+      .captcha-pill { padding: 4px 8px; }
+      #captchaText { display: none; }
+      .nav-tab { padding: 0 10px; font-size: 12px; gap: 4px; }
+
+      /* Body: allow flex children to shrink properly */
+      body { overflow: hidden; }
+
+      /* Runner panel: vertical stack */
+      .runner-layout {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      /* TESTS / LOG toggle bar */
+      .mobile-toggle-bar {
+        display: flex;
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+      .mtoggle-btn {
+        flex: 1; padding: 10px 0;
+        font-size: 12.5px; font-weight: 700;
+        font-family: var(--mono); letter-spacing: 0.06em;
+        background: transparent; border: none; cursor: pointer;
+        color: var(--text-dim);
+        border-bottom: 3px solid transparent;
+        transition: all 0.15s;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .mtoggle-btn.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        background: var(--accent-dim);
+      }
+
+      /* Sidebar + output fill remaining height */
+      .sidebar {
+        border-right: none;
+        flex: 1; min-height: 0; width: 100%;
+      }
+      .output-panel { flex: 1; min-height: 0; }
+
+      /* Hide the non-active panel */
+      .sidebar.mob-hidden, .output-panel.mob-hidden { display: none; }
+
+      /* Slightly more compact config drawer */
+      .config-drawer { padding: 8px 10px; }
+      .field-label { width: 72px; font-size: 10.5px; }
+      .field-input { font-size: 11.5px; }
+
+      /* Log output — tighter text on small screen */
+      .output-log { font-size: 11px; padding: 10px 14px; line-height: 1.75; }
+
+      /* Pause state banner — stack buttons vertically if needed */
+      #pauseState div[style*="display:flex"] { flex-wrap: wrap; }
+
+      /* Reports — compact layout */
+      .reports-layout { padding: 12px; gap: 10px; }
+      .renv-tabs, .rstatus-tabs { flex-wrap: wrap; }
+      .reports-table-wrap { -webkit-overflow-scrolling: touch; }
+
+      /* Modal — nearly full screen */
+      .modal { width: 96vw; max-height: 92vh; }
+      .modal-log-section { height: 220px; }
+    }
   </style>
 </head>
 <body>
@@ -749,6 +826,12 @@
 ════════════════════════════ -->
 <div class="tab-panel active" id="tab-runner">
   <div class="runner-layout">
+
+    <!-- Mobile-only panel toggle (hidden on desktop) -->
+    <div class="mobile-toggle-bar">
+      <button class="mtoggle-btn active" id="mBtn-tests" onclick="switchMobilePanel('tests')">&#129514; TESTS</button>
+      <button class="mtoggle-btn" id="mBtn-log" onclick="switchMobilePanel('log')">&#128221; LOG</button>
+    </div>
 
     <div class="sidebar">
       <!-- Env -->
@@ -1479,6 +1562,27 @@ function getConfigValues() {
 }
 
 // ════════════════════════════════════════════
+//  MOBILE PANEL TOGGLE
+// ════════════════════════════════════════════
+function switchMobilePanel(panel) {
+  var sidebar = document.querySelector('.sidebar');
+  var output  = document.querySelector('.output-panel');
+  var tBtn    = document.getElementById('mBtn-tests');
+  var lBtn    = document.getElementById('mBtn-log');
+  if (panel === 'tests') {
+    if (sidebar) sidebar.classList.remove('mob-hidden');
+    if (output)  output.classList.add('mob-hidden');
+    if (tBtn) tBtn.classList.add('active');
+    if (lBtn) lBtn.classList.remove('active');
+  } else {
+    if (sidebar) sidebar.classList.add('mob-hidden');
+    if (output)  output.classList.remove('mob-hidden');
+    if (tBtn) tBtn.classList.remove('active');
+    if (lBtn) lBtn.classList.add('active');
+  }
+}
+
+// ════════════════════════════════════════════
 //  RUN / STOP
 // ════════════════════════════════════════════
 var stats        = { total: 0, passed: 0, failed: 0 };
@@ -1537,6 +1641,7 @@ function runTest(testId, configVals) {
   configVals = configVals || {};
   setTestState(testId, 'running');
   document.getElementById('ctx-test').textContent = testId;
+  if (window.innerWidth <= 640) switchMobilePanel('log');
 
   var payload = {
     test: testId, env: currentEnv,
