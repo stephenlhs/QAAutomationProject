@@ -16,3 +16,5 @@ reports/
 .screenshots-tmp/
 *.report-tmp-*.json
 playwright-report/
+.playwright-cli/
+web.config

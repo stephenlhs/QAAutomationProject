@@ -404,6 +404,38 @@
     }
     .q-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface3); }
 
+    .agent-btns { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+    .agent-btn {
+      width: 100%; text-align: left;
+      padding: 7px 10px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 5px;
+      color: var(--text-dim); font-size: 12px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .agent-btn:hover { background: var(--surface3); color: var(--text); }
+    .agent-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+    .save-spec-card {
+      margin-top: 10px; padding: 10px 12px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; font-size: 12px;
+    }
+    .save-spec-title { font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .save-spec-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .save-spec-row select, .save-spec-row input {
+      padding: 5px 8px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text); font-size: 12px; font-family: var(--mono);
+    }
+    .save-spec-row input { flex: 1; min-width: 140px; }
+    .save-spec-btn {
+      padding: 5px 12px; background: var(--accent); color: #fff;
+      border: none; border-radius: 4px; font-size: 12px;
+      font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .save-spec-btn:hover { opacity: 0.9; }
+    .save-spec-status { margin-top: 6px; font-size: 11px; }
+
     .t-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
     .chat-log {
       flex: 1; overflow-y: auto; padding: 20px;
@@ -811,8 +843,7 @@
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" data-tab="runner">&#129514; Test Runner</div>
-    <!-- Claude Terminal tab hidden temporarily — restore by removing comment tags -->
-    <!-- <div class="nav-tab" data-tab="terminal">&#129302; Claude Terminal</div> -->
+    <div class="nav-tab" data-tab="terminal">&#129302; AI Agent</div>
     <div class="nav-tab" data-tab="reports">&#128202; Reports</div>
   </div>
   <div class="captcha-pill offline" id="captchaPill">
@@ -1022,6 +1053,12 @@
 <div class="tab-panel" id="tab-terminal">
   <div class="terminal-layout">
     <div class="t-sidebar">
+      <div class="t-section">Agent</div>
+      <div class="agent-btns">
+        <button class="agent-btn active" id="agentBtn-planner"  onclick="switchAgent('planner')">&#128279; Planner</button>
+        <button class="agent-btn"        id="agentBtn-tester"   onclick="switchAgent('tester')">&#129514; Tester</button>
+        <button class="agent-btn"        id="agentBtn-debugger" onclick="switchAgent('debugger')">&#128270; Debugger</button>
+      </div>
       <div class="t-section">Context</div>
       <div class="ctx-chip">
         <span class="ctx-chip-val" id="ctx-env">Staging</span>
@@ -1032,30 +1069,12 @@
         <span class="ctx-chip-lbl">last test</span>
       </div>
       <div class="t-section">Quick</div>
-      <button class="q-btn" onclick="quickPrompt('Approve deposit on staging')">&#9654; Approve deposit &middot; staging</button>
-      <button class="q-btn" onclick="quickPrompt('Approve deposit on UAT')">&#9654; Approve deposit &middot; UAT</button>
-      <button class="q-btn" onclick="quickPrompt('Reject deposit on staging')">&#9654; Reject deposit &middot; staging</button>
-      <button class="q-btn" onclick="quickPrompt('Approve withdrawal on staging')">&#9654; Approve withdrawal &middot; staging</button>
-      <button class="q-btn" onclick="quickPrompt('Reject withdrawal on staging')">&#9654; Reject withdrawal &middot; staging</button>
-      <button class="q-btn" onclick="quickPrompt('Create members on staging')">&#9654; Create members &middot; staging</button>
-      <button class="q-btn" onclick="quickPromptDebug()">&#128269; Debug last failure</button>
-      <button class="q-btn" onclick="quickPrompt('Explain the approve deposit test flow step by step')">&#128218; Explain test flow</button>
+      <div id="agent-quick-btns"></div>
     </div>
     <div class="t-main">
-      <div class="chat-log" id="chatLog">
-        <div class="chat-msg assistant">
-          <div class="msg-who">Claude</div>
-          <div class="msg-body">Hi! I am your QA assistant. I can:
-
-&#8226; Trigger any test on any environment &#8212; try "approve deposit on UAT"
-&#8226; Debug failures &#8212; paste log output and ask what went wrong
-&#8226; Answer questions about test flows and config
-
-What would you like to do?</div>
-        </div>
-      </div>
+      <div class="chat-log" id="chatLog"></div>
       <div class="chat-input-row">
-        <textarea id="claudeInput" placeholder="e.g. approve deposit on UAT  or  why did this test fail?" rows="1"
+        <textarea id="claudeInput" placeholder="Describe the flow you want to test…" rows="1"
           onkeydown="handleInputKey(event)"></textarea>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
       </div>
@@ -2177,36 +2196,158 @@ var TEST_LABELS = {
   'paygate-deposit-settings': 'Paygate Deposit Settings'
 };
 
-var SYSTEM_PROMPT = 'You are an expert QA automation assistant embedded in a Playwright-based QA Dashboard for an iGaming platform.\n\n'
-  + 'You have two roles:\n'
-  + '1. TRIGGER TESTS - parse intent and respond with a structured trigger.\n'
-  + '2. QA ASSISTANT - answer questions, debug failures, explain test flows.\n\n'
-  + '## Available Tests\n'
-  + '- approve-deposit: Player submits deposit, backoffice approves, balance and rollover verified\n'
-  + '- reject-deposit: Player submits deposit, backoffice rejects, balance unchanged\n'
-  + '- approve-withdrawal: Submit withdrawal (rollover + balance checks), BO approves, balance decreases, rollover resets\n'
-  + '- reject-withdrawal: Submit withdrawal, BO rejects, balance unchanged\n'
-  + '- create-members: Create in BO + bank account + playsite password change\n'
-  + '- paygate-deposit: Paygate deposit — select gateway (e.g. vaderpayc2), loops enabled methods, pause for vendor callback, verifies balance/rollover in BO\n'
-  + '- paygate-withdraw: Paygate withdrawal — select gateway, loops enabled methods, verifies in BO Cash Withdraw List\n'
-  + '- paygate-deposit-settings: Paygate deposit settings validation — min/max amount enforcement + In Process status check; specify gateway, method (optional), amount, currency (e.g. MYR)\n\n'
-  + '## Environments\n'
-  + '- staging (stage-mem.linkv2.com / stage-bo.linkv2.com, prefix: x9048_)\n'
-  + '- uat (mem2.linkv2.com / ag-uat.linkv2.com)\n'
-  + '- prod (998hihi.com / bo.v2hotel.com)\n\n'
-  + '## Tech\n'
-  + '- Playwright + Node.js, Page Object Model\n'
-  + '- Captcha: ddddocr (Python), 2FA: otpauth TOTP\n'
-  + '- Sessions in .auth/ per env, config via TEST_ENV\n\n'
-  + '## Triggering\n'
-  + 'When user wants to run a test, confirm conversationally then end with:\n'
-  + 'TRIGGER_JSON:{"test":"approve-deposit","env":"staging","depositAmount":"50"}\n\n'
-  + 'Only include amounts if relevant. For create-members include "members" JSON string if specified.\n\n'
-  + '## QA Help\n'
-  + 'For failures, identify the likely cause and suggest a fix. Be concise.';
+var AGENT_SYSTEM_PROMPTS = {
+  planner:
+    'You are a QA Test Planner for an iGaming platform tested with Playwright.\n\n'
+    + 'When given a feature or user flow to test, output a structured test plan with:\n'
+    + '1. Pre-conditions (data setup, env, sessions needed)\n'
+    + '2. Numbered test steps — each with: Actor (Player / Backoffice), Action, Expected Outcome\n'
+    + '3. Final assertions (what values to compare)\n'
+    + '4. Edge cases worth testing\n\n'
+    + '## Platform context\n'
+    + '- Players: member portal (deposit, withdrawal, cash history, balance/rollover display)\n'
+    + '- Backoffice: approve/reject transactions, manage members, paygate settings\n'
+    + '- Key concepts: balance, rollover (wagering requirement), target (rollover goal), bonus, txNo\n'
+    + '- Envs: staging, uat, prod\n\n'
+    + '## Existing test flows\n'
+    + '- ManualApproveDeposit, ManualRejectDeposit\n'
+    + '- ManualApproveWithdrawal, ManualRejectWithdrawal\n'
+    + '- CreateMemberAndSaveSession\n'
+    + '- PaygateDepositTest, PaygateWithdrawTest\n\n'
+    + 'Keep plans concise. Use tables where helpful. End with a summary sentence.',
 
-var chatHistory = [];
-var claudeBusy  = false;
+  tester:
+    'You are a Playwright spec generator for an iGaming QA project.\n\n'
+    + '## Project conventions (follow exactly)\n'
+    + '```\n'
+    + 'import { test, expect } from \'@playwright/test\';\n'
+    + 'import { mkdirSync, writeFileSync } from \'fs\';\n'
+    + 'import { join } from \'path\';\n'
+    + 'import { CaptchaHelper } from \'../helpers/CaptchaHelper.js\';\n'
+    + 'import { LoginPage } from \'./pages/LoginPage.js\';\n'
+    + 'import { BackofficePage } from \'./pages/BackofficePage.js\';\n'
+    + '// also: WithdrawalPage, DepositPage, StatementPage\n'
+    + 'import { PLAYER, BACKOFFICE, DEPOSIT, WITHDRAWAL } from \'./config.js\';\n'
+    + '```\n\n'
+    + '## Required patterns\n'
+    + '- test() uses `async ({ browser })` — always multi-context\n'
+    + '- `test.setTimeout(0)` at top of test\n'
+    + '- Screenshots: `snap(page, \'01 - Label\')` — increments a `screenshots` array\n'
+    + '- `MANIFEST_NAME = \'manifest-{name}.json\'` for screenshot manifest\n'
+    + '- `TXN_MANIFEST_NAME = \'manifest-{name}-txn.json\'` for Excel report\n'
+    + '- txnSummary fields: player, gateway, method, packageName, txNo, txDateTime, txAmount, bonus, txStatus, outstandingTotal, balanceBefore, balanceAfter, rolloverBefore, rolloverAfter, targetBefore, targetAfter\n'
+    + '- Balance retry: `for (let i = 0; i < 5 && condition; i++) { await page.waitForTimeout(3000); reload; re-read stats; }`\n'
+    + '- BO search helper: `expandAdvancedSearch()` checks `#txtTransactionId` visibility before clicking "Advanced Search"\n'
+    + '- 5-part structure: Part 1 Player before → Part 2 Submit → Part 3 Cash History → Part 4 BO action → Part 5 Player after\n\n'
+    + '## snap() helper (always include verbatim)\n'
+    + '```js\n'
+    + 'const screenshots = [];\n'
+    + 'const MANIFEST_NAME     = \'manifest-{name}.json\';\n'
+    + 'const TXN_MANIFEST_NAME = \'manifest-{name}-txn.json\';\n'
+    + 'async function snap(page, label, el = null) {\n'
+    + '  const dir  = join(process.cwd(), \'.screenshots-tmp\');\n'
+    + '  mkdirSync(dir, { recursive: true });\n'
+    + '  const file = join(dir, `${Date.now()}-${label.replace(/\\s+/g, \'-\')}.png`);\n'
+    + '  if (el) { await el.screenshot({ path: file }).catch(() => page.screenshot({ path: file, fullPage: false })); }\n'
+    + '  else    { await page.screenshot({ path: file, fullPage: false }); }\n'
+    + '  screenshots.push({ label, path: file });\n'
+    + '  writeFileSync(join(dir, MANIFEST_NAME), JSON.stringify(screenshots.map(s => ({ label: s.label, path: s.path }))), \'utf-8\');\n'
+    + '  console.log(`>> Screenshot: ${label}`);\n'
+    + '}\n'
+    + '```\n\n'
+    + 'Output ONLY the complete spec file content in a ```js code block. No explanations outside the code block.',
+
+  debugger:
+    'You are a Playwright test debugger for an iGaming QA platform.\n\n'
+    + '## Your job\n'
+    + '1. Identify the root cause in ONE sentence\n'
+    + '2. Show the exact fix as a code diff or replacement snippet\n'
+    + '3. One-line note on how to prevent recurrence\n\n'
+    + '## Known failure patterns\n'
+    + '| Log signal | Cause | Fix |\n'
+    + '|---|---|---|\n'
+    + '| Timeout 30000ms exceeded | Selector not found | Fix locator or add waitFor |\n'
+    + '| Expected X, Received Y on balance | Server-side balance cache | Retry loop (already in code) |\n'
+    + '| Advanced Search panel closes on retry | expandAdvancedSearch() called twice | Idempotency check in place |\n'
+    + '| selectOption failed | Bank option value differs per env | Use selectOption({ label: text }) |\n'
+    + '| Captcha wrong 3x | ddddocr server offline | Check port 3333, restart captcha-server |\n'
+    + '| 2FA code rejected | Clock skew | Sync system clock; verify *_2FA_SECRET in .env |\n'
+    + '| Cannot read properties of null | Session expired | Re-run CreateMember to refresh .auth/ |\n\n'
+    + '## Project context\n'
+    + '- Playwright + Node.js ESM, Page Object Model\n'
+    + '- Pages: LoginPage, BackofficePage, DepositPage, WithdrawalPage, StatementPage\n'
+    + '- Captcha: Python ddddocr on port 3333; 2FA: otpauth TOTP\n'
+    + '- Sessions saved to .auth/ per env\n\n'
+    + 'Be concise — no preamble, go straight to the diagnosis.'
+};
+
+var AGENT_QUICK_PROMPTS = {
+  planner: [
+    { label: '&#128279; Plan: approve deposit',    text: 'Plan a test for a player submitting a deposit that backoffice approves. Include balance and rollover assertions.' },
+    { label: '&#128279; Plan: reject withdrawal',  text: 'Plan a test for a player submitting a withdrawal that backoffice rejects. Verify balance unchanged.' },
+    { label: '&#128279; Plan: paygate deposit',    text: 'Plan a paygate deposit test — player selects method, vendor callback is simulated, balance verified after approve.' },
+    { label: '&#128279; Plan: create member',      text: 'Plan a test to create a new member in backoffice, set bank account, and do first login on player site.' }
+  ],
+  tester: [
+    { label: '&#129514; Generate: approve deposit', text: 'Generate a complete Playwright spec for ManualApproveDeposit — player submits deposit, BO approves, verify balance and rollover increase.' },
+    { label: '&#129514; Generate: approve withdrawal', text: 'Generate a complete Playwright spec for ManualApproveWithdrawal — player submits withdrawal, BO approves, verify balance decreases and rollover resets to 0.' },
+    { label: '&#129514; Generate: reject deposit',  text: 'Generate a complete Playwright spec for ManualRejectDeposit — player submits deposit, BO rejects, verify balance and rollover unchanged.' },
+    { label: '&#129514; Generate: create member',   text: 'Generate a complete Playwright spec for CreateMemberAndSaveSession — create member in BO, set bank account, player changes password, save session.' }
+  ],
+  debugger: [
+    { label: '&#128270; Debug last failure',       text: 'Why did the last test fail? Output:\n\n' + '' },
+    { label: '&#128270; Timeout selector fix',     text: 'The test is throwing "Timeout 30000ms exceeded" on a selector. Here is the error and spec section:' },
+    { label: '&#128270; Balance assertion failed', text: 'Balance assertion failed after approval. Expected balance to decrease but it is still the same. Here is the log:' },
+    { label: '&#128270; 2FA rejected',             text: 'The 2FA code is being rejected. Here is the error:' }
+  ]
+};
+
+var AGENT_WELCOME = {
+  planner:  'Hi! I am the **Planner** agent.\n\nDescribe a user flow or feature you want to test and I will create a structured test plan with steps, actors, and assertions.\n\nExample: "Plan a test where a player deposits and gets a bonus, then tries to withdraw before meeting rollover."',
+  tester:   'Hi! I am the **Tester** agent.\n\nDescribe what you want to test and I will generate a complete, runnable Playwright spec file following this project\'s exact patterns.\n\nOnce I generate the code you can save it directly to AutomationProject/{env}/ using the Save button that appears below my response.',
+  debugger: 'Hi! I am the **Debugger** agent.\n\nPaste your failed test log (or click "Debug last failure") and I will identify the root cause and show you exactly how to fix it.'
+};
+
+var currentAgent = 'planner';
+var chatHistory  = [];
+var claudeBusy   = false;
+var lastGeneratedCode = null;
+
+function switchAgent(agent) {
+  currentAgent = agent;
+  lastGeneratedCode = null;
+  chatHistory = [];
+
+  document.querySelectorAll('.agent-btn').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('agentBtn-' + agent);
+  if (btn) btn.classList.add('active');
+
+  var quickContainer = document.getElementById('agent-quick-btns');
+  quickContainer.innerHTML = '';
+  var prompts = AGENT_QUICK_PROMPTS[agent] || [];
+  prompts.forEach(function(p) {
+    var b = document.createElement('button');
+    b.className = 'q-btn';
+    b.innerHTML = p.label;
+    b.onclick = function() {
+      var text = p.text;
+      if (agent === 'debugger' && p.label.indexOf('last failure') !== -1) {
+        text = 'Why did the last test fail? Output:\n\n' + (lastLogLines.slice(-60).join('\n') || '(no output yet)');
+      }
+      quickPrompt(text);
+    };
+    quickContainer.appendChild(b);
+  });
+
+  var log = document.getElementById('chatLog');
+  log.innerHTML = '';
+  var safeWelcome = (AGENT_WELCOME[agent] || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  log.innerHTML = '<div class="chat-msg assistant"><div class="msg-who">Claude</div><div class="msg-body">' + safeWelcome + '</div></div>';
+
+  var ph = { planner: 'Describe a user flow to plan…', tester: 'Describe the test to generate…', debugger: 'Paste failed log or describe the error…' };
+  var ta = document.getElementById('claudeInput');
+  if (ta) ta.placeholder = ph[agent] || '';
+}
 
 function appendChat(role, content, extraHTML) {
   extraHTML = extraHTML || '';
@@ -2231,6 +2372,121 @@ function buildTriggerCard(p) {
     + (p.withdrawalAmount ? '<div class="tc-row"><span class="tc-row-k">withdrawal</span><span class="tc-row-v">MYR ' + p.withdrawalAmount + '</span></div>' : '');
   return '<div class="trigger-card">' + rows
     + '<button class="tc-run" onclick=\'executeTrigger(' + safe + ')\'>&#9654; Run Now</button></div>';
+}
+
+function buildSaveSpecCard(code) {
+  lastGeneratedCode = code;
+  return '<div class="save-spec-card">'
+    + '<div class="save-spec-title">&#128190; Save Spec File</div>'
+    + '<div class="save-spec-row">'
+    + '<select id="saveSpecEnv"><option value="staging">staging</option><option value="uat">uat</option><option value="prod">prod</option></select>'
+    + '<input type="text" id="saveSpecFilename" placeholder="MyNewTest.spec.js">'
+    + '<button class="save-spec-btn" onclick="saveGeneratedSpec()">&#128190; Save</button>'
+    + '</div>'
+    + '<div class="save-spec-status" id="saveSpecStatus"></div>'
+    + '</div>';
+}
+
+function saveGeneratedSpec() {
+  if (!lastGeneratedCode) return;
+  var env      = document.getElementById('saveSpecEnv').value;
+  var filename = (document.getElementById('saveSpecFilename').value || '').trim();
+  var status   = document.getElementById('saveSpecStatus');
+  if (!filename) { status.style.color = '#dc2626'; status.textContent = 'Enter a filename (e.g. MyTest.spec.js)'; return; }
+  if (!/^[a-zA-Z0-9_-]+\.spec\.js$/.test(filename)) { status.style.color = '#dc2626'; status.textContent = 'Filename must match MyTest.spec.js pattern'; return; }
+  status.style.color = 'var(--text-dim)';
+  status.textContent = 'Saving…';
+  fetch('/save-spec', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ env: env, filename: filename, content: lastGeneratedCode })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) { status.style.color = '#16a34a'; status.textContent = '✔ Saved to ' + d.path; }
+    else       { status.style.color = '#dc2626'; status.textContent = 'Error: ' + d.error; }
+  })
+  .catch(function(e) { status.style.color = '#dc2626'; status.textContent = 'Save failed: ' + e.message; });
+}
+
+function sendMessage() {
+  if (claudeBusy) return;
+  var input = document.getElementById('claudeInput');
+  var text  = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendChat('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  claudeBusy = true;
+  document.getElementById('sendBtn').disabled = true;
+  var typingBubble = appendChat('assistant', 'Thinking…');
+  typingBubble.classList.add('typing');
+
+  var systemPrompt = AGENT_SYSTEM_PROMPTS[currentAgent] || AGENT_SYSTEM_PROMPTS.planner;
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': window.ANTHROPIC_API_KEY || '',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-allow-browser': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: chatHistory
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    typingBubble.closest('.chat-msg').remove();
+    if (data.error) {
+      appendChat('assistant', 'API error: ' + data.error.message + '\n\nSet ANTHROPIC_API_KEY in your .env file.');
+    } else {
+      var fullText = (data.content || []).filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text; }).join('');
+      var triggerMatch = fullText.match(/TRIGGER_JSON:(\{[^}]+\})/);
+      var displayText  = fullText.replace(/TRIGGER_JSON:\{[^}]+\}/, '').trim();
+      var card = '';
+      if (triggerMatch) {
+        try { card = buildTriggerCard(JSON.parse(triggerMatch[1])); } catch(e) {}
+      }
+      var codeMatch = fullText.match(/```(?:js|javascript)\n([\s\S]+?)```/);
+      if (codeMatch && currentAgent === 'tester') {
+        card += buildSaveSpecCard(codeMatch[1]);
+      }
+      appendChat('assistant', displayText, card);
+      chatHistory.push({ role: 'assistant', content: fullText });
+    }
+  })
+  .catch(function(err) {
+    typingBubble.closest('.chat-msg').remove();
+    appendChat('assistant', 'Could not reach Claude API: ' + err.message);
+  })
+  .finally(function() {
+    claudeBusy = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('claudeInput').focus();
+  });
+}
+
+function quickPrompt(text) {
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector('[data-tab="terminal"]').classList.add('active');
+  document.getElementById('tab-terminal').classList.add('active');
+  document.getElementById('claudeInput').value = text;
+  document.getElementById('claudeInput').focus();
+}
+
+function quickPromptDebug() {
+  switchAgent('debugger');
+  quickPrompt('Why did the last test fail? Output:\n\n' + (lastLogLines.slice(-60).join('\n') || '(no output yet)'));
 }
 
 function executeTrigger(p) {
@@ -2258,85 +2514,14 @@ function executeTrigger(p) {
   }
 }
 
-function sendMessage() {
-  if (claudeBusy) return;
-  var input = document.getElementById('claudeInput');
-  var text  = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  input.style.height = 'auto';
-
-  appendChat('user', text);
-  chatHistory.push({ role: 'user', content: text });
-
-  claudeBusy = true;
-  document.getElementById('sendBtn').disabled = true;
-  var typingBubble = appendChat('assistant', 'Thinking\u2026');
-  typingBubble.classList.add('typing');
-
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': window.ANTHROPIC_API_KEY || '',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-allow-browser': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system: SYSTEM_PROMPT,
-      messages: chatHistory
-    })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    typingBubble.closest('.chat-msg').remove();
-    if (data.error) {
-      appendChat('assistant', 'API error: ' + data.error.message + '\n\nSet ANTHROPIC_API_KEY via server.js /config endpoint.');
-    } else {
-      var fullText = (data.content || []).filter(function(b) { return b.type === 'text'; })
-        .map(function(b) { return b.text; }).join('');
-      var triggerMatch = fullText.match(/TRIGGER_JSON:(\{[^}]+\})/);
-      var displayText  = fullText.replace(/TRIGGER_JSON:\{[^}]+\}/, '').trim();
-      var card = '';
-      if (triggerMatch) {
-        try { card = buildTriggerCard(JSON.parse(triggerMatch[1])); } catch(e) {}
-      }
-      appendChat('assistant', displayText, card);
-      chatHistory.push({ role: 'assistant', content: fullText });
-    }
-  })
-  .catch(function(err) {
-    typingBubble.closest('.chat-msg').remove();
-    appendChat('assistant', 'Could not reach Claude API: ' + err.message);
-  })
-  .finally(function() {
-    claudeBusy = false;
-    document.getElementById('sendBtn').disabled = false;
-    document.getElementById('claudeInput').focus();
-  });
-}
-
-function quickPrompt(text) {
-  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelectorAll('.tab-panel').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelector('[data-tab="terminal"]').classList.add('active');
-  document.getElementById('tab-terminal').classList.add('active');
-  document.getElementById('claudeInput').value = text;
-  document.getElementById('claudeInput').focus();
-}
-
-function quickPromptDebug() {
-  quickPrompt('Why did the last test fail? Output:\n\n' + (lastLogLines.slice(-40).join('\n') || '(no output yet)'));
-}
-
 function handleInputKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   var el = e.target;
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
+
+switchAgent('planner');
 </script>
 </body>
 </html>

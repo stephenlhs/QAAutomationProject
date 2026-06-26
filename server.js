@@ -331,6 +331,40 @@ const server = createServer((req, res) => {
     return;
   }
 
+  if (pathname === '/save-spec' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const { env, filename, content } = JSON.parse(body);
+        const validEnvs = ['staging', 'uat', 'prod'];
+        if (!validEnvs.includes(env)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: false, error: 'Invalid env. Must be staging, uat, or prod.' }));
+        }
+        if (!/^[a-zA-Z0-9_-]+\.spec\.js$/.test(filename)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: false, error: 'Invalid filename. Must match [a-zA-Z0-9_-]+.spec.js' }));
+        }
+        if (!content || typeof content !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: false, error: 'Missing content.' }));
+        }
+        const destDir  = join(__dirname, 'AutomationProject', env);
+        const destPath = join(destDir, filename);
+        mkdirSync(destDir, { recursive: true });
+        writeFileSync(destPath, content, 'utf-8');
+        const relPath = `AutomationProject/${env}/${filename}`;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, path: relPath }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404);
   res.end();
 });

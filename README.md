@@ -126,6 +126,22 @@ Replace `staging` with `uat` or `prod` for other environments.
 
 > **Deposit package:** Staging uses `Stephen Turnover Package` (rollover x1) by default. Override with `DEPOSIT_PACKAGE_NAME` in `.env` if needed.
 
+### Deposit Reward Tests (Staging only)
+
+Feature tests for the BO Deposit Reward promo code system. Requires `claudestag1` player session saved in `.auth/`.
+
+```
+# Base suite — TC-001 to TC-019 (core happy-path and BO settings)
+npx playwright test AutomationProject/staging/DepositReward.spec.js --project=staging
+
+# Advanced suite — TC-020 to TC-033 (edge cases, multi-code, boundary, rollover)
+npx playwright test AutomationProject/staging/DepositReward_Advanced.spec.js --project=staging
+```
+
+> Tests run serially (`describe.serial`) and share a single player account state. Do not run both suites simultaneously.
+
+> Test plans and case definitions are in `docs/deposit-reward/`.
+
 ### Withdrawal Tests
 
 > **Prerequisite:** Disable the payment gateway (paygate) in BO settings before running withdrawal tests. These tests are for **manual withdrawal** flow only. If paygate is enabled and the withdrawal amount falls within its limit, the transaction will be routed to the gateway and the test will hang.
@@ -221,6 +237,8 @@ QAAutomationProject/
 │   │   │   └── WithdrawalPage.js
 │   │   ├── config.js                 Staging URLs + env vars
 │   │   ├── CreateMemberAndSaveSession.spec.js
+│   │   ├── DepositReward.spec.js          Deposit Reward base suite (TC-001 – TC-019)
+│   │   ├── DepositReward_Advanced.spec.js Deposit Reward advanced suite (TC-020 – TC-033)
 │   │   ├── ManualApproveDeposit.spec.js
 │   │   ├── ManualRejectDeposit.spec.js
 │   │   ├── ManualApproveWithdrawal.spec.js
@@ -230,6 +248,12 @@ QAAutomationProject/
 │   │   └── PaygateWithdrawTest.spec.js
 │   ├── uat/                          Same structure as staging (excl. PaygateWithdrawTest)
 │   └── prod/                         Same structure as staging (excl. PaygateWithdrawTest)
+├── docs/
+│   ├── deposit-reward/
+│   │   ├── TestCases_TC020-TC031.md  Test case definitions for advanced suite
+│   │   ├── planner.md                Design notes and approach
+│   │   └── tester.md                 Execution notes
+│   └── AI_AGENT_DESIGN.md
 ├── reports/                          Auto-generated Excel reports per env
 ├── .auth/                            Saved login sessions (not committed to git)
 ├── .env                              Your credentials (not committed to git)
@@ -304,6 +328,34 @@ QAAutomationProject/
 4. Cash History verified — transaction recorded
 5. Player records balance/rollover/target after
 6. BO logs in, verifies transaction in Cash Withdraw List and confirms paygate label
+
+### DepositReward (Base Suite — TC-001 to TC-019)
+Tests core Deposit Reward behaviour: BO enable/disable, tier rates, bonus cap, counter resets, and rollover.
+1. BO enables Deposit Reward feature with 4 tier settings
+2. Player makes qualifying deposits at various amounts
+3. BO approves; player checks inbox for promo code
+4. Player applies promo code on subsequent deposit
+5. Assertions: correct bonus per tier, bonus capped at $25 MYR, rollover multiplied by X3
+
+### DepositReward Advanced Suite (TC-020 to TC-033)
+Edge-case tests that run serially and share `claudestag1` player state.
+
+| TC | Description |
+|----|-------------|
+| TC-020 | Setting 2 fresh counter — 1st-tier rate applied |
+| TC-021 | Multiple codes in inbox — uses oldest first, newest unaffected |
+| TC-022 | Multiple codes in inbox — uses newest first |
+| TC-023 | Code expiry — skipped (requires staging clock control) |
+| TC-024 | BO disables feature mid-session; held code still redeemable |
+| TC-025 | Boundary — exact $50.00 earns promo code |
+| TC-026 | Boundary — $49.99 earns no promo code |
+| TC-027 | Promo code entered with zero/blank deposit amount |
+| TC-028 | BO rejects deposit with promo code — code not consumed |
+| TC-029 | Max cap — large deposit bonus capped at $25 |
+| TC-030 | Concurrent same-code submission |
+| TC-031 | Cross-setting code: Setting 1 code redeemed on Setting 2 deposit |
+| TC-032 | Rollover requirement increases by bonus × rollover multiplier |
+| TC-033 | Old code keeps rollover from issuance (X3), ignores new setting (X5) |
 
 ---
 

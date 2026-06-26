@@ -167,7 +167,13 @@ Open a terminal and keep it running:
   Paygate Withdrawal (staging):
   npx playwright test AutomationProject/staging/PaygateWithdrawTest.spec.js --headed --project=staging
 
-  Replace "staging" with "uat" or "prod" for other environments.
+  Deposit Reward — base suite (staging, TC-001 to TC-019):
+  npx playwright test AutomationProject/staging/DepositReward.spec.js --project=staging
+
+  Deposit Reward — advanced suite (staging, TC-020 to TC-033):
+  npx playwright test AutomationProject/staging/DepositReward_Advanced.spec.js --project=staging
+
+  Replace "staging" with "uat" or "prod" for other environments (Deposit Reward is staging-only).
 
 ### Step 4 - View HTML report
   npx playwright show-report
@@ -182,7 +188,7 @@ QAAutomationProject/
 │   │   └── CaptchaHelper.js          Auto captcha solver (shared across all envs)
 │   ├── staging/
 │   │   ├── fixtures/
-│   │   │   └── VaderpayC2Config.json  Paygate method config (enabled methods, amounts, credentials)
+│   │   │   └── VaderpayC2.json       Paygate method config (methods, banks, amounts)
 │   │   ├── pages/                    Page Object Models
 │   │   │   ├── BackofficePage.js
 │   │   │   ├── DepositPage.js
@@ -191,6 +197,8 @@ QAAutomationProject/
 │   │   │   └── WithdrawalPage.js
 │   │   ├── config.js
 │   │   ├── CreateMemberAndSaveSession.spec.js
+│   │   ├── DepositReward.spec.js          Deposit Reward base suite (TC-001 to TC-019)
+│   │   ├── DepositReward_Advanced.spec.js Deposit Reward advanced suite (TC-020 to TC-033)
 │   │   ├── ManualApproveDeposit.spec.js
 │   │   ├── ManualRejectDeposit.spec.js
 │   │   ├── ManualApproveWithdrawal.spec.js
@@ -199,6 +207,12 @@ QAAutomationProject/
 │   │   └── PaygateWithdrawTest.spec.js
 │   ├── uat/                          Same structure as staging
 │   └── prod/                         Same structure as staging
+├── docs/
+│   ├── deposit-reward/
+│   │   ├── TestCases_TC020-TC031.md  Test case definitions for advanced suite
+│   │   ├── planner.md                Design notes and approach
+│   │   └── tester.md                 Execution notes
+│   └── AI_AGENT_DESIGN.md
 ├── reports/                          Auto-generated Excel reports per env
 ├── .auth/                            Saved login sessions (not committed to git)
 ├── .env                              Your credentials (not committed to git)
@@ -259,6 +273,35 @@ QAAutomationProject/
   4.  Cash History verified
   5.  Player records balance/rollover/target AFTER
   6.  BO logs in, verifies transaction in Cash Withdraw List
+
+### DepositReward Base Suite (TC-001 to TC-019, staging only)
+  Tests core Deposit Reward behaviour: BO enable/disable, tier rates, bonus cap,
+  counter resets, and rollover.
+  1.  BO enables Deposit Reward with 4 tier settings
+  2.  Player makes qualifying deposits at various amounts
+  3.  BO approves; player checks inbox for promo code
+  4.  Player applies promo code on next deposit
+  5.  Assertions: correct bonus per tier, capped at $25 MYR, rollover x3
+
+### DepositReward Advanced Suite (TC-020 to TC-033, staging only)
+  Edge-case tests that run serially and share claudestag1 player state.
+
+  TC-020  Setting 2 fresh counter — 1st-tier rate applied
+  TC-021  Multiple codes — uses oldest first, newest unaffected (balance proof)
+  TC-022  Multiple codes — uses newest first
+  TC-023  Code expiry — SKIPPED (requires staging clock control)
+  TC-024  BO disables feature mid-session; held code still redeemable
+  TC-025  Boundary — exact $50.00 earns promo code
+  TC-026  Boundary — $49.99 earns no promo code
+  TC-027  Promo code entered with zero/blank deposit amount
+  TC-028  BO rejects deposit with promo code — code not consumed
+  TC-029  Max cap — large deposit bonus capped at $25
+  TC-030  Concurrent same-code submission
+  TC-031  Cross-setting: Setting 1 code redeemed on Setting 2 deposit
+  TC-032  Rollover requirement increases by bonus x rollover multiplier
+  TC-033  Old code keeps rollover from issuance (X3), ignores new setting (X5)
+
+  NOTE: Tests use describe.serial — a failure stops all subsequent tests in the suite.
 
 ### CreateMemberAndSaveSession
   1.  BO creates each member account
