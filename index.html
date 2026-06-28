@@ -193,6 +193,12 @@
       font-size: 12.5px; font-weight: 600; color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .env-badge {
+      display: inline-block; font-size: 9px; font-weight: 700;
+      padding: 1px 5px; border-radius: 3px; vertical-align: middle;
+      margin-left: 4px; letter-spacing: 0.04em;
+    }
+    .staging-badge { background: var(--amber-dim); color: var(--amber); }
     .tr-desc {
       font-size: 10.5px; color: var(--text-dim); margin-top: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -875,7 +881,22 @@
       <!-- Test list -->
       <div class="sidebar-scroll">
 
-        <div class="section-hdr">Deposit</div>
+        <div class="section-hdr">Members</div>
+
+        <div class="test-row" id="row-create-members" onclick="selectTest('create-members', this)">
+          <div class="tr-icon">&#128100;</div>
+          <div class="tr-body">
+            <div class="tr-name">Create Members</div>
+            <div class="tr-desc">Create &#8594; bank account &#8594; change password</div>
+          </div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-create-members">IDLE</span>
+            <button class="icon-btn run" id="btn-create-members" title="Run"
+              onclick="event.stopPropagation(); handleRun('create-members')">&#9654;</button>
+          </div>
+        </div>
+
+        <div class="section-hdr">Manual Deposit</div>
 
         <div class="test-row" id="row-approve-deposit" onclick="selectTest('approve-deposit', this)">
           <div class="tr-icon">&#128176;</div>
@@ -903,7 +924,7 @@
           </div>
         </div>
 
-        <div class="section-hdr">Withdrawal</div>
+        <div class="section-hdr">Manual Withdrawal</div>
 
         <div class="test-row" id="row-approve-withdrawal" onclick="selectTest('approve-withdrawal', this)">
           <div class="tr-icon">&#128184;</div>
@@ -949,7 +970,7 @@
         <div class="test-row" id="row-paygate-withdraw" onclick="selectTest('paygate-withdraw', this)">
           <div class="tr-icon">&#128184;</div>
           <div class="tr-body">
-            <div class="tr-name">Paygate Withdraw</div>
+            <div class="tr-name">Paygate Withdrawal</div>
             <div class="tr-desc">Select gateway &#8594; submit &#8594; BO verify</div>
           </div>
           <div class="tr-actions">
@@ -959,31 +980,44 @@
           </div>
         </div>
 
-        <div class="test-row" id="row-paygate-deposit-settings" onclick="selectTest('paygate-deposit-settings', this)">
-          <div class="tr-icon">&#128203;</div>
+        <div class="section-hdr">Paygate Integration</div>
+
+        <div class="test-row staging-only" id="row-paygate-com-settings" onclick="selectTest('paygate-com-settings', this)">
+          <div class="tr-icon">&#128274;</div>
           <div class="tr-body">
-            <div class="tr-name">Deposit Settings</div>
-            <div class="tr-desc">Min/Max validation &#8594; In Process status</div>
+            <div class="tr-name">COM Settings <span class="env-badge staging-badge">Staging</span></div>
+            <div class="tr-desc">COM-level toggles &#183; Enable/Disable &#183; Bank&amp;QR &#183; Display &#183; Prod &#183; Maintenance</div>
           </div>
           <div class="tr-actions">
-            <span class="badge idle" id="badge-paygate-deposit-settings">IDLE</span>
-            <button class="icon-btn run" id="btn-paygate-deposit-settings" title="Run"
-              onclick="event.stopPropagation(); handleRun('paygate-deposit-settings')">&#9654;</button>
+            <span class="badge idle" id="badge-paygate-com-settings">IDLE</span>
+            <button class="icon-btn run" id="btn-paygate-com-settings" title="Run"
+              onclick="event.stopPropagation(); handleRun('paygate-com-settings')">&#9654;</button>
           </div>
         </div>
 
-        <div class="section-hdr">Members</div>
-
-        <div class="test-row" id="row-create-members" onclick="selectTest('create-members', this)">
-          <div class="tr-icon">&#128100;</div>
+        <div class="test-row" id="row-paygate-ssr-settings" onclick="selectTest('paygate-ssr-settings', this)">
+          <div class="tr-icon">&#128203;</div>
           <div class="tr-body">
-            <div class="tr-name">Create Members</div>
-            <div class="tr-desc">Create &#8594; bank account &#8594; change password</div>
+            <div class="tr-name">SSR Settings</div>
+            <div class="tr-desc">SSR-level toggles &#183; Gateway / QR / Bank &#183; Min/Max validation</div>
           </div>
           <div class="tr-actions">
-            <span class="badge idle" id="badge-create-members">IDLE</span>
-            <button class="icon-btn run" id="btn-create-members" title="Run"
-              onclick="event.stopPropagation(); handleRun('create-members')">&#9654;</button>
+            <span class="badge idle" id="badge-paygate-ssr-settings">IDLE</span>
+            <button class="icon-btn run" id="btn-paygate-ssr-settings" title="Run"
+              onclick="event.stopPropagation(); handleRun('paygate-ssr-settings')">&#9654;</button>
+          </div>
+        </div>
+
+        <div class="test-row" id="row-paygate-integration" onclick="selectTest('paygate-integration', this)">
+          <div class="tr-icon">&#128269;</div>
+          <div class="tr-body">
+            <div class="tr-name">Integration Check</div>
+            <div class="tr-desc">Deposit &amp; Withdrawal &#8594; verify across all BO &amp; Webtools</div>
+          </div>
+          <div class="tr-actions">
+            <span class="badge idle" id="badge-paygate-integration">IDLE</span>
+            <button class="icon-btn run" id="btn-paygate-integration" title="Run"
+              onclick="event.stopPropagation(); handleRun('paygate-integration')">&#9654;</button>
           </div>
         </div>
 
@@ -1217,6 +1251,9 @@ function setEnv(env, btn) {
   document.getElementById('ctx-env').textContent = env.charAt(0).toUpperCase() + env.slice(1);
   addLog('info', '>> Environment: ' + env.toUpperCase());
   loadPaygateGateways(env);
+  // COM Settings is staging-only — hide row when UAT or Prod is selected
+  var comRow = document.getElementById('row-paygate-com-settings');
+  if (comRow) comRow.style.display = (env === 'staging') ? '' : 'none';
 }
 
 // ════════════════════════════════════════════
@@ -1255,9 +1292,17 @@ var TEST_CONFIG = {
     label: 'Paygate Withdraw',
     fields: [], hasPaygateConfig: 'withdrawal', hasPlayer: true,
   },
-  'paygate-deposit-settings': {
-    label: 'Paygate Deposit Settings',
-    fields: [], hasPaygateConfig: 'deposit', hasPlayer: true,
+  'paygate-com-settings': {
+    label: 'Paygate COM Settings',
+    fields: [], hasPaygateConfig: 'deposit', hideAmount: true, hasPlayer: true,
+  },
+  'paygate-ssr-settings': {
+    label: 'Paygate SSR Settings',
+    fields: [], hasPaygateConfig: 'deposit', hideAmount: true, hasPlayer: true,
+  },
+  'paygate-integration': {
+    label: 'Paygate Integration',
+    fields: [], hasPaygateConfig: 'deposit', hasIntegrationCase: true, hasPlayer: true,
   }
 };
 
@@ -1284,9 +1329,10 @@ function loadPaygateGateways(env) {
       if (gen !== _pgLoadGen) return;
       paygateGateways = configs || [];
       var typeMap = {
-        'paygate-deposit':          'deposit',
-        'paygate-withdraw':         'withdrawal',
-        'paygate-deposit-settings': 'deposit'
+        'paygate-deposit':      'deposit',
+        'paygate-withdraw':     'withdrawal',
+        'paygate-com-settings': 'deposit',
+        'paygate-ssr-settings': 'deposit'
       };
       if (typeMap[selectedTest]) rebuildPaygateGatewaySelect(typeMap[selectedTest]);
     })
@@ -1368,11 +1414,12 @@ function updatePaygateMethods(type) {
   }
   var firstEnabled = methodNames.find(function(n) { return methods[n].enabled; }) || '';
 
-  // Auto-set amount to first enabled method's amount (or section amount)
+  // Auto-set amount to selected currency's min for the first enabled method
   var amtEl = document.getElementById('cfg-paygate-amount');
-  if (amtEl) {
+  if (amtEl && firstEnabled) {
     var fm = methods[firstEnabled] || {};
-    amtEl.value = fm.amount || section.amount || amtEl.value || 50;
+    var minFromLimits = fm.limits && fm.limits[selectedCurrency] && fm.limits[selectedCurrency].min;
+    if (minFromLimits) amtEl.value = minFromLimits;
   }
 
   container.innerHTML =
@@ -1384,8 +1431,7 @@ function updatePaygateMethods(type) {
         var inputExtra  = m.enabled ? '' : ' disabled';
         var checked     = (name === firstEnabled) ? ' checked' : '';
         var tag         = m.enabled ? '' : ' <span style="font-size:10px;">(disabled)</span>';
-        var amtAttr     = m.amount ? ' data-method-amount="' + m.amount + '"' : '';
-        var baseAmtAttr = section.amount ? ' data-section-amount="' + section.amount + '"' : '';
+        var limitsAttr  = m.limits ? ' data-limits=\'' + JSON.stringify(m.limits) + '\'' : '';
         var onChange    = ' onchange="onPaygateMethodChange(\'' + type + '\', this)"';
 
         // Banks/wallets sub-section — shown for any method that has a banks object
@@ -1413,20 +1459,22 @@ function updatePaygateMethods(type) {
         }
 
         return '<label style="' + labelStyle + '">'
-          + '<input type="radio" name="paygate-method" value="' + name + '" style="accent-color:var(--accent);"' + inputExtra + checked + amtAttr + baseAmtAttr + onChange + '>'
+          + '<input type="radio" name="paygate-method" value="' + name + '" style="accent-color:var(--accent);"' + inputExtra + checked + limitsAttr + onChange + '>'
           + name + tag + '</label>'
           + banksHtml;
       }).join('');
 }
 
 function onPaygateMethodChange(type, radioEl) {
-  // Update amount field
+  // Update amount field to the selected currency's min for this method
   var amtEl = document.getElementById('cfg-paygate-amount');
   if (amtEl) {
-    var methodAmt  = radioEl.getAttribute('data-method-amount');
-    var sectionAmt = radioEl.getAttribute('data-section-amount');
-    if (methodAmt)  amtEl.value = methodAmt;
-    else if (sectionAmt) amtEl.value = sectionAmt;
+    var curSel = document.getElementById('cfg-paygate-currency');
+    var cur = curSel ? curSel.value : 'MYR';
+    try {
+      var limits = JSON.parse(radioEl.getAttribute('data-limits') || 'null');
+      if (limits && limits[cur] && limits[cur].min) amtEl.value = limits[cur].min;
+    } catch {}
   }
   // Show active method's banks/wallets list, hide others
   document.querySelectorAll('[id^="paygate-banks-list-"]').forEach(function(el) {
@@ -1487,8 +1535,8 @@ function selectTest(testId, rowEl) {
       + '</select></div>'
       + '<div class="field-row"><span class="field-label">Method</span>'
       + '<div id="cfg-paygate-methods" style="flex:1;display:flex;flex-direction:column;gap:2px;"></div></div>'
-      + '<div class="field-row"><span class="field-label">Amount</span>'
-      + '<input class="field-input" type="number" id="cfg-paygate-amount" value="50"></div>';
+      + (cfg.hideAmount ? '' : '<div class="field-row"><span class="field-label">Amount</span>'
+      + '<input class="field-input" type="number" id="cfg-paygate-amount" value="50"></div>');
     fields.appendChild(pg);
     if (paygateGateways.length === 0) {
       loadPaygateGateways(currentEnv);
@@ -1496,6 +1544,20 @@ function selectTest(testId, rowEl) {
       updatePaygateCurrencies(pgType);
       updatePaygateMethods(pgType);
     }
+  }
+
+  if (cfg.hasIntegrationCase) {
+    var ic = document.createElement('div');
+    ic.innerHTML = '<div class="field-row"><span class="field-label">Case</span>'
+      + '<div style="flex:1;display:flex;flex-direction:column;gap:4px;">'
+      + ['approve','reject','pending-approve','pending-reject'].map(function(c, i) {
+          var labels = { 'approve': 'Approve (vendor callback)', 'reject': 'Reject (vendor callback)', 'pending-approve': 'Pending → Approve (7 min wait)', 'pending-reject': 'Pending → Reject (7 min wait)' };
+          return '<label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">'
+            + '<input type="radio" name="integration-case" value="' + c + '"' + (i === 0 ? ' checked' : '') + ' style="accent-color:var(--accent);">'
+            + labels[c] + '</label>';
+        }).join('')
+      + '</div></div>';
+    fields.appendChild(ic);
   }
 
   if (cfg.hasPlayer) {
@@ -1575,6 +1637,11 @@ function getConfigValues() {
     // Selected bank/wallet (radio — one at a time)
     var pgBank = document.querySelector('input[name="paygate-bank"]:checked');
     if (pgBank && pgBank.value) vals.paygateBanks = pgBank.value;
+  }
+
+  if (cfg.hasIntegrationCase) {
+    var icRadio = document.querySelector('input[name="integration-case"]:checked');
+    if (icRadio && icRadio.value) vals.paygateIntegrationCase = icRadio.value;
   }
 
   return vals;
@@ -1674,6 +1741,7 @@ function runTest(testId, configVals) {
     paygateTestCurrency:  configVals.paygateTestCurrency,
     paygateAmount:        configVals.paygateAmount,
     paygateBanks:         configVals.paygateBanks,
+    paygateIntegrationCase:    configVals.paygateIntegrationCase,
   };
 
   setOutputLabel('RUNNING &#8212; ' + testId + ' [' + currentEnv.toUpperCase() + ']', 'running');
@@ -1716,7 +1784,10 @@ function runTest(testId, configVals) {
               try {
                 var pd = JSON.parse(data.msg.substring('>> PAUSE:'.length));
                 showPauseState(pd, testId);
-                addLog('info', '⏸ Waiting for vendor callback — txNo: ' + (pd.txNo || '') + '  amount: ' + (pd.amount || ''));
+                var pauseMsg = pd.pendingAction
+                  ? '⏸ Transaction PENDING — please manually ' + pd.pendingAction.toUpperCase() + ' in BO, then signal below. txNo: ' + (pd.txNo || '')
+                  : '⏸ Waiting for vendor callback — txNo: ' + (pd.txNo || '') + '  amount: ' + (pd.amount || '');
+                addLog('info', pauseMsg);
               } catch(e) { addLog(data.type, data.msg); }
             } else if (data.msg) { addLog(data.type, data.msg); }
           } catch(e) {}
@@ -2191,9 +2262,11 @@ var TEST_LABELS = {
   'approve-withdrawal': 'Approve Withdrawal',
   'reject-withdrawal':  'Reject Withdrawal',
   'create-members':     'Create Members',
-  'paygate-deposit':          'Paygate Deposit',
-  'paygate-withdraw':         'Paygate Withdraw',
-  'paygate-deposit-settings': 'Paygate Deposit Settings'
+  'paygate-deposit':      'Paygate Deposit',
+  'paygate-withdraw':     'Paygate Withdraw',
+  'paygate-com-settings': 'Paygate COM Settings',
+  'paygate-ssr-settings': 'Paygate SSR Settings',
+  'paygate-integration':  'Paygate Integration Check'
 };
 
 var AGENT_SYSTEM_PROMPTS = {

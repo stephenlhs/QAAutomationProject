@@ -44,8 +44,6 @@ test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 test('Paygate withdraw — all enabled methods', async ({ browser }) => {
   test.setTimeout(0);
 
-  const amount = parseInt(process.env.CUSTOM_WITHDRAWAL_AMOUNT) || CONFIG.withdrawal.amount;
-
   const results = {};
   const enabledMethods = Object.entries(CONFIG.withdrawal.methods).filter(([name, m]) => {
     if (methodOverride) return name === methodOverride;
@@ -58,7 +56,9 @@ test('Paygate withdraw — all enabled methods', async ({ browser }) => {
     return;
   }
 
-  for (const [methodName] of enabledMethods) {
+  for (const [methodName, method] of enabledMethods) {
+    const testCurrency = process.env.PAYGATE_TEST_CURRENCY || 'MYR';
+    const amount = parseInt(process.env.CUSTOM_WITHDRAWAL_AMOUNT) || method.limits?.[testCurrency]?.min || 50;
     console.log(`\n>> ===== Testing ${CONFIG.gatewayName} Withdraw — ${methodName} =====`);
 
     let playerContext, playerPage, boContext, boPage;

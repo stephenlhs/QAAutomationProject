@@ -17,7 +17,9 @@ const TEST_FILES = {
   'create-members':     'CreateMemberAndSaveSession.spec.js',
   'paygate-deposit':          'PaygateDepositTest.spec.js',
   'paygate-withdraw':         'PaygateWithdrawTest.spec.js',
-  'paygate-deposit-settings': 'PaygateDepositSettingsTest.spec.js',
+  'paygate-com-settings':     'PaygateComSettingsTest.spec.js',
+  'paygate-ssr-settings':     'PaygateSsrSettingsTest.spec.js',
+  'paygate-integration':      'PaygateIntegrationTest.spec.js',
 };
 
 const activeProcesses = {};
@@ -195,7 +197,7 @@ const server = createServer((req, res) => {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
-      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword, paygateGateway, paygateMethod, paygateTestCurrency, paygateAmount, paygateBanks } = JSON.parse(body);
+      const { test, env, depositAmount, withdrawalAmount, members, customPlayerUsername, customPlayerPassword, paygateGateway, paygateMethod, paygateTestCurrency, paygateAmount, paygateBanks, paygateIntegrationCase } = JSON.parse(body);
 
       const fileName = TEST_FILES[test];
       if (!fileName) {
@@ -239,7 +241,8 @@ const server = createServer((req, res) => {
       if (paygateMethod)         customEnv.PAYGATE_METHOD           = paygateMethod;
       if (paygateTestCurrency)   customEnv.PAYGATE_TEST_CURRENCY    = paygateTestCurrency;
       if (paygateAmount)         customEnv.CUSTOM_DEPOSIT_AMOUNT    = paygateAmount;
-      if (paygateBanks)          customEnv.PAYGATE_BANKS            = paygateBanks;
+      if (paygateBanks)                customEnv.PAYGATE_BANKS            = paygateBanks;
+      if (paygateIntegrationCase)    customEnv.PAYGATE_INTEGRATION_CASE = paygateIntegrationCase;
 
       const startTime = Date.now();
       const logLines  = [];   // ← collect all output for the report
@@ -331,7 +334,7 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (pathname === '/save-spec' && req.method === 'POST') {
+  if (url.pathname === '/save-spec' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {

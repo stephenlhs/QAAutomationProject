@@ -1,284 +1,928 @@
 {
-  "gatewayName": "VaderPay C2",
+  "gatewayName": "VaderPay (C2)",
   "classIdentifier": "vaderpayc2",
   "deposit": {
     "packageName": "Stephen Turnover Package",
-    "amount": 50,
     "methods": {
       "Bank": {
         "enabled": true,
         "tab": "online-transfer",
-        "amount": 100,
-        "currencies": ["AUD", "HKD", "IDR", "INR", "JPY", "MXN", "MYR", "PHP", "SGD", "THB", "VND"],
+        "currencies": [
+          "AUD",
+          "HKD",
+          "IDR",
+          "INR",
+          "JPY",
+          "MXN",
+          "MYR",
+          "PHP",
+          "SGD",
+          "THB",
+          "VND"
+        ],
         "limits": {
-          "AUD": { "min": 10,    "max": 5000     },
-          "HKD": { "min": 50,    "max": 30000    },
-          "IDR": { "min": 10000, "max": 500000   },
-          "INR": { "min": 100,   "max": 100000   },
-          "JPY": { "min": 500,   "max": 300000   },
-          "MXN": { "min": 50,    "max": 10000    },
-          "MYR": { "min": 30,    "max": 30000    },
-          "PHP": { "min": 200,   "max": 100000   },
-          "SGD": { "min": 10,    "max": 10000    },
-          "THB": { "min": 100,   "max": 50000    },
-          "VND": { "min": 50000, "max": 10000000 }
+          "AUD": {
+            "min": 10,
+            "max": 5000
+          },
+          "HKD": {
+            "min": 50,
+            "max": 30000
+          },
+          "IDR": {
+            "min": 10000,
+            "max": 500000
+          },
+          "INR": {
+            "min": 100,
+            "max": 100000
+          },
+          "JPY": {
+            "min": 500,
+            "max": 300000
+          },
+          "MXN": {
+            "min": 50,
+            "max": 10000
+          },
+          "MYR": {
+            "min": 30,
+            "max": 30000
+          },
+          "PHP": {
+            "min": 200,
+            "max": 100000
+          },
+          "SGD": {
+            "min": 10,
+            "max": 10000
+          },
+          "THB": {
+            "min": 100,
+            "max": 50000
+          },
+          "VND": {
+            "min": 50000,
+            "max": 10000000
+          }
         },
         "banks": {
           "MYR": [
-            { "name": "CIMB",                   "enabled": true  },
-            { "name": "Maybank Berhad",          "enabled": true },
-            { "name": "RHB Bank Berhad",         "enabled": false },
-            { "name": "AmBank",                  "enabled": false },
-            { "name": "Bank Simpanan Nasional",  "enabled": false },
-            { "name": "Bank Islam Malaysia",     "enabled": false },
-            { "name": "Affin Bank",              "enabled": false },
-            { "name": "HSBC Bank",               "enabled": false },
-            { "name": "Alliance Bank",           "enabled": false },
-            { "name": "OCBC Bank",               "enabled": false },
-            { "name": "Bank Kerjasama Rakyat",   "enabled": false }
+            {
+              "name": "CIMB",
+              "enabled": true
+            },
+            {
+              "name": "Maybank Berhad",
+              "enabled": true
+            },
+            {
+              "name": "RHB Bank Berhad",
+              "enabled": false
+            },
+            {
+              "name": "AmBank",
+              "enabled": false
+            },
+            {
+              "name": "Bank Simpanan Nasional",
+              "enabled": false
+            },
+            {
+              "name": "Bank Islam Malaysia",
+              "enabled": false
+            },
+            {
+              "name": "Affin Bank",
+              "enabled": false
+            },
+            {
+              "name": "HSBC Bank",
+              "enabled": false
+            },
+            {
+              "name": "Alliance Bank",
+              "enabled": false
+            },
+            {
+              "name": "OCBC Bank",
+              "enabled": false
+            },
+            {
+              "name": "Bank Kerjasama Rakyat",
+              "enabled": false
+            }
           ],
           "INR": [
-            { "name": "City Union Bank",         "enabled": true  },
-            { "name": "Federal Bank LTD",        "enabled": false },
-            { "name": "HDFC Bank",               "enabled": false },
-            { "name": "IDFC Bank",               "enabled": false },
-            { "name": "IndusInd Bank",           "enabled": false },
-            { "name": "Kotak Mahindra Bank",     "enabled": false },
-            { "name": "Indian bank",             "enabled": false },
-            { "name": "ICICI Bank Limited",      "enabled": false }
+            {
+              "name": "City Union Bank",
+              "enabled": true
+            },
+            {
+              "name": "Federal Bank LTD",
+              "enabled": false
+            },
+            {
+              "name": "HDFC Bank",
+              "enabled": false
+            },
+            {
+              "name": "IDFC Bank",
+              "enabled": false
+            },
+            {
+              "name": "IndusInd Bank",
+              "enabled": false
+            },
+            {
+              "name": "Kotak Mahindra Bank",
+              "enabled": false
+            },
+            {
+              "name": "Indian bank",
+              "enabled": false
+            },
+            {
+              "name": "ICICI Bank Limited",
+              "enabled": false
+            }
           ],
           "THB": [
-            { "name": "BangkokBank",                                    "enabled": true  },
-            { "name": "BankofAyudhya(Krungsri)",                        "enabled": true },
-            { "name": "KasikornBank",                                   "enabled": false },
-            { "name": "Bank for Agriculture and Agricultural Cooperatives", "enabled": false },
-            { "name": "CIMB Thai",                                      "enabled": false },
-            { "name": "Government Housing Bank",                        "enabled": false },
-            { "name": "Government Savings Bank",                        "enabled": false },
-            { "name": "ISLAMIC BANK",                                   "enabled": false },
-            { "name": "Krung Thai Bank",                                "enabled": false },
-            { "name": "Siam Commercial Bank",                           "enabled": false },
-            { "name": "TISCO Bank",                                     "enabled": false },
-            { "name": "TMBThanachart Bank",                             "enabled": false },
-            { "name": "United Overseas Bank",                           "enabled": false },
-            { "name": "INDUSTRIAL AND COMMERCIAL BANK OF CHINA (THAI)", "enabled": false },
-            { "name": "Kiatnakin Bank",                                 "enabled": false },
-            { "name": "Land And Houses Bank",                           "enabled": false },
-            { "name": "EXIM Bank",                                      "enabled": false },
-            { "name": "SME Bank",                                       "enabled": false },
-            { "name": "THAI CREDIT BANK",                               "enabled": false }
+            {
+              "name": "BangkokBank",
+              "enabled": true
+            },
+            {
+              "name": "BankofAyudhya(Krungsri)",
+              "enabled": false
+            },
+            {
+              "name": "KasikornBank",
+              "enabled": false
+            },
+            {
+              "name": "Bank for Agriculture and Agricultural Cooperatives",
+              "enabled": false
+            },
+            {
+              "name": "CIMB Thai",
+              "enabled": false
+            },
+            {
+              "name": "Government Housing Bank",
+              "enabled": false
+            },
+            {
+              "name": "Government Savings Bank",
+              "enabled": false
+            },
+            {
+              "name": "ISLAMIC BANK",
+              "enabled": false
+            },
+            {
+              "name": "Krung Thai Bank",
+              "enabled": false
+            },
+            {
+              "name": "Siam Commercial Bank",
+              "enabled": false
+            },
+            {
+              "name": "TISCO Bank",
+              "enabled": false
+            },
+            {
+              "name": "TMBThanachart Bank",
+              "enabled": false
+            },
+            {
+              "name": "United Overseas Bank",
+              "enabled": false
+            },
+            {
+              "name": "INDUSTRIAL AND COMMERCIAL BANK OF CHINA (THAI)",
+              "enabled": false
+            },
+            {
+              "name": "Kiatnakin Bank",
+              "enabled": false
+            },
+            {
+              "name": "Land And Houses Bank",
+              "enabled": false
+            },
+            {
+              "name": "EXIM Bank",
+              "enabled": false
+            },
+            {
+              "name": "SME Bank",
+              "enabled": false
+            },
+            {
+              "name": "THAI CREDIT BANK",
+              "enabled": false
+            }
           ],
           "VND": [
-            { "name": "BankforInvestmentandDevelopmentofVietnam",        "enabled": true  },
-            { "name": "Eximbank",                                        "enabled": false },
-            { "name": "AsiaCommercialBank",                              "enabled": false },
-            { "name": "VietcomBank",                                     "enabled": false },
-            { "name": "VietinBank",                                      "enabled": false },
-            { "name": "Tien Phong Commercial Joint Stock Bank",          "enabled": false },
-            { "name": "Military Commercial Joint Stock Bank",            "enabled": false },
-            { "name": "LienVietPostBank",                                "enabled": false },
-            { "name": "Saigon Hanoi Commercial Joint Stock Bank",        "enabled": false },
-            { "name": "Techcombank",                                     "enabled": false },
-            { "name": "SeABank",                                         "enabled": false },
-            { "name": "Orient Commercial Joint Stock Bank",              "enabled": false }
+            {
+              "name": "BankforInvestmentandDevelopmentofVietnam",
+              "enabled": true
+            },
+            {
+              "name": "Eximbank",
+              "enabled": false
+            },
+            {
+              "name": "AsiaCommercialBank",
+              "enabled": false
+            },
+            {
+              "name": "VietcomBank",
+              "enabled": false
+            },
+            {
+              "name": "VietinBank",
+              "enabled": false
+            },
+            {
+              "name": "Tien Phong Commercial Joint Stock Bank",
+              "enabled": false
+            },
+            {
+              "name": "Military Commercial Joint Stock Bank",
+              "enabled": false
+            },
+            {
+              "name": "LienVietPostBank",
+              "enabled": false
+            },
+            {
+              "name": "Saigon Hanoi Commercial Joint Stock Bank",
+              "enabled": false
+            },
+            {
+              "name": "Techcombank",
+              "enabled": false
+            },
+            {
+              "name": "SeABank",
+              "enabled": false
+            },
+            {
+              "name": "Orient Commercial Joint Stock Bank",
+              "enabled": false
+            }
           ],
           "IDR": [
-            { "name": "BCA Bank",               "enabled": true  },
-            { "name": "Bank Rakyat Indonesia",  "enabled": false },
-            { "name": "Bank Negara Indonesia",  "enabled": false },
-            { "name": "CIMB Niaga",             "enabled": false },
-            { "name": "Permata Bank",           "enabled": false },
-            { "name": "Danamon Bank",           "enabled": false },
-            { "name": "Mandiri Bank",           "enabled": false },
-            { "name": "Maybank Indonesia",      "enabled": false }
+            {
+              "name": "BCA Bank",
+              "enabled": true
+            },
+            {
+              "name": "Bank Rakyat Indonesia",
+              "enabled": false
+            },
+            {
+              "name": "Bank Negara Indonesia",
+              "enabled": false
+            },
+            {
+              "name": "CIMB Niaga",
+              "enabled": false
+            },
+            {
+              "name": "Permata Bank",
+              "enabled": false
+            },
+            {
+              "name": "Danamon Bank",
+              "enabled": false
+            },
+            {
+              "name": "Mandiri Bank",
+              "enabled": false
+            },
+            {
+              "name": "Maybank Indonesia",
+              "enabled": false
+            }
           ],
           "PHP": [
-            { "name": "PayMaya Philippines",    "enabled": true  },
-            { "name": "GoTyme Bank",            "enabled": false }
+            {
+              "name": "PayMaya Philippines",
+              "enabled": true
+            },
+            {
+              "name": "GoTyme Bank",
+              "enabled": false
+            }
           ],
           "SGD": [
-            { "name": "UOB Bank",                       "enabled": true  },
-            { "name": "OCBC Bank",                      "enabled": false },
-            { "name": "POSB Bank",                      "enabled": false },
-            { "name": "Standard Chartered Singapore",   "enabled": false },
-            { "name": "Paynow",                         "enabled": false },
-            { "name": "DBS Bank",                       "enabled": false }
+            {
+              "name": "UOB Bank",
+              "enabled": true
+            },
+            {
+              "name": "OCBC Bank",
+              "enabled": false
+            },
+            {
+              "name": "POSB Bank",
+              "enabled": false
+            },
+            {
+              "name": "Standard Chartered Singapore",
+              "enabled": false
+            },
+            {
+              "name": "Paynow",
+              "enabled": false
+            },
+            {
+              "name": "DBS Bank",
+              "enabled": false
+            }
           ],
           "AUD": [
-            { "name": "ABN AMRO Bank",                                   "enabled": true  },
-            { "name": "Adelaide Bank",                                   "enabled": false },
-            { "name": "Allied Irish Banks",                              "enabled": false },
-            { "name": "AMP Limited",                                     "enabled": false },
-            { "name": "Arab Bank Australia",                             "enabled": false },
-            { "name": "Australia and New Zealand Banking Group Limited", "enabled": false },
-            { "name": "Auswide Bank",                                    "enabled": false },
-            { "name": "Bank Australia",                                  "enabled": false },
-            { "name": "Bank of America in Australia",                    "enabled": false },
-            { "name": "Bank of China Australia",                         "enabled": false },
-            { "name": "Bank of Melbourne",                               "enabled": false },
-            { "name": "Bank of Queensland",                              "enabled": false },
-            { "name": "Bank of Scotland",                                "enabled": false },
-            { "name": "Bank of Sydney",                                  "enabled": false },
-            { "name": "Bank of Western Australia",                       "enabled": false },
-            { "name": "Bank SA",                                         "enabled": false },
-            { "name": "Bank Vic",                                        "enabled": false },
-            { "name": "Barclays Bank PLC",                               "enabled": false },
-            { "name": "Bendigo Bank",                                    "enabled": false },
-            { "name": "Beyond Bank Australia",                           "enabled": false },
-            { "name": "BNP Paribas in Australia and New Zealand",        "enabled": false },
-            { "name": "Citi Bank",                                       "enabled": false },
-            { "name": "Commonwealth Bank of Australia",                  "enabled": false },
-            { "name": "Defence Bank",                                    "enabled": false },
-            { "name": "Delphi Bank",                                     "enabled": false },
-            { "name": "Deutsche Bank Australia",                         "enabled": false },
-            { "name": "G&C Mutual Bank",                                 "enabled": false },
-            { "name": "Heritage Bank",                                   "enabled": false },
-            { "name": "HSBC Bank Australia Limited",                     "enabled": false },
-            { "name": "Hume Bank",                                       "enabled": false },
-            { "name": "IMB Bank",                                        "enabled": false },
-            { "name": "ING Direct",                                      "enabled": false },
-            { "name": "Investec Bank Limited",                           "enabled": false },
-            { "name": "J.P. Morgan Australia & New Zealand",             "enabled": false },
-            { "name": "Macquarie Bank Limited",                          "enabled": false },
-            { "name": "ME Bank",                                         "enabled": false },
-            { "name": "Mega International Commercial Bank",              "enabled": false },
-            { "name": "MyState Bank",                                    "enabled": false },
-            { "name": "National Australia Bank",                         "enabled": false },
-            { "name": "P&N Bank",                                        "enabled": false },
-            { "name": "Police Bank",                                     "enabled": false },
-            { "name": "Rabobank",                                        "enabled": false },
-            { "name": "RACQ Bank",                                       "enabled": false },
-            { "name": "Reserve Bank of Australia",                       "enabled": false },
-            { "name": "Rural Bank",                                      "enabled": false },
-            { "name": "St.George Bank",                                  "enabled": false },
-            { "name": "Standard Chartered Australia Corporate Banking",  "enabled": false },
-            { "name": "STATE BANK OF INDIA",                             "enabled": false },
-            { "name": "Suncorp Bank",                                    "enabled": false },
-            { "name": "Teachers Mutual Bank",                            "enabled": false },
-            { "name": "The Bank of New York Mellon",                     "enabled": false },
-            { "name": "The Bank of Tokyo-Mitsubishi UFJ, Ltd.",          "enabled": false },
-            { "name": "The Royal Bank of Scotland Group PLC",            "enabled": false },
-            { "name": "Westpac",                                         "enabled": false },
-            { "name": "United Overseas Bank",                            "enabled": false }
+            {
+              "name": "ABN AMRO Bank",
+              "enabled": true
+            },
+            {
+              "name": "Adelaide Bank",
+              "enabled": false
+            },
+            {
+              "name": "Allied Irish Banks",
+              "enabled": false
+            },
+            {
+              "name": "AMP Limited",
+              "enabled": false
+            },
+            {
+              "name": "Arab Bank Australia",
+              "enabled": false
+            },
+            {
+              "name": "Australia and New Zealand Banking Group Limited",
+              "enabled": false
+            },
+            {
+              "name": "Auswide Bank",
+              "enabled": false
+            },
+            {
+              "name": "Bank Australia",
+              "enabled": false
+            },
+            {
+              "name": "Bank of America in Australia",
+              "enabled": false
+            },
+            {
+              "name": "Bank of China Australia",
+              "enabled": false
+            },
+            {
+              "name": "Bank of Melbourne",
+              "enabled": false
+            },
+            {
+              "name": "Bank of Queensland",
+              "enabled": false
+            },
+            {
+              "name": "Bank of Scotland",
+              "enabled": false
+            },
+            {
+              "name": "Bank of Sydney",
+              "enabled": false
+            },
+            {
+              "name": "Bank of Western Australia",
+              "enabled": false
+            },
+            {
+              "name": "Bank SA",
+              "enabled": false
+            },
+            {
+              "name": "Bank Vic",
+              "enabled": false
+            },
+            {
+              "name": "Barclays Bank PLC",
+              "enabled": false
+            },
+            {
+              "name": "Bendigo Bank",
+              "enabled": false
+            },
+            {
+              "name": "Beyond Bank Australia",
+              "enabled": false
+            },
+            {
+              "name": "BNP Paribas in Australia and New Zealand",
+              "enabled": false
+            },
+            {
+              "name": "Citi Bank",
+              "enabled": false
+            },
+            {
+              "name": "Commonwealth Bank of Australia",
+              "enabled": false
+            },
+            {
+              "name": "Defence Bank",
+              "enabled": false
+            },
+            {
+              "name": "Delphi Bank",
+              "enabled": false
+            },
+            {
+              "name": "Deutsche Bank Australia",
+              "enabled": false
+            },
+            {
+              "name": "G&C Mutual Bank",
+              "enabled": false
+            },
+            {
+              "name": "Heritage Bank",
+              "enabled": false
+            },
+            {
+              "name": "HSBC Bank Australia Limited",
+              "enabled": false
+            },
+            {
+              "name": "Hume Bank",
+              "enabled": false
+            },
+            {
+              "name": "IMB Bank",
+              "enabled": false
+            },
+            {
+              "name": "ING Direct",
+              "enabled": false
+            },
+            {
+              "name": "Investec Bank Limited",
+              "enabled": false
+            },
+            {
+              "name": "J.P. Morgan Australia & New Zealand",
+              "enabled": false
+            },
+            {
+              "name": "Macquarie Bank Limited",
+              "enabled": false
+            },
+            {
+              "name": "ME Bank",
+              "enabled": false
+            },
+            {
+              "name": "Mega International Commercial Bank",
+              "enabled": false
+            },
+            {
+              "name": "MyState Bank",
+              "enabled": false
+            },
+            {
+              "name": "National Australia Bank",
+              "enabled": false
+            },
+            {
+              "name": "P&N Bank",
+              "enabled": false
+            },
+            {
+              "name": "Police Bank",
+              "enabled": false
+            },
+            {
+              "name": "Rabobank",
+              "enabled": false
+            },
+            {
+              "name": "RACQ Bank",
+              "enabled": false
+            },
+            {
+              "name": "Reserve Bank of Australia",
+              "enabled": false
+            },
+            {
+              "name": "Rural Bank",
+              "enabled": false
+            },
+            {
+              "name": "St.George Bank",
+              "enabled": false
+            },
+            {
+              "name": "Standard Chartered Australia Corporate Banking",
+              "enabled": false
+            },
+            {
+              "name": "STATE BANK OF INDIA",
+              "enabled": false
+            },
+            {
+              "name": "Suncorp Bank",
+              "enabled": false
+            },
+            {
+              "name": "Teachers Mutual Bank",
+              "enabled": false
+            },
+            {
+              "name": "The Bank of New York Mellon",
+              "enabled": false
+            },
+            {
+              "name": "The Bank of Tokyo-Mitsubishi UFJ, Ltd.",
+              "enabled": false
+            },
+            {
+              "name": "The Royal Bank of Scotland Group PLC",
+              "enabled": false
+            },
+            {
+              "name": "Westpac",
+              "enabled": false
+            },
+            {
+              "name": "United Overseas Bank",
+              "enabled": false
+            }
           ]
         }
       },
       "EWallet": {
-        "enabled": true,
+        "enabled": false,
         "tab": "e-wallet",
-        "currencies": ["BDT", "HKD", "IDR", "PHP", "PKR", "VND"],
+        "currencies": [
+          "BDT",
+          "HKD",
+          "IDR",
+          "PHP",
+          "PKR",
+          "VND"
+        ],
         "limits": {
-          "BDT": { "min": 200,   "max": 30000    },
-          "HKD": { "min": 50,    "max": 30000    },
-          "IDR": { "min": 10000, "max": 500000   },
-          "PHP": { "min": 200,   "max": 100000   },
-          "PKR": { "min": 500,   "max": 50000    },
-          "VND": { "min": 50000, "max": 10000000 }
+          "BDT": {
+            "min": 200,
+            "max": 30000
+          },
+          "HKD": {
+            "min": 50,
+            "max": 30000
+          },
+          "IDR": {
+            "min": 10000,
+            "max": 500000
+          },
+          "PHP": {
+            "min": 200,
+            "max": 100000
+          },
+          "PKR": {
+            "min": 500,
+            "max": 50000
+          },
+          "VND": {
+            "min": 50000,
+            "max": 10000000
+          }
         },
         "banks": {
           "BDT": [
-            { "name": "NAGAD",    "enabled": true  },
-            { "name": "BKASH",    "enabled": false },
-            { "name": "ROCKET",   "enabled": false },
-            { "name": "UPAY",     "enabled": false },
-            { "name": "TAPPAY",   "enabled": false },
-            { "name": "OKWALLET", "enabled": false },
-            { "name": "SURECASH", "enabled": false }
+            {
+              "name": "NAGAD",
+              "enabled": true
+            },
+            {
+              "name": "BKASH",
+              "enabled": false
+            },
+            {
+              "name": "ROCKET",
+              "enabled": false
+            },
+            {
+              "name": "UPAY",
+              "enabled": false
+            },
+            {
+              "name": "TAPPAY",
+              "enabled": false
+            },
+            {
+              "name": "OKWALLET",
+              "enabled": false
+            },
+            {
+              "name": "SURECASH",
+              "enabled": false
+            }
           ],
           "HKD": [
-            { "name": "FPS", "enabled": true }
+            {
+              "name": "FPS",
+              "enabled": true
+            }
           ],
           "PHP": [
-            { "name": "GCASH",   "enabled": true  },
-            { "name": "GrabPay", "enabled": false },
-            { "name": "Maya",    "enabled": false }
+            {
+              "name": "GCASH",
+              "enabled": true
+            },
+            {
+              "name": "GrabPay",
+              "enabled": false
+            },
+            {
+              "name": "Maya",
+              "enabled": false
+            }
           ],
           "VND": [
-            { "name": "Momopay", "enabled": true  },
-            { "name": "Zalopay", "enabled": false }
+            {
+              "name": "Momopay",
+              "enabled": true
+            },
+            {
+              "name": "Zalopay",
+              "enabled": false
+            }
           ]
         }
       },
       "QR": {
         "enabled": true,
         "tab": "qr-code-payment",
-        "currencies": ["BRL", "IDR", "INR", "KHR", "MYR", "PHP", "SGD", "THB", "USD", "VND"],
+        "currencies": [
+          "BRL",
+          "IDR",
+          "INR",
+          "KHR",
+          "MYR",
+          "PHP",
+          "SGD",
+          "THB",
+          "USD",
+          "VND"
+        ],
         "limits": {
-          "BRL": { "min": 10,    "max": 5000     },
-          "IDR": { "min": 10000, "max": 500000   },
-          "INR": { "min": 100,   "max": 100000   },
-          "KHR": { "min": 5000,  "max": 2000000  },
-          "MYR": { "min": 10,    "max": 30000    },
-          "PHP": { "min": 200,   "max": 100000   },
-          "SGD": { "min": 10,    "max": 10000    },
-          "THB": { "min": 100,   "max": 50000    },
-          "USD": { "min": 5,     "max": 5000     },
-          "VND": { "min": 50000, "max": 10000000 }
+          "BRL": {
+            "min": 10,
+            "max": 5000
+          },
+          "IDR": {
+            "min": 10000,
+            "max": 500000
+          },
+          "INR": {
+            "min": 100,
+            "max": 100000
+          },
+          "KHR": {
+            "min": 5000,
+            "max": 2000000
+          },
+          "MYR": {
+            "min": 10,
+            "max": 30000
+          },
+          "PHP": {
+            "min": 200,
+            "max": 100000
+          },
+          "SGD": {
+            "min": 10,
+            "max": 10000
+          },
+          "THB": {
+            "min": 100,
+            "max": 50000
+          },
+          "USD": {
+            "min": 5,
+            "max": 5000
+          },
+          "VND": {
+            "min": 50000,
+            "max": 10000000
+          }
         }
       },
       "Crypto": {
-        "enabled": true,
+        "enabled": false,
         "tab": "crypto-payment",
-        "currencies": ["MYR", "IDR", "THB", "USD", "VND", "INR", "HKD"],
+        "currencies": [
+          "MYR",
+          "IDR",
+          "THB",
+          "USD",
+          "VND",
+          "INR",
+          "HKD"
+        ],
         "limits": {
-          "MYR": { "min": 10,    "max": 30000    },
-          "IDR": { "min": 10000, "max": 500000   },
-          "THB": { "min": 100,   "max": 50000    },
-          "USD": { "min": 5,     "max": 5000     },
-          "VND": { "min": 50000, "max": 10000000 },
-          "INR": { "min": 100,   "max": 100000   },
-          "HKD": { "min": 50,    "max": 30000    }
+          "MYR": {
+            "min": 10,
+            "max": 30000
+          },
+          "IDR": {
+            "min": 10000,
+            "max": 500000
+          },
+          "THB": {
+            "min": 100,
+            "max": 50000
+          },
+          "USD": {
+            "min": 5,
+            "max": 5000
+          },
+          "VND": {
+            "min": 50000,
+            "max": 10000000
+          },
+          "INR": {
+            "min": 100,
+            "max": 100000
+          },
+          "HKD": {
+            "min": 50,
+            "max": 30000
+          }
         },
         "types": [
-          { "name": "USDT-ERC20", "enabled": true  },
-          { "name": "USDT-TRC20", "enabled": false }
+          {
+            "name": "USDT-ERC20",
+            "enabled": true
+          },
+          {
+            "name": "USDT-TRC20",
+            "enabled": false
+          }
         ]
       }
     }
   },
   "withdrawal": {
-    "amount": 50,
     "methods": {
       "Bank": {
         "enabled": true,
-        "currencies": ["AUD", "BRL", "HKD", "KHR", "IDR", "INR", "MYR", "PHP", "SGD", "THB", "USD", "VND", "ZAR"],
+        "currencies": [
+          "AUD",
+          "BRL",
+          "HKD",
+          "KHR",
+          "IDR",
+          "INR",
+          "MYR",
+          "PHP",
+          "SGD",
+          "THB",
+          "USD",
+          "VND",
+          "ZAR"
+        ],
         "limits": {
-          "AUD": { "min": 20,     "max": 5000     },
-          "BRL": { "min": 20,     "max": 5000     },
-          "HKD": { "min": 100,    "max": 30000    },
-          "KHR": { "min": 20000,  "max": 5000000  },
-          "IDR": { "min": 50000,  "max": 5000000  },
-          "INR": { "min": 500,    "max": 100000   },
-          "MYR": { "min": 50,     "max": 50000    },
-          "PHP": { "min": 500,    "max": 100000   },
-          "SGD": { "min": 20,     "max": 10000    },
-          "THB": { "min": 500,    "max": 50000    },
-          "USD": { "min": 10,     "max": 5000     },
-          "VND": { "min": 200000, "max": 50000000 },
-          "ZAR": { "min": 100,    "max": 20000    }
+          "AUD": {
+            "min": 20,
+            "max": 5000
+          },
+          "BRL": {
+            "min": 20,
+            "max": 5000
+          },
+          "HKD": {
+            "min": 100,
+            "max": 30000
+          },
+          "KHR": {
+            "min": 20000,
+            "max": 5000000
+          },
+          "IDR": {
+            "min": 50000,
+            "max": 5000000
+          },
+          "INR": {
+            "min": 500,
+            "max": 100000
+          },
+          "MYR": {
+            "min": 50,
+            "max": 50000
+          },
+          "PHP": {
+            "min": 500,
+            "max": 100000
+          },
+          "SGD": {
+            "min": 20,
+            "max": 10000
+          },
+          "THB": {
+            "min": 500,
+            "max": 50000
+          },
+          "USD": {
+            "min": 10,
+            "max": 5000
+          },
+          "VND": {
+            "min": 200000,
+            "max": 50000000
+          },
+          "ZAR": {
+            "min": 100,
+            "max": 20000
+          }
         }
       },
       "EWallet": {
-        "enabled": true,
-        "currencies": ["BDT", "HKD", "IDR", "PKR"],
+        "enabled": false,
+        "currencies": [
+          "BDT",
+          "HKD",
+          "IDR",
+          "PKR"
+        ],
         "limits": {
-          "BDT": { "min": 200,   "max": 30000   },
-          "HKD": { "min": 100,   "max": 30000   },
-          "IDR": { "min": 50000, "max": 5000000 },
-          "PKR": { "min": 500,   "max": 50000   }
+          "BDT": {
+            "min": 200,
+            "max": 30000
+          },
+          "HKD": {
+            "min": 100,
+            "max": 30000
+          },
+          "IDR": {
+            "min": 50000,
+            "max": 5000000
+          },
+          "PKR": {
+            "min": 500,
+            "max": 50000
+          }
         }
       },
       "Crypto": {
-        "enabled": true,
-        "currencies": ["MYR", "IDR", "THB", "USD", "VND", "INR", "HKD"],
+        "enabled": false,
+        "currencies": [
+          "MYR",
+          "IDR",
+          "THB",
+          "USD",
+          "VND",
+          "INR",
+          "HKD"
+        ],
         "limits": {
-          "MYR": { "min": 50,     "max": 50000    },
-          "IDR": { "min": 50000,  "max": 5000000  },
-          "THB": { "min": 500,    "max": 50000    },
-          "USD": { "min": 10,     "max": 5000     },
-          "VND": { "min": 200000, "max": 50000000 },
-          "INR": { "min": 500,    "max": 100000   },
-          "HKD": { "min": 100,    "max": 30000    }
+          "MYR": {
+            "min": 50,
+            "max": 50000
+          },
+          "IDR": {
+            "min": 50000,
+            "max": 5000000
+          },
+          "THB": {
+            "min": 500,
+            "max": 50000
+          },
+          "USD": {
+            "min": 10,
+            "max": 5000
+          },
+          "VND": {
+            "min": 200000,
+            "max": 50000000
+          },
+          "INR": {
+            "min": 500,
+            "max": 100000
+          },
+          "HKD": {
+            "min": 100,
+            "max": 30000
+          }
         }
       }
     }

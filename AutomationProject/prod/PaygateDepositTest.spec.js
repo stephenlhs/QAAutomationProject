@@ -74,7 +74,7 @@ test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 test('Paygate deposit — all enabled methods', async ({ browser }) => {
   test.setTimeout(0);
 
-  const amount = parseInt(process.env.CUSTOM_DEPOSIT_AMOUNT) || CONFIG.deposit.amount;
+
 
   const results = {};
   const enabledMethods = Object.entries(CONFIG.deposit.methods).filter(([name, m]) => {
@@ -231,8 +231,8 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
         console.log(`>> Next button clicked`);
       }
 
-      // Fill amount — priority: CUSTOM_DEPOSIT_AMOUNT env → method.amount → global amount
-      const depositAmount = parseInt(process.env.CUSTOM_DEPOSIT_AMOUNT) || method.amount || amount;
+      // Fill amount — priority: CUSTOM_DEPOSIT_AMOUNT env → fixture limits[currency].min
+      const depositAmount = parseInt(process.env.CUSTOM_DEPOSIT_AMOUNT) || method.limits?.[testCurrency]?.min || 50;
       console.log(`>> Looking for amount input... (depositAmount: ${depositAmount})`);
       const amountInput = playerPage.locator('#txtAmount[name="txtAmount"]');
       const amountInputVisible = await amountInput.isVisible({ timeout: 5000 }).catch(() => false);

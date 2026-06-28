@@ -11,6 +11,10 @@ import { PLAYER, BACKOFFICE, DEPOSIT, URLS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const WEBTOOLS_BASE = process.env.WEBTOOLS_BASE || 'http://54.179.20.185';
+const WEBTOOLS_USER = process.env.WEBTOOLS_USER || 'com';
+const WEBTOOLS_PASS = process.env.WEBTOOLS_PASS || 'com@com';
+
 // Load gateway config by classIdentifier (PAYGATE_GATEWAY env var, default: 'vaderpayc2')
 const gatewayId      = process.env.PAYGATE_GATEWAY || 'vaderpayc2';
 const methodOverride = process.env.PAYGATE_METHOD  || null;
@@ -74,7 +78,7 @@ test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 test('Paygate deposit — all enabled methods', async ({ browser }) => {
   test.setTimeout(0);
 
-  const amount = parseInt(process.env.CUSTOM_DEPOSIT_AMOUNT) || CONFIG.deposit.amount;
+
 
   const results = {};
   const enabledMethods = Object.entries(CONFIG.deposit.methods).filter(([name, m]) => {
@@ -231,8 +235,8 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
         console.log(`>> Next button clicked`);
       }
 
-      // Fill amount — priority: CUSTOM_DEPOSIT_AMOUNT env → method.amount → global amount
-      const depositAmount = parseInt(process.env.CUSTOM_DEPOSIT_AMOUNT) || method.amount || amount;
+      // Fill amount — priority: CUSTOM_DEPOSIT_AMOUNT env → fixture limits[currency].min
+      const depositAmount = parseInt(process.env.CUSTOM_DEPOSIT_AMOUNT) || method.limits?.[testCurrency]?.min || 50;
       console.log(`>> Looking for amount input... (depositAmount: ${depositAmount})`);
       const amountInput = playerPage.locator('#txtAmount[name="txtAmount"]');
       const amountInputVisible = await amountInput.isVisible({ timeout: 5000 }).catch(() => false);
@@ -260,11 +264,13 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
       });
       await playerPage.waitForTimeout(3000);
 
-      // Confirmation modal
+      // Confirmation modal (may or may not appear depending on gateway/method)
       const continueModal = playerPage.locator('.swal2-content', { hasText: 'Do you want to continue?' });
-      await continueModal.waitFor({ state: 'visible', timeout: 120000 }).catch(() => {});
-      await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true });
-      await playerPage.waitForTimeout(5000);
+      const modalVisible = await continueModal.waitFor({ state: 'visible', timeout: 120000 }).then(() => true).catch(() => false);
+      if (modalVisible) {
+        await playerPage.locator('.swal2-buttonswrapper .swal2-confirm[type="button"]').click({ force: true });
+        await playerPage.waitForTimeout(5000);
+      }
 
       // ── Determine deposit submission result ──
       let depositResult = 'unknown';
@@ -416,11 +422,200 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
             console.log('>> WARNING: BO detail modal did not appear');
           }
         }
+
+        // ── PART 7b: BO PG Transactions + detail modal ──
+        try {
+          const pgStatusVal = resumeAction === 'approved' ? '2' : '3';
+          await boPage.goto(`${backoffice.boBase}/dashboard/payment-gateway/transactions`, { waitUntil: 'domcontentloaded' });
+          await boPage.waitForTimeout(1500);
+          await boPage.getByText('Advanced Search').click().catch(() => {});
+          await boPage.waitForTimeout(400);
+          await boPage.locator('[name="filterTransNo"]').fill(tx.txNo).catch(() => {});
+          await boPage.locator('#ddlTicketStatus').selectOption(pgStatusVal).catch(() => {});
+          await boPage.getByRole('button', { name: 'Search' }).click();
+          await boPage.waitForTimeout(2000);
+          const pgRow = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
+          const pgRowText = (await pgRow.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+          console.log(`>> PG Transactions row: ${pgRowText.substring(0, 200)}`);
+          await snap(boPage, `${methodName}-08 - PG Transactions`);
+          const pgDetailBtn = pgRow.locator('[title="View Details"], [title="Details"], [title="View"], .fa-eye, .fa-search').first();
+          if (await pgDetailBtn.count()) {
+            await pgDetailBtn.click({ force: true });
+            await boPage.waitForTimeout(1500);
+            const pgModal = boPage.locator('.modal.in, .modal.show').first();
+            if (await pgModal.isVisible({ timeout: 3000 }).catch(() => false)) {
+              console.log(`>> PG detail modal: ${(await pgModal.innerText().catch(() => '')).replace(/\s+/g, ' ').substring(0, 200)}`);
+              await snap(boPage, `${methodName}-09 - PG Transactions Modal`, pgModal);
+              await pgModal.locator('[data-dismiss="modal"], button:has-text("Close"), .close').first().click({ force: true }).catch(() => {});
+              await boPage.waitForTimeout(500);
+            }
+          } else {
+            console.log('>> PG detail button not found');
+          }
+        } catch (err) {
+          console.log(`>> PG Transactions error: ${err.message.split('\n')[0]}`);
+        }
+
+        // ── PART 7c: BO Cash Flow Report (approve only) ──
+        if (resumeAction === 'approved') {
+          try {
+            await boPage.goto(`${backoffice.boBase}/dashboard/cash-flow/report`, { waitUntil: 'domcontentloaded' });
+            await boPage.waitForTimeout(1500);
+            await boPage.getByRole('button', { name: 'Search' }).click();
+            await boPage.waitForTimeout(2000);
+            const cfText = await boPage.evaluate(() => document.body.innerText);
+            const cfRow = cfText.split('\n').find(l => l.includes(boUsername));
+            console.log(`>> Cash Flow: ${cfRow?.replace(/\t/g, ' | ') || `${boUsername} not found`}`);
+            await snap(boPage, `${methodName}-10 - Cash Flow Report`);
+          } catch (err) {
+            console.log(`>> Cash Flow error: ${err.message.split('\n')[0]}`);
+          }
+        }
+
+        // ── PART 7d: BO Member Cash History (approve only) ──
+        if (resumeAction === 'approved') {
+          try {
+            await boPage.goto(`${backoffice.boBase}/dashboard/member/member-cash-history`, { waitUntil: 'domcontentloaded' });
+            await boPage.waitForTimeout(1500);
+            await boPage.locator('#txtUserName').fill(boUsername);
+            await boPage.getByRole('button', { name: 'Search' }).click();
+            await boPage.waitForTimeout(2000);
+            const chRow = boPage.locator('.table-responsive tbody tr').filter({ hasText: tx.txNo }).first();
+            console.log(`>> Member Cash History: ${(await chRow.innerText().catch(() => '')).replace(/\s+/g, ' ').substring(0, 200)}`);
+            await snap(boPage, `${methodName}-11 - Member Cash History`);
+          } catch (err) {
+            console.log(`>> Member Cash History error: ${err.message.split('\n')[0]}`);
+          }
+        }
+
+        // ── PART 7e: BO Member Account (approve only) ──
+        if (resumeAction === 'approved') {
+          try {
+            await boPage.goto(
+              `${backoffice.boBase}/dashboard/cash/cash-member/member-account?username=${boUsername}&expandacc=false`,
+              { waitUntil: 'domcontentloaded' }
+            );
+            await boPage.waitForTimeout(2000);
+            await snap(boPage, `${methodName}-12 - Member Account`);
+            const bodyText = await boPage.locator('body').innerText().catch(() => '');
+            const lines = bodyText.split('\n').filter(l => l.trim());
+            console.log(`>> Member Account Total Deposit: ${lines.find(l => l.includes('Total Deposit'))?.trim()}`);
+            console.log(`>> Member Account Last Deposit:  ${lines.find(l => l.includes('Last Deposit Date'))?.trim()}`);
+          } catch (err) {
+            console.log(`>> Member Account error: ${err.message.split('\n')[0]}`);
+          }
+        }
+
+        // ── PART 7f: BO Member Statement + click transaction detail (approve only) ──
+        if (resumeAction === 'approved') {
+          try {
+            await boPage.goto(`${backoffice.boBase}/dashboard/reports/statement`, { waitUntil: 'domcontentloaded' });
+            await boPage.waitForTimeout(1500);
+            await boPage.locator('[name="memberName"]').fill(boUsername);
+            await boPage.getByRole('button', { name: 'Search' }).click();
+            await boPage.waitForTimeout(2000);
+            console.log(`>> Member Statement: ${(await boPage.locator('table').innerText().catch(() => '')).replace(/\n/g, ' | ').substring(0, 300)}`);
+            await snap(boPage, `${methodName}-13 - Member Statement`);
+            // Click transaction row for detail
+            const stmtRow = (await boPage.locator('table tbody tr').filter({ hasText: tx.txNo }).count())
+              ? boPage.locator('table tbody tr').filter({ hasText: tx.txNo }).first()
+              : boPage.locator('table tbody tr').filter({ hasText: tx.amount }).first();
+            if (await stmtRow.count()) {
+              const detailIcon = stmtRow.locator('[title="Detail"], [title="View"], .fa-search, .fa-eye').first();
+              if (await detailIcon.count()) { await detailIcon.click({ force: true }); }
+              else { await stmtRow.click({ force: true }).catch(() => {}); }
+              await boPage.waitForTimeout(1500);
+              const stmtModal = boPage.locator('.modal.in, .modal.show').first();
+              if (await stmtModal.isVisible({ timeout: 3000 }).catch(() => false)) {
+                console.log(`>> Statement detail: ${(await stmtModal.innerText().catch(() => '')).replace(/\s+/g, ' ').substring(0, 200)}`);
+                await snap(boPage, `${methodName}-14 - Statement Detail`, stmtModal);
+                await stmtModal.locator('[data-dismiss="modal"], button:has-text("Close"), .close').first().click({ force: true }).catch(() => {});
+                await boPage.waitForTimeout(500);
+              }
+            }
+          } catch (err) {
+            console.log(`>> Member Statement error: ${err.message.split('\n')[0]}`);
+          }
+        }
       }
 
       await boPage.close({ runBeforeUnload: false }).catch(() => {});
       await boContext.close();
       boContext = null;
+
+      // ── PART 7g: Webtools — Wallet Log + Tally Checking ──
+      if (resumeAction) {
+        const wtContext = await browser.newContext();
+        const wtPage    = await wtContext.newPage();
+        try {
+          await wtPage.goto(`${WEBTOOLS_BASE}/account/login`, { waitUntil: 'domcontentloaded' });
+          await wtPage.waitForTimeout(1000);
+          const wtInputs = wtPage.locator('input:not([type=hidden])');
+          await wtInputs.first().fill(WEBTOOLS_USER);
+          await wtInputs.nth(1).fill(WEBTOOLS_PASS);
+          await wtPage.waitForTimeout(300);
+          await wtPage.getByRole('button', { name: /sign in/i }).click();
+          await wtPage.waitForLoadState('domcontentloaded');
+          await wtPage.waitForTimeout(1500);
+          if (wtPage.url().includes('/login')) {
+            console.log('>> Webtools login failed — skipping webtools checks');
+          } else {
+            console.log('>> Webtools login ✅');
+            const txDate   = (tx.dateTime || '').split(' ')[0] || new Date().toISOString().split('T')[0];
+            const dateFrom = `${txDate} 00:00:00`;
+            const dateTo   = `${txDate} 23:59:59`;
+            // Wallet Log
+            try {
+              await wtPage.goto(`${WEBTOOLS_BASE}/WalletLog`, { waitUntil: 'domcontentloaded' });
+              await wtPage.waitForTimeout(1500);
+              await wtPage.locator('#input-memberName').fill(boUsername);
+              await wtPage.locator('#fromDate').fill(dateFrom);
+              await wtPage.locator('#toDate').fill(dateTo);
+              await wtPage.locator('#btnSearch').click();
+              await wtPage.waitForTimeout(2000);
+              await snap(wtPage, `${methodName}-15 - Webtools Wallet Log`);
+              const wtRows = await wtPage.locator('table tbody tr').all();
+              const wtEntries = [];
+              for (const row of wtRows) {
+                const rt = await row.innerText();
+                if (rt.includes(tx.txNo)) wtEntries.push(rt.replace(/\n/g, ' | ').substring(0, 200));
+              }
+              console.log(`>> Webtools Wallet Log (${wtEntries.length} entries for txNo):`);
+              wtEntries.forEach((e, i) => console.log(`>>   [${i+1}] ${e}`));
+              if (resumeAction === 'approved') {
+                console.log(`>> Has Deposit entry: ${wtEntries.some(e => e.includes('Deposit'))}, Has Bonus: ${wtEntries.some(e => e.includes('Bonus'))}`);
+              }
+            } catch (err) {
+              console.log(`>> Webtools Wallet Log error: ${err.message.split('\n')[0]}`);
+            }
+            // Tally — Find Paygate Transactions
+            try {
+              await wtPage.goto(`${WEBTOOLS_BASE}/CashTransferTicket/FindByPaygate`, { waitUntil: 'domcontentloaded' });
+              await wtPage.waitForTimeout(1500);
+              await wtPage.getByRole('textbox').nth(1).fill(boUsername);
+              await wtPage.locator('select[name="paygateSelector"]').selectOption(CONFIG.classIdentifier).catch(() => {});
+              await wtPage.locator('#fromDate').fill(dateFrom);
+              await wtPage.locator('#toDate').fill(dateTo);
+              await wtPage.locator('#btnSearch').click();
+              await wtPage.waitForTimeout(2000);
+              const swalText = await wtPage.locator('.swal2-container').innerText().catch(() => '');
+              if (swalText) { await wtPage.locator('.swal2-confirm').click().catch(() => {}); await wtPage.waitForTimeout(500); }
+              await snap(wtPage, `${methodName}-16 - Webtools Tally`);
+              const tallyRows = await wtPage.locator('table tbody tr').all();
+              for (const row of tallyRows) {
+                const rt = await row.innerText();
+                if (rt.includes(tx.txNo)) { console.log(`>> Tally row: ${rt.replace(/\n/g, ' | ').substring(0, 300)}`); break; }
+              }
+              console.log(`>> Tally has txNo: ${(await wtPage.locator('table').innerText().catch(() => '')).includes(tx.txNo)}`);
+            } catch (err) {
+              console.log(`>> Webtools Tally error: ${err.message.split('\n')[0]}`);
+            }
+          }
+        } finally {
+          await wtPage.close({ runBeforeUnload: false }).catch(() => {});
+          await wtContext.close();
+        }
+      }
 
       // ── PART 8: Playsite after screenshots (cash history + stats) ──
       let after = null;
@@ -475,7 +670,7 @@ test('Paygate deposit — all enabled methods', async ({ browser }) => {
       if (resumeAction && after) {
         if (resumeAction === 'approved') {
           const txBonusAmount = parseFloat(tx.bonus) || 0;
-          const totalCredit   = amount + txBonusAmount;
+          const totalCredit   = parseFloat(tx.amount) + txBonusAmount;
           const effectiveBal  = before.balance + outstanding.total;
           const rolloverInc   = totalCredit * DEPOSIT.rolloverMultiplier;
 

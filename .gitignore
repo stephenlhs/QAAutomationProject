@@ -14,6 +14,7 @@ tests/BulkDeposit.spec.js
 # New additions
 reports/
 .screenshots-tmp/
+screenshots/exploration/
 *.report-tmp-*.json
 playwright-report/
 .playwright-cli/
