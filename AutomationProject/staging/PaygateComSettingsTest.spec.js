@@ -129,6 +129,13 @@ async function comGotoGatewaySettings(comPage) {
   await comPage.waitForTimeout(1000);
 }
 
+// Click a currency tab (MYR, THB, etc.) inside the "Turn on Bank & QR" section
+async function comSelectBankQRTab(comPage, currency) {
+  const tab = comPage.locator('a, button').filter({ hasText: new RegExp(`^${currency}$`) }).first();
+  await tab.click({ force: true });
+  await comPage.waitForTimeout(800);
+}
+
 async function comSave(comPage) {
   await comPage.getByRole('button', { name: 'Save Changes' }).click({ force: true });
   await comPage.waitForTimeout(2000);
@@ -180,37 +187,31 @@ async function ssrCheckC2Exists(ssrPage, label) {
   return result;
 }
 
-// C2: Check if QR Pay section is visible under C2 in SSR deposit settings
-async function ssrCheckQRSection(ssrPage, label) {
+// C2: When "Turn on Bank & QR" is OFF, Gateway Transfer + QR Pay sections disappear in SSR.
+//     Check both — return 'visible' if either is found, 'hidden' if neither.
+async function ssrCheckBankQRSections(ssrPage, label) {
   await ssrGotoGateway(ssrPage);
   await ssrSelectCurrencyTab(ssrPage);
   await ssrPage.waitForTimeout(800);
-  const qrEl = ssrPage.locator('.checkbox, label, .form-check, .form-group').filter({ hasText: /QR Pay/i }).first();
-  const visible = await qrEl.isVisible({ timeout: 3000 }).catch(() => false);
+  const gtEl = ssrPage.locator('label, td, th, .checkbox').filter({ hasText: /Gateway Transfer/i }).first();
+  const qrEl = ssrPage.locator('label, td, th, .checkbox').filter({ hasText: /QR Pay/i }).first();
+  const gtVisible = await gtEl.isVisible({ timeout: 2000 }).catch(() => false);
+  const qrVisible = await qrEl.isVisible({ timeout: 2000 }).catch(() => false);
   await snap(ssrPage, label);
-  console.log(`>> [SSR] QR Pay section visible: ${visible}`);
-  return visible ? 'visible' : 'hidden';
+  console.log(`>> [SSR] Gateway Transfer: ${gtVisible}, QR Pay: ${qrVisible}`);
+  return (gtVisible || qrVisible) ? 'visible' : 'hidden';
 }
 
-// C3: Check if a specific bank is visible under Gateway Transfer section in SSR
-async function ssrCheckBankInGatewayTransfer(ssrPage, bankName, label) {
+// C3: Check if a specific bank row is visible in the SSR deposit settings bank table
+async function ssrCheckBankRow(ssrPage, bankName, label) {
   await ssrGotoGateway(ssrPage);
   await ssrSelectCurrencyTab(ssrPage);
   await ssrPage.waitForTimeout(800);
-  // First check if the Gateway Transfer section itself is visible
-  const gtSection = ssrPage.locator('.checkbox, label, .form-check, .form-group').filter({ hasText: /Gateway Transfer/i }).first();
-  const gtVisible = await gtSection.isVisible({ timeout: 3000 }).catch(() => false);
-  if (!gtVisible) {
-    await snap(ssrPage, label);
-    console.log(`>> [SSR] Gateway Transfer section not found → bank hidden`);
-    return 'hidden';
-  }
-  // Check for the specific bank row in the bank table
-  const bankRow = ssrPage.locator('tr, .bank-item, [class*="bank"]').filter({ hasText: bankName }).first();
-  const bankVisible = await bankRow.isVisible({ timeout: 3000 }).catch(() => false);
+  const bankRow = ssrPage.getByRole('row', { name: bankName }).first();
+  const visible = await bankRow.isVisible({ timeout: 3000 }).catch(() => false);
   await snap(ssrPage, label);
-  console.log(`>> [SSR] Bank "${bankName}" visible: ${bankVisible}`);
-  return bankVisible ? 'visible' : 'hidden';
+  console.log(`>> [SSR] Bank row "${bankName}": ${visible ? 'visible' : 'hidden'}`);
+  return visible ? 'visible' : 'hidden';
 }
 
 // C4: Check if Merchant ID label is visible in SSR gateway settings
@@ -369,10 +370,12 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
     }
     console.log(`>> [COM-C1] ${results['COM-C1-c2-toggle']}`);
 
-    // ── COM-C2: "Turn on Bank & QR" → verify QR Pay section in SSR BO ───────
-    // Turn OFF → SSR should not show QR Pay under C2
-    // Turn ON  → SSR should show QR Pay under C2
-    console.log('\n>> [COM-C2] Turn on Bank & QR → SSR QR Pay section');
+    // ── COM-C2: "Turn on Bank & QR" toggle → verify in SSR BO ──────────────
+    // "Turn on Bank & QR" is a gateway-level toggle that controls ALL payment methods
+    // (bank, QR, ewallet) across all currencies for this gateway.
+    // Turn OFF → SSR should not show Gateway Transfer or QR Pay sections under C2
+    // Turn ON  → SSR shows Gateway Transfer + QR Pay sections
+    console.log('\n>> [COM-C2] Turn on Bank & QR → SSR Gateway Transfer + QR Pay sections');
     try {
       await comGotoGatewaySettings(comPage);
       await snap(comPage, 'COM-C2a - COM Gateway Settings');
@@ -382,22 +385,22 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
       if (wasOn) await bankQrCb.click({ force: true });
       await comSave(comPage);
       await snap(comPage, 'COM-C2b - Bank&QR OFF saved');
-      const offResult = await ssrCheckQRSection(ssrPage, 'COM-C2c - SSR QR OFF');
-      console.log(`>> [COM-C2] Bank&QR OFF → SSR QR Pay: ${offResult}`);
+      const offResult = await ssrCheckBankQRSections(ssrPage, 'COM-C2c - SSR Bank&QR OFF');
+      console.log(`>> [COM-C2] Bank&QR OFF → SSR: ${offResult}`);
 
       await comGotoGatewaySettings(comPage);
       const bankQrCb2 = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
       if (!(await bankQrCb2.isChecked().catch(() => false))) await bankQrCb2.click({ force: true });
       await comSave(comPage);
       await snap(comPage, 'COM-C2d - Bank&QR ON saved');
-      const onResult = await ssrCheckQRSection(ssrPage, 'COM-C2e - SSR QR ON');
-      console.log(`>> [COM-C2] Bank&QR ON → SSR QR Pay: ${onResult}`);
+      const onResult = await ssrCheckBankQRSections(ssrPage, 'COM-C2e - SSR Bank&QR ON');
+      console.log(`>> [COM-C2] Bank&QR ON → SSR: ${onResult}`);
 
-      results['COM-C2-qr-section'] = (offResult === 'hidden' && onResult === 'visible')
-        ? `PASS — QR Pay: OFF→hidden, ON→visible`
+      results['COM-C2-bankqr-toggle'] = (offResult === 'hidden' && onResult === 'visible')
+        ? `PASS — Bank&QR: OFF→SSR hidden, ON→SSR visible`
         : `FAIL — OFF→${offResult}, ON→${onResult}`;
     } catch (e) {
-      results['COM-C2-qr-section'] = `FAIL: ${e.message.split('\n')[0]}`;
+      results['COM-C2-bankqr-toggle'] = `FAIL: ${e.message.split('\n')[0]}`;
       try {
         await comGotoGatewaySettings(comPage);
         const cb = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
@@ -405,49 +408,69 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
         await comSave(comPage);
       } catch {}
     }
-    console.log(`>> [COM-C2] ${results['COM-C2-qr-section']}`);
+    console.log(`>> [COM-C2] ${results['COM-C2-bankqr-toggle']}`);
 
-    // ── COM-C3: "Turn on Bank & QR" → verify specific bank in SSR Gateway Transfer ──
-    // Turn OFF → SSR should not show the bank under Gateway Transfer
-    // Turn ON  → SSR should show the bank under Gateway Transfer
-    console.log(`\n>> [COM-C3] Turn on Bank & QR → SSR bank "${testBankName}" in Gateway Transfer`);
+    // ── COM-C3: Individual bank toggle → verify specific bank row in SSR ────
+    // With "Turn on Bank & QR" ON, each currency tab has individual bank checkboxes.
+    // Uncheck a specific bank under the test currency tab in COM
+    // → that bank row should disappear from SSR's Gateway Transfer bank list.
+    console.log(`\n>> [COM-C3] Individual bank "${testBankName}" toggle under ${testCurrency} → SSR bank list`);
     if (!testBankName) {
-      results['COM-C3-bank-in-gt'] = `SKIP — no enabled bank found for ${testCurrency} in fixture`;
+      results['COM-C3-bank-row'] = `SKIP — no enabled bank found for ${testCurrency} in fixture`;
     } else {
       try {
+        // Ensure Bank & QR is ON first (so bank checkboxes are visible in COM)
         await comGotoGatewaySettings(comPage);
-        await snap(comPage, 'COM-C3a - COM Gateway Settings');
         const bankQrCb = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
-        const wasOn    = await bankQrCb.isChecked().catch(() => true);
+        if (!(await bankQrCb.isChecked().catch(() => false))) {
+          await bankQrCb.click({ force: true });
+          await comSave(comPage);
+          await comGotoGatewaySettings(comPage);
+        }
+        await snap(comPage, 'COM-C3a - COM Gateway Settings (Bank&QR ON)');
 
-        if (wasOn) await bankQrCb.click({ force: true });
+        // Select the test currency tab to see its bank list
+        await comSelectBankQRTab(comPage, testCurrency);
+        await snap(comPage, `COM-C3b - ${testCurrency} tab`);
+
+        // Uncheck the specific bank
+        const bankRow = comPage.getByRole('row', { name: testBankName }).first();
+        const bankCb  = bankRow.getByRole('checkbox').first();
+        const wasOn   = await bankCb.isChecked().catch(() => true);
+        if (wasOn) await bankCb.click({ force: true });
         await comSave(comPage);
-        await snap(comPage, 'COM-C3b - Bank&QR OFF saved');
-        const offResult = await ssrCheckBankInGatewayTransfer(ssrPage, testBankName, 'COM-C3c - SSR Bank OFF');
-        console.log(`>> [COM-C3] Bank&QR OFF → SSR bank "${testBankName}": ${offResult}`);
+        await snap(comPage, `COM-C3c - "${testBankName}" OFF saved`);
+        const offResult = await ssrCheckBankRow(ssrPage, testBankName, `COM-C3d - SSR "${testBankName}" OFF`);
+        console.log(`>> [COM-C3] Bank "${testBankName}" OFF → SSR: ${offResult}`);
 
+        // Re-check the bank
         await comGotoGatewaySettings(comPage);
-        const bankQrCb2 = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
-        if (!(await bankQrCb2.isChecked().catch(() => false))) await bankQrCb2.click({ force: true });
+        await comSelectBankQRTab(comPage, testCurrency);
+        const bankRow2 = comPage.getByRole('row', { name: testBankName }).first();
+        const bankCb2  = bankRow2.getByRole('checkbox').first();
+        if (!(await bankCb2.isChecked().catch(() => false))) await bankCb2.click({ force: true });
         await comSave(comPage);
-        await snap(comPage, 'COM-C3d - Bank&QR ON saved');
-        const onResult = await ssrCheckBankInGatewayTransfer(ssrPage, testBankName, 'COM-C3e - SSR Bank ON');
-        console.log(`>> [COM-C3] Bank&QR ON → SSR bank "${testBankName}": ${onResult}`);
+        await snap(comPage, `COM-C3e - "${testBankName}" ON saved`);
+        const onResult = await ssrCheckBankRow(ssrPage, testBankName, `COM-C3f - SSR "${testBankName}" ON`);
+        console.log(`>> [COM-C3] Bank "${testBankName}" ON → SSR: ${onResult}`);
 
-        results['COM-C3-bank-in-gt'] = (offResult === 'hidden' && onResult === 'visible')
-          ? `PASS — "${testBankName}": OFF→hidden, ON→visible`
+        results['COM-C3-bank-row'] = (offResult === 'hidden' && onResult === 'visible')
+          ? `PASS — "${testBankName}": OFF→SSR hidden, ON→SSR visible`
           : `FAIL — OFF→${offResult}, ON→${onResult}`;
       } catch (e) {
-        results['COM-C3-bank-in-gt'] = `FAIL: ${e.message.split('\n')[0]}`;
+        results['COM-C3-bank-row'] = `FAIL: ${e.message.split('\n')[0]}`;
+        // Recovery: re-enable the bank
         try {
           await comGotoGatewaySettings(comPage);
-          const cb = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
+          await comSelectBankQRTab(comPage, testCurrency);
+          const br = comPage.getByRole('row', { name: testBankName }).first();
+          const cb = br.getByRole('checkbox').first();
           if (!(await cb.isChecked().catch(() => false))) await cb.click({ force: true });
           await comSave(comPage);
         } catch {}
       }
     }
-    console.log(`>> [COM-C3] ${results['COM-C3-bank-in-gt']}`);
+    console.log(`>> [COM-C3] ${results['COM-C3-bank-row']}`);
 
     // ── COM-C4: Display Setting → verify Merchant ID in SSR BO ──────────────
     // Turn OFF → SSR should not show Merchant ID field
