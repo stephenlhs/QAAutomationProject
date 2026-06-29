@@ -269,17 +269,25 @@ async function playSiteCheckMaintenance(playerPage, method, label) {
   const cardText    = (await card.innerText().catch(() => '')).toLowerCase();
   const cardHtml    = (await card.innerHTML().catch(() => '')).toLowerCase();
   const hasMaintCls = await card.locator('[class*="maintenance"],[class*="disabled"],[class*="unavailable"]').count() > 0;
-  if (cardText.includes('maintenance') || cardHtml.includes('maintenance') || hasMaintCls) {
+  const isDisabled  = await card.evaluate(el => {
+    const style = window.getComputedStyle(el);
+    return el.hasAttribute('disabled') || style.pointerEvents === 'none' || style.opacity < 0.5;
+  }).catch(() => false);
+  const maintKeywords = ['maintenance', 'unavailable', 'under maintenance', 'scheduled maintenance'];
+  if (maintKeywords.some(k => cardText.includes(k) || cardHtml.includes(k)) || hasMaintCls || isDisabled) {
     await snap(playerPage, label);
     return 'maintenance';
   }
   await card.click({ force: true });
-  await playerPage.waitForTimeout(2000);
+  await playerPage.waitForTimeout(2500);
   const swalText = (await playerPage.locator('.swal2-modal, .swal2-container').innerText().catch(() => '')).toLowerCase();
   const errText  = (await playerPage.locator('.alert, .error-message, [class*="error"], [class*="alert"]').innerText().catch(() => '')).toLowerCase();
   const bodyText = (await playerPage.locator('.redeposit, .deposit-form, [class*="deposit"]').innerText().catch(() => '')).toLowerCase();
-  const hasMaint = swalText.includes('maintenance') || errText.includes('maintenance') || bodyText.includes('maintenance') ||
-    swalText.includes('unavailable') || swalText.includes('not available');
+  const pageText = (await playerPage.locator('body').innerText().catch(() => '')).toLowerCase();
+  const hasMaint = [swalText, errText, bodyText, pageText].some(t =>
+    t.includes('maintenance') || t.includes('unavailable') || t.includes('not available') ||
+    t.includes('service down') || t.includes('under maintenance') || t.includes('scheduled maintenance')
+  );
   await snap(playerPage, label);
   return hasMaint ? 'maintenance' : 'visible';
 }
@@ -515,9 +523,6 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
     // Turn ON  → Playsite should show C2 gateway card
     console.log('\n>> [COM-C5] Prod On/Off → Playsite');
     try {
-      const card = await comGotoPaymentStatus(comPage);
-      await snap(comPage, 'COM-C5a - Payment Status');
-
       const getCardState = async (c) => {
         const txt = (await c.locator('.ibox-content').innerText().catch(() => '')).toLowerCase();
         console.log(`>> [COM-C5] Card status: "${txt.substring(0, 80).trim()}"`);
@@ -531,12 +536,25 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
         }
       };
 
-      const prodToggle = card.locator('[data-original-title="Prod On/Off"]').first();
+      // Ensure gateway is NOT in maintenance before testing prod toggle
+      // (.switch-control is hidden by Angular ngIf when in maintenance state)
+      let card = await comGotoPaymentStatus(comPage);
+      await snap(comPage, 'COM-C5a - Payment Status');
+      const readyBtnPre = card.locator('button[title="Ready"]');
+      if (await readyBtnPre.isVisible({ timeout: 2000 }).catch(() => false)) {
+        console.log('>> [COM-C5] Gateway in maintenance — clicking Ready to restore before prod test');
+        await readyBtnPre.click({ force: true });
+        await handleSwal();
+        await comPage.waitForTimeout(4000);
+        card = await comGotoPaymentStatus(comPage);
+      }
+
+      const prodToggle = card.locator('.switch-control > .slider').first();
       const isOn = await getCardState(card);
       console.log(`>> [COM-C5] Current state: ${isOn ? 'ON' : 'OFF'}`);
 
       if (isOn) { await prodToggle.click({ force: true }); await handleSwal(); }
-      await comPage.waitForTimeout(4000);
+      await comPage.waitForTimeout(5000);
       await snap(comPage, 'COM-C5b - Prod OFF');
       const offResult = firstMethod
         ? await playSiteCheckGateway(playerPage, firstMethod, 'COM-C5c - Playsite Prod OFF')
@@ -545,9 +563,9 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
 
       const card2       = await comGotoPaymentStatus(comPage);
       const isOn2       = await getCardState(card2);
-      const prodToggle2 = card2.locator('[data-original-title="Prod On/Off"]').first();
+      const prodToggle2 = card2.locator('.switch-control > .slider').first();
       if (!isOn2) { await prodToggle2.click({ force: true }); await handleSwal(); }
-      await comPage.waitForTimeout(4000);
+      await comPage.waitForTimeout(5000);
       await snap(comPage, 'COM-C5d - Prod ON');
       const onResult = firstMethod
         ? await playSiteCheckGateway(playerPage, firstMethod, 'COM-C5e - Playsite Prod ON')
@@ -561,9 +579,17 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
       results['COM-C5-prod-toggle'] = `FAIL: ${e.message.split('\n')[0]}`;
       try {
         const c   = await comGotoPaymentStatus(comPage);
-        const txt = (await c.locator('.ibox-content').innerText().catch(() => '')).toLowerCase();
+        const readyFix = c.locator('button[title="Ready"]').first();
+        if (await readyFix.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await readyFix.click({ force: true });
+          const sc = comPage.locator('button.swal2-confirm').first();
+          if (await sc.isVisible({ timeout: 3000 }).catch(() => false)) await sc.click({ force: true });
+          await comPage.waitForTimeout(3000);
+        }
+        const c2 = await comGotoPaymentStatus(comPage);
+        const txt = (await c2.locator('.ibox-content').innerText().catch(() => '')).toLowerCase();
         if (!txt.includes('running')) {
-          await c.locator('[data-original-title="Prod On/Off"]').first().click({ force: true });
+          await c2.locator('.switch-control > .slider').first().click({ force: true });
           const sc = comPage.locator('button.swal2-confirm').first();
           if (await sc.isVisible({ timeout: 3000 }).catch(() => false)) await sc.click({ force: true });
           await comPage.waitForTimeout(2000);
@@ -573,30 +599,33 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
     console.log(`>> [COM-C5] ${results['COM-C5-prod-toggle']}`);
 
     // ── COM-C6: Maintenance → verify in Playsite ────────────────────────────
-    // Start Maintenance → Playsite should show maintenance state
-    // Resume (Ready)    → Playsite should show normal card
+    // Start Maintenance → Playsite should show maintenance state or hide card
+    // Resume (Ready)    → Playsite should show normal card again
     console.log('\n>> [COM-C6] Maintenance → Playsite');
     try {
       const card = await comGotoPaymentStatus(comPage);
       await snap(comPage, 'COM-C6a - Before Maintenance');
 
+      // button[data-target="#statusModal"] is the Maintenance Setting button (always visible)
       const maintBtn = card.locator('button[data-target="#statusModal"]').first();
       await maintBtn.click({ force: true });
       await comPage.waitForTimeout(1000);
       await comPage.locator('#statusModal').waitFor({ state: 'visible', timeout: 8000 });
+      await snap(comPage, 'COM-C6b - Status Modal');
       await comPage.locator('#statusModal button[type="submit"]').click({ force: true });
-      console.log('>> [COM-C6] "Start Maintenance" clicked');
-      await comPage.waitForTimeout(4000);
-      await snap(comPage, 'COM-C6b - Maintenance set');
+      console.log('>> [COM-C6] "Start Maintenance" confirmed');
+      await comPage.waitForTimeout(6000);
+      await snap(comPage, 'COM-C6c - Maintenance set');
 
       const maintResult = firstMethod
-        ? await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C6c - Playsite Maintenance')
+        ? await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C6d - Playsite Maintenance')
         : 'SKIP';
       console.log(`>> [COM-C6] Maintenance → Playsite: ${maintResult}`);
 
       const card2    = await comGotoPaymentStatus(comPage);
-      await snap(comPage, 'COM-C6d-pre - Payment Status (maintenance active)');
-      const readyBtn = card2.locator('button[data-original-title="Ready"]').first();
+      await snap(comPage, 'COM-C6e-pre - Payment Status (maintenance active)');
+      // button[title="Ready"] appears when gateway is in maintenance (data-original-title is NOT set in Angular component)
+      const readyBtn = card2.locator('button[title="Ready"]').first();
       const hasReady = await readyBtn.isVisible({ timeout: 5000 }).catch(() => false);
       if (hasReady) {
         await readyBtn.click({ force: true });
@@ -607,14 +636,14 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
           console.log('>> [COM-C6] SweetAlert confirmed');
         }
       } else {
-        const btns = await card2.locator('button').evaluateAll(els => els.map(e => `${e.getAttribute('data-original-title') || ''} ${e.textContent?.trim() || ''}`));
+        const btns = await card2.locator('button').evaluateAll(els => els.map(e => `title="${e.getAttribute('title') || ''}" class="${e.className}"`));
         console.log(`>> [COM-C6] WARNING — Ready button not found. Buttons: ${JSON.stringify(btns)}`);
       }
-      await comPage.waitForTimeout(4000);
-      await snap(comPage, 'COM-C6d - Resumed');
+      await comPage.waitForTimeout(6000);
+      await snap(comPage, 'COM-C6e - Resumed');
 
       const resumeResult = firstMethod
-        ? await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C6e - Playsite after Resume')
+        ? await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C6f - Playsite after Resume')
         : 'SKIP';
       console.log(`>> [COM-C6] Resume → Playsite: ${resumeResult}`);
 
@@ -625,7 +654,7 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
       results['COM-C6-maintenance'] = `FAIL: ${e.message.split('\n')[0]}`;
       try {
         const c  = await comGotoPaymentStatus(comPage);
-        const rb = c.locator('button[data-original-title="Ready"]').first();
+        const rb = c.locator('button[title="Ready"]').first();
         if (await rb.isVisible({ timeout: 3000 }).catch(() => false)) {
           await rb.click({ force: true });
           const sc = comPage.locator('button.swal2-confirm').first();
