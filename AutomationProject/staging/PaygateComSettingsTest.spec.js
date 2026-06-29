@@ -147,7 +147,7 @@ async function comGotoPaymentStatus(comPage) {
     .first();
 }
 
-// ─── SSR BO check helpers (for C1–C3 verification) ───
+// ─── SSR BO verification helpers ─────────────────
 async function ssrGotoGateway(ssrPage) {
   await ssrPage.goto(SSR_DEPOSIT_SETTINGS_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await ssrPage.waitForTimeout(2000);
@@ -170,6 +170,7 @@ async function ssrSelectCurrencyTab(ssrPage) {
   await ssrPage.waitForTimeout(500);
 }
 
+// C1: Check if C2 gateway appears in the SSR left panel list
 async function ssrCheckC2Exists(ssrPage, label) {
   await ssrPage.goto(SSR_DEPOSIT_SETTINGS_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await ssrPage.waitForTimeout(2000);
@@ -179,21 +180,40 @@ async function ssrCheckC2Exists(ssrPage, label) {
   return result;
 }
 
-async function ssrCheckBankQR(ssrPage, label) {
-  // Navigate fresh each time to avoid stale page state
+// C2: Check if QR Pay section is visible under C2 in SSR deposit settings
+async function ssrCheckQRSection(ssrPage, label) {
   await ssrGotoGateway(ssrPage);
   await ssrSelectCurrencyTab(ssrPage);
   await ssrPage.waitForTimeout(800);
-  const gtCb = ssrPage.getByRole('checkbox', { name: /Gateway Transfer/i });
-  const qrCb = ssrPage.getByRole('checkbox', { name: /QR Pay/i });
-  // COM Bank&QR OFF disables these checkboxes in SSR BO; ON enables them
-  const isGTEnabled = await gtCb.isEnabled({ timeout: 2000 }).catch(() => false);
-  const isQREnabled = await qrCb.isEnabled({ timeout: 2000 }).catch(() => false);
+  const qrEl = ssrPage.locator('.checkbox, label, .form-check, .form-group').filter({ hasText: /QR Pay/i }).first();
+  const visible = await qrEl.isVisible({ timeout: 3000 }).catch(() => false);
   await snap(ssrPage, label);
-  console.log(`>> [SSR] Gateway Transfer enabled: ${isGTEnabled}, QR Pay enabled: ${isQREnabled}`);
-  return (isGTEnabled || isQREnabled) ? 'enabled' : 'disabled';
+  console.log(`>> [SSR] QR Pay section visible: ${visible}`);
+  return visible ? 'visible' : 'hidden';
 }
 
+// C3: Check if a specific bank is visible under Gateway Transfer section in SSR
+async function ssrCheckBankInGatewayTransfer(ssrPage, bankName, label) {
+  await ssrGotoGateway(ssrPage);
+  await ssrSelectCurrencyTab(ssrPage);
+  await ssrPage.waitForTimeout(800);
+  // First check if the Gateway Transfer section itself is visible
+  const gtSection = ssrPage.locator('.checkbox, label, .form-check, .form-group').filter({ hasText: /Gateway Transfer/i }).first();
+  const gtVisible = await gtSection.isVisible({ timeout: 3000 }).catch(() => false);
+  if (!gtVisible) {
+    await snap(ssrPage, label);
+    console.log(`>> [SSR] Gateway Transfer section not found → bank hidden`);
+    return 'hidden';
+  }
+  // Check for the specific bank row in the bank table
+  const bankRow = ssrPage.locator('tr, .bank-item, [class*="bank"]').filter({ hasText: bankName }).first();
+  const bankVisible = await bankRow.isVisible({ timeout: 3000 }).catch(() => false);
+  await snap(ssrPage, label);
+  console.log(`>> [SSR] Bank "${bankName}" visible: ${bankVisible}`);
+  return bankVisible ? 'visible' : 'hidden';
+}
+
+// C4: Check if Merchant ID label is visible in SSR gateway settings
 async function ssrCheckMerchantId(ssrPage, label) {
   await ssrGotoGateway(ssrPage);
   await ssrPage.waitForTimeout(800);
@@ -203,7 +223,7 @@ async function ssrCheckMerchantId(ssrPage, label) {
   return result;
 }
 
-// ─── Playsite helpers (for C4–C5 verification) ───────
+// ─── Playsite helpers (C5–C6) ────────────────────
 async function playSiteSelectPkgMethod(playerPage, method) {
   await playerPage.locator('.fa.fa-times').click().catch(() => {});
   const pkgBtn = playerPage.locator('button, [role="button"]').filter({ hasText: CONFIG.deposit.packageName }).first();
@@ -225,6 +245,7 @@ async function playSiteGetCard(playerPage) {
   return playerPage.locator(parts.map(p => `[data-paygate-name*="${p}"]`).join('')).first();
 }
 
+// C5: Check if gateway card is visible on playsite (Prod on/off)
 async function playSiteCheckGateway(playerPage, method, label) {
   await playerPage.goto(DEPOSIT_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await playerPage.waitForTimeout(1500);
@@ -234,6 +255,7 @@ async function playSiteCheckGateway(playerPage, method, label) {
   return visible ? 'visible' : 'hidden';
 }
 
+// C6: Check if gateway card shows maintenance state on playsite
 async function playSiteCheckMaintenance(playerPage, method, label) {
   await playerPage.goto(DEPOSIT_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await playerPage.waitForTimeout(1500);
@@ -262,11 +284,18 @@ async function playSiteCheckMaintenance(playerPage, method, label) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test — COM level only (staging only, requires sc@com credentials)
+// Test — COM level only (staging only, requires COM BO credentials)
+//
+// COM-C1: C2 Enable/Disable         → verify in SSR BO (C2 in left panel list)
+// COM-C2: Turn on Bank & QR         → verify QR Pay section in SSR BO
+// COM-C3: Turn on Bank & QR         → verify specific bank under Gateway Transfer in SSR BO
+// COM-C4: Display Setting           → verify Merchant ID in SSR BO
+// COM-C5: Prod On/Off (pay status)  → verify in Playsite (card visible/hidden)
+// COM-C6: Maintenance (pay status)  → verify in Playsite (maintenance state)
 // ─────────────────────────────────────────────────────────────────────────────
 test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 
-test('Paygate COM settings — enable/disable, Bank&QR, Display, Prod, Maintenance', async ({ browser }) => {
+test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', async ({ browser }) => {
   test.setTimeout(0);
   const results = {};
 
@@ -280,8 +309,9 @@ test('Paygate COM settings — enable/disable, Bank&QR, Display, Prod, Maintenan
     if (methodOverride) return name === methodOverride;
     return m.enabled;
   });
-
-  const firstMethod = enabledMethods[0]?.[1];
+  const firstMethod  = enabledMethods[0]?.[1];
+  const bankMethod   = (enabledMethods.find(([n]) => n === 'Bank') || enabledMethods.find(([n]) => n.toLowerCase().includes('bank')))?.[1];
+  const testBankName = bankMethod?.banks?.[testCurrency]?.find(b => b.enabled)?.name || null;
 
   let comCtx = null, comPage = null;
   let ssrCtx = null, ssrPage = null;
@@ -298,39 +328,35 @@ test('Paygate COM settings — enable/disable, Bank&QR, Display, Prod, Maintenan
     await snap(playerPage, 'COM-Setup - Playsite');
 
     console.log('\n>> ════════════════════════════════════════════');
-    console.log('>> SECTION COM — COM-level Settings');
+    console.log('>> COM-level Settings');
     console.log('>> ════════════════════════════════════════════');
 
-    // ── COM-C1: C2 Enable/Disable → SSR BO ──────────────────────────────────
+    // ── COM-C1: C2 Enable/Disable → verify in SSR BO ────────────────────────
+    // Turn OFF C2 in COM → SSR left panel should not show C2
+    // Turn ON  C2 in COM → SSR left panel should show C2
     console.log('\n>> [COM-C1] C2 Enable/Disable → SSR BO');
     try {
       await comGotoGatewaySettings(comPage);
-      await snap(comPage, 'COM-C1a - Company Gateway Settings');
+      await snap(comPage, 'COM-C1a - COM Gateway Settings');
       const c2Cb  = comPage.getByRole('checkbox', { name: /VaderPay.*C2|C2.*VaderPay/i }).first();
       const wasOn = await c2Cb.isChecked().catch(() => true);
 
       if (wasOn) await c2Cb.click({ force: true });
       await comSave(comPage);
-      await snap(comPage, 'COM-C1b - C2 Disabled (saved)');
-      await comPage.waitForTimeout(6000); // wait for change to propagate to playsite
-      const offResult = firstMethod
-        ? await playSiteCheckGateway(playerPage, firstMethod, 'COM-C1c - Playsite C2 Disabled')
-        : 'SKIP';
-      console.log(`>> [COM-C1] C2 OFF → Playsite: ${offResult}`);
+      await snap(comPage, 'COM-C1b - C2 OFF saved');
+      const offResult = await ssrCheckC2Exists(ssrPage, 'COM-C1c - SSR C2 OFF');
+      console.log(`>> [COM-C1] C2 OFF → SSR: ${offResult}`);
 
       await comGotoGatewaySettings(comPage);
       const c2Cb2 = comPage.getByRole('checkbox', { name: /VaderPay.*C2|C2.*VaderPay/i }).first();
       if (!(await c2Cb2.isChecked().catch(() => false))) await c2Cb2.click({ force: true });
       await comSave(comPage);
-      await snap(comPage, 'COM-C1d - C2 Enabled (saved)');
-      await comPage.waitForTimeout(6000);
-      const onResult = firstMethod
-        ? await playSiteCheckGateway(playerPage, firstMethod, 'COM-C1e - Playsite C2 Enabled')
-        : 'SKIP';
-      console.log(`>> [COM-C1] C2 ON → Playsite: ${onResult}`);
+      await snap(comPage, 'COM-C1d - C2 ON saved');
+      const onResult = await ssrCheckC2Exists(ssrPage, 'COM-C1e - SSR C2 ON');
+      console.log(`>> [COM-C1] C2 ON → SSR: ${onResult}`);
 
       results['COM-C1-c2-toggle'] = (offResult === 'hidden' && onResult === 'visible')
-        ? `PASS — OFF→hidden, ON→visible`
+        ? `PASS — C2 OFF→SSR hidden, ON→SSR visible`
         : `FAIL — OFF→${offResult}, ON→${onResult}`;
     } catch (e) {
       results['COM-C1-c2-toggle'] = `FAIL: ${e.message.split('\n')[0]}`;
@@ -343,42 +369,35 @@ test('Paygate COM settings — enable/disable, Bank&QR, Display, Prod, Maintenan
     }
     console.log(`>> [COM-C1] ${results['COM-C1-c2-toggle']}`);
 
-    // ── COM-C2: Bank & QR → SSR BO ──────────────────────────────────────────
-    console.log('\n>> [COM-C2] Turn on Bank & QR → SSR BO');
+    // ── COM-C2: "Turn on Bank & QR" → verify QR Pay section in SSR BO ───────
+    // Turn OFF → SSR should not show QR Pay under C2
+    // Turn ON  → SSR should show QR Pay under C2
+    console.log('\n>> [COM-C2] Turn on Bank & QR → SSR QR Pay section');
     try {
       await comGotoGatewaySettings(comPage);
-      await snap(comPage, 'COM-C2a - Company Gateway Settings');
-      const bankQrCb   = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
-      const wasChecked = await bankQrCb.isChecked().catch(() => true);
+      await snap(comPage, 'COM-C2a - COM Gateway Settings');
+      const bankQrCb = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
+      const wasOn    = await bankQrCb.isChecked().catch(() => true);
 
-      if (wasChecked) await bankQrCb.click({ force: true });
+      if (wasOn) await bankQrCb.click({ force: true });
       await comSave(comPage);
-      await snap(comPage, 'COM-C2b - Bank & QR OFF (saved)');
-      // Re-navigate to read fresh checkbox state (verifies the setting saved)
-      await comGotoGatewaySettings(comPage);
-      const offIsChecked = await comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' }).isChecked({ timeout: 3000 }).catch(() => null);
-      const offResult = offIsChecked === false ? 'off' : offIsChecked === true ? 'on' : 'not-found';
-      console.log(`>> [COM-C2] Bank&QR COM BO after OFF save: isChecked=${offIsChecked} → ${offResult}`);
-      // SSR screenshot for reference
-      await ssrCheckBankQR(ssrPage, 'COM-C2c - SSR BankQR OFF');
+      await snap(comPage, 'COM-C2b - Bank&QR OFF saved');
+      const offResult = await ssrCheckQRSection(ssrPage, 'COM-C2c - SSR QR OFF');
+      console.log(`>> [COM-C2] Bank&QR OFF → SSR QR Pay: ${offResult}`);
 
+      await comGotoGatewaySettings(comPage);
       const bankQrCb2 = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
       if (!(await bankQrCb2.isChecked().catch(() => false))) await bankQrCb2.click({ force: true });
       await comSave(comPage);
-      await snap(comPage, 'COM-C2d - Bank & QR ON (saved)');
-      // Re-navigate to read fresh checkbox state
-      await comGotoGatewaySettings(comPage);
-      const onIsChecked = await comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' }).isChecked({ timeout: 3000 }).catch(() => null);
-      const onResult = onIsChecked === true ? 'on' : onIsChecked === false ? 'off' : 'not-found';
-      console.log(`>> [COM-C2] Bank&QR COM BO after ON save: isChecked=${onIsChecked} → ${onResult}`);
-      // SSR screenshot for reference
-      await ssrCheckBankQR(ssrPage, 'COM-C2e - SSR BankQR ON');
+      await snap(comPage, 'COM-C2d - Bank&QR ON saved');
+      const onResult = await ssrCheckQRSection(ssrPage, 'COM-C2e - SSR QR ON');
+      console.log(`>> [COM-C2] Bank&QR ON → SSR QR Pay: ${onResult}`);
 
-      results['COM-C2-bankqr-toggle'] = (offResult === 'off' && onResult === 'on')
-        ? `PASS — COM BO: Bank&QR toggle OFF→off, ON→on`
-        : `FAIL — COM BO: OFF→${offResult}, ON→${onResult}`;
+      results['COM-C2-qr-section'] = (offResult === 'hidden' && onResult === 'visible')
+        ? `PASS — QR Pay: OFF→hidden, ON→visible`
+        : `FAIL — OFF→${offResult}, ON→${onResult}`;
     } catch (e) {
-      results['COM-C2-bankqr-toggle'] = `FAIL: ${e.message.split('\n')[0]}`;
+      results['COM-C2-qr-section'] = `FAIL: ${e.message.split('\n')[0]}`;
       try {
         await comGotoGatewaySettings(comPage);
         const cb = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
@@ -386,35 +405,79 @@ test('Paygate COM settings — enable/disable, Bank&QR, Display, Prod, Maintenan
         await comSave(comPage);
       } catch {}
     }
-    console.log(`>> [COM-C2] ${results['COM-C2-bankqr-toggle']}`);
+    console.log(`>> [COM-C2] ${results['COM-C2-qr-section']}`);
 
-    // ── COM-C3: Display Setting → SSR Merchant ID ────────────────────────────
-    console.log('\n>> [COM-C3] Display Setting → SSR Merchant ID');
+    // ── COM-C3: "Turn on Bank & QR" → verify specific bank in SSR Gateway Transfer ──
+    // Turn OFF → SSR should not show the bank under Gateway Transfer
+    // Turn ON  → SSR should show the bank under Gateway Transfer
+    console.log(`\n>> [COM-C3] Turn on Bank & QR → SSR bank "${testBankName}" in Gateway Transfer`);
+    if (!testBankName) {
+      results['COM-C3-bank-in-gt'] = `SKIP — no enabled bank found for ${testCurrency} in fixture`;
+    } else {
+      try {
+        await comGotoGatewaySettings(comPage);
+        await snap(comPage, 'COM-C3a - COM Gateway Settings');
+        const bankQrCb = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
+        const wasOn    = await bankQrCb.isChecked().catch(() => true);
+
+        if (wasOn) await bankQrCb.click({ force: true });
+        await comSave(comPage);
+        await snap(comPage, 'COM-C3b - Bank&QR OFF saved');
+        const offResult = await ssrCheckBankInGatewayTransfer(ssrPage, testBankName, 'COM-C3c - SSR Bank OFF');
+        console.log(`>> [COM-C3] Bank&QR OFF → SSR bank "${testBankName}": ${offResult}`);
+
+        await comGotoGatewaySettings(comPage);
+        const bankQrCb2 = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
+        if (!(await bankQrCb2.isChecked().catch(() => false))) await bankQrCb2.click({ force: true });
+        await comSave(comPage);
+        await snap(comPage, 'COM-C3d - Bank&QR ON saved');
+        const onResult = await ssrCheckBankInGatewayTransfer(ssrPage, testBankName, 'COM-C3e - SSR Bank ON');
+        console.log(`>> [COM-C3] Bank&QR ON → SSR bank "${testBankName}": ${onResult}`);
+
+        results['COM-C3-bank-in-gt'] = (offResult === 'hidden' && onResult === 'visible')
+          ? `PASS — "${testBankName}": OFF→hidden, ON→visible`
+          : `FAIL — OFF→${offResult}, ON→${onResult}`;
+      } catch (e) {
+        results['COM-C3-bank-in-gt'] = `FAIL: ${e.message.split('\n')[0]}`;
+        try {
+          await comGotoGatewaySettings(comPage);
+          const cb = comPage.getByRole('checkbox', { name: 'Turn on Bank & QR' });
+          if (!(await cb.isChecked().catch(() => false))) await cb.click({ force: true });
+          await comSave(comPage);
+        } catch {}
+      }
+    }
+    console.log(`>> [COM-C3] ${results['COM-C3-bank-in-gt']}`);
+
+    // ── COM-C4: Display Setting → verify Merchant ID in SSR BO ──────────────
+    // Turn OFF → SSR should not show Merchant ID field
+    // Turn ON  → SSR should show Merchant ID field
+    console.log('\n>> [COM-C4] Display Setting → SSR Merchant ID');
     try {
       await comGotoGatewaySettings(comPage);
-      await snap(comPage, 'COM-C3a - Company Gateway Settings');
-      const displayCb  = comPage.getByRole('checkbox', { name: 'Display setting' });
-      const wasChecked = await displayCb.isChecked().catch(() => true);
+      await snap(comPage, 'COM-C4a - COM Gateway Settings');
+      const displayCb = comPage.getByRole('checkbox', { name: 'Display setting' });
+      const wasOn     = await displayCb.isChecked().catch(() => true);
 
-      if (wasChecked) await displayCb.click({ force: true });
+      if (wasOn) await displayCb.click({ force: true });
       await comSave(comPage);
-      await snap(comPage, 'COM-C3b - Display OFF (saved)');
-      const offResult = await ssrCheckMerchantId(ssrPage, 'COM-C3c - SSR Merchant ID (Display OFF)');
-      console.log(`>> [COM-C3] Display OFF → SSR Merchant ID: ${offResult}`);
+      await snap(comPage, 'COM-C4b - Display OFF saved');
+      const offResult = await ssrCheckMerchantId(ssrPage, 'COM-C4c - SSR Merchant ID OFF');
+      console.log(`>> [COM-C4] Display OFF → SSR Merchant ID: ${offResult}`);
 
       await comGotoGatewaySettings(comPage);
       const displayCb2 = comPage.getByRole('checkbox', { name: 'Display setting' });
       if (!(await displayCb2.isChecked().catch(() => false))) await displayCb2.click({ force: true });
       await comSave(comPage);
-      await snap(comPage, 'COM-C3d - Display ON (saved)');
-      const onResult = await ssrCheckMerchantId(ssrPage, 'COM-C3e - SSR Merchant ID (Display ON)');
-      console.log(`>> [COM-C3] Display ON → SSR Merchant ID: ${onResult}`);
+      await snap(comPage, 'COM-C4d - Display ON saved');
+      const onResult = await ssrCheckMerchantId(ssrPage, 'COM-C4e - SSR Merchant ID ON');
+      console.log(`>> [COM-C4] Display ON → SSR Merchant ID: ${onResult}`);
 
-      results['COM-C3-display'] = (offResult === 'hidden' && onResult === 'visible')
-        ? `PASS — Display OFF→MerchantID hidden, ON→visible`
+      results['COM-C4-display'] = (offResult === 'hidden' && onResult === 'visible')
+        ? `PASS — Merchant ID: Display OFF→hidden, ON→visible`
         : `FAIL — OFF→${offResult}, ON→${onResult}`;
     } catch (e) {
-      results['COM-C3-display'] = `FAIL: ${e.message.split('\n')[0]}`;
+      results['COM-C4-display'] = `FAIL: ${e.message.split('\n')[0]}`;
       try {
         await comGotoGatewaySettings(comPage);
         const cb = comPage.getByRole('checkbox', { name: 'Display setting' });
@@ -422,144 +485,133 @@ test('Paygate COM settings — enable/disable, Bank&QR, Display, Prod, Maintenan
         await comSave(comPage);
       } catch {}
     }
-    console.log(`>> [COM-C3] ${results['COM-C3-display']}`);
+    console.log(`>> [COM-C4] ${results['COM-C4-display']}`);
 
-    // ── COM-C4: Prod ON/OFF → Playsite ──────────────────────────────────────
-    console.log('\n>> [COM-C4] Prod ON/OFF → Playsite');
+    // ── COM-C5: Prod On/Off → verify in Playsite ────────────────────────────
+    // Turn OFF → Playsite should not show C2 gateway card
+    // Turn ON  → Playsite should show C2 gateway card
+    console.log('\n>> [COM-C5] Prod On/Off → Playsite');
     try {
       const card = await comGotoPaymentStatus(comPage);
-      await snap(comPage, 'COM-C4a - Payment Status');
+      await snap(comPage, 'COM-C5a - Payment Status');
 
       const getCardState = async (c) => {
         const txt = (await c.locator('.ibox-content').innerText().catch(() => '')).toLowerCase();
-        console.log(`>> [COM-C4] Card status: "${txt.substring(0, 80).trim()}"`);
+        console.log(`>> [COM-C5] Card status: "${txt.substring(0, 80).trim()}"`);
         return txt.includes('running') || (!txt.includes('maintenance') && !txt.includes('off'));
       };
       const handleSwal = async () => {
         const sc = comPage.locator('button.swal2-confirm').first();
         if (await sc.isVisible({ timeout: 3000 }).catch(() => false)) {
           await sc.click({ force: true });
-          console.log('>> [COM-C4] SweetAlert confirmed');
+          console.log('>> [COM-C5] SweetAlert confirmed');
         }
       };
 
-      const prodToggle = card.locator('.switch-control > .slider').first();
+      const prodToggle = card.locator('[data-original-title="Prod On/Off"]').first();
       const isOn = await getCardState(card);
-      console.log(`>> [COM-C4] Current state: ${isOn ? 'ON' : 'OFF'}`);
+      console.log(`>> [COM-C5] Current state: ${isOn ? 'ON' : 'OFF'}`);
 
       if (isOn) { await prodToggle.click({ force: true }); await handleSwal(); }
-      await comPage.waitForTimeout(12000);
-      // Use COM BO card status as authoritative check (playsite doesn't show a visible maintenance indicator)
+      await comPage.waitForTimeout(4000);
+      await snap(comPage, 'COM-C5b - Prod OFF');
+      const offResult = firstMethod
+        ? await playSiteCheckGateway(playerPage, firstMethod, 'COM-C5c - Playsite Prod OFF')
+        : 'SKIP';
+      console.log(`>> [COM-C5] Prod OFF → Playsite: ${offResult}`);
+
       const card2       = await comGotoPaymentStatus(comPage);
       const isOn2       = await getCardState(card2);
-      const offResult   = isOn2 ? 'running' : 'maintenance';
-      console.log(`>> [COM-C4] COM BO Prod OFF → ${offResult}`);
-      await snap(comPage, 'COM-C4b - Prod OFF');
-      if (firstMethod) await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C4c - Playsite Prod OFF').catch(() => {});
-
-      const prodToggle2 = card2.locator('.switch-control > .slider').first();
+      const prodToggle2 = card2.locator('[data-original-title="Prod On/Off"]').first();
       if (!isOn2) { await prodToggle2.click({ force: true }); await handleSwal(); }
-      await comPage.waitForTimeout(12000);
-      const card3  = await comGotoPaymentStatus(comPage);
-      const isOn3  = await getCardState(card3);
-      const onResult = isOn3 ? 'running' : 'maintenance';
-      console.log(`>> [COM-C4] COM BO Prod ON → ${onResult}`);
-      await snap(comPage, 'COM-C4d - Prod ON');
-      if (firstMethod) await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C4e - Playsite Prod ON').catch(() => {});
+      await comPage.waitForTimeout(4000);
+      await snap(comPage, 'COM-C5d - Prod ON');
+      const onResult = firstMethod
+        ? await playSiteCheckGateway(playerPage, firstMethod, 'COM-C5e - Playsite Prod ON')
+        : 'SKIP';
+      console.log(`>> [COM-C5] Prod ON → Playsite: ${onResult}`);
 
-      results['COM-C4-prod-toggle'] = (offResult === 'maintenance' && onResult === 'running')
-        ? `PASS — COM BO: OFF→maintenance, ON→running`
-        : `FAIL — COM BO: OFF→${offResult}, ON→${onResult}`;
+      results['COM-C5-prod-toggle'] = (offResult === 'hidden' && onResult === 'visible')
+        ? `PASS — Prod OFF→Playsite hidden, ON→visible`
+        : `FAIL — OFF→${offResult}, ON→${onResult}`;
     } catch (e) {
-      results['COM-C4-prod-toggle'] = `FAIL: ${e.message.split('\n')[0]}`;
+      results['COM-C5-prod-toggle'] = `FAIL: ${e.message.split('\n')[0]}`;
       try {
         const c   = await comGotoPaymentStatus(comPage);
         const txt = (await c.locator('.ibox-content').innerText().catch(() => '')).toLowerCase();
         if (!txt.includes('running')) {
-          await c.locator('.switch-control > .slider').first().click({ force: true });
+          await c.locator('[data-original-title="Prod On/Off"]').first().click({ force: true });
           const sc = comPage.locator('button.swal2-confirm').first();
           if (await sc.isVisible({ timeout: 3000 }).catch(() => false)) await sc.click({ force: true });
           await comPage.waitForTimeout(2000);
         }
       } catch {}
     }
-    console.log(`>> [COM-C4] ${results['COM-C4-prod-toggle']}`);
+    console.log(`>> [COM-C5] ${results['COM-C5-prod-toggle']}`);
 
-    // ── COM-C5: Maintenance → Playsite ──────────────────────────────────────
-    console.log('\n>> [COM-C5] Maintenance → Playsite');
+    // ── COM-C6: Maintenance → verify in Playsite ────────────────────────────
+    // Start Maintenance → Playsite should show maintenance state
+    // Resume (Ready)    → Playsite should show normal card
+    console.log('\n>> [COM-C6] Maintenance → Playsite');
     try {
       const card = await comGotoPaymentStatus(comPage);
-      await snap(comPage, 'COM-C5a - Before Maintenance');
+      await snap(comPage, 'COM-C6a - Before Maintenance');
 
-      const maintBtn = card.locator('.ibox-title .ibox-tools .btn').first();
+      const maintBtn = card.locator('button[data-target="#statusModal"]').first();
       await maintBtn.click({ force: true });
       await comPage.waitForTimeout(1000);
       await comPage.locator('#statusModal').waitFor({ state: 'visible', timeout: 8000 });
-      await comPage.getByText('Start Maintenance').click({ force: true });
-      console.log('>> [COM-C5] "Start Maintenance" clicked');
-      await comPage.waitForTimeout(12000);
-      await snap(comPage, 'COM-C5b - Maintenance set');
+      await comPage.locator('#statusModal button[type="submit"]').click({ force: true });
+      console.log('>> [COM-C6] "Start Maintenance" clicked');
+      await comPage.waitForTimeout(4000);
+      await snap(comPage, 'COM-C6b - Maintenance set');
 
-      // Use COM BO card status as authoritative check
-      const card2       = await comGotoPaymentStatus(comPage);
-      const maintTxt    = (await card2.locator('.ibox-content').innerText().catch(() => '')).toLowerCase();
-      const maintResult = maintTxt.includes('maintenance') ? 'maintenance' : 'running';
-      console.log(`>> [COM-C5] COM BO maintenance status: ${maintResult} ("${maintTxt.substring(0, 60).trim()}")`);
-      if (firstMethod) await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C5c - Playsite Maintenance').catch(() => {});
-      await snap(comPage, 'COM-C5d-pre - Payment Status (after maintenance)');
-      const readyBtn = card2.locator('.btn.btn-sm.btn-primary').first();
+      const maintResult = firstMethod
+        ? await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C6c - Playsite Maintenance')
+        : 'SKIP';
+      console.log(`>> [COM-C6] Maintenance → Playsite: ${maintResult}`);
+
+      const card2    = await comGotoPaymentStatus(comPage);
+      await snap(comPage, 'COM-C6d-pre - Payment Status (maintenance active)');
+      const readyBtn = card2.locator('button[data-original-title="Ready"]').first();
       const hasReady = await readyBtn.isVisible({ timeout: 5000 }).catch(() => false);
       if (hasReady) {
         await readyBtn.click({ force: true });
-        console.log('>> [COM-C5] Resume button clicked');
-        await comPage.waitForTimeout(800);
-        const confirmBtn = comPage.getByRole('button', { name: 'Confirm' }).first();
-        if (await confirmBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await confirmBtn.click({ force: true });
-          console.log('>> [COM-C5] Confirmation dialog confirmed');
-        } else {
-          const swalConfirm = comPage.locator('button.swal2-confirm').first();
-          if (await swalConfirm.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await swalConfirm.click({ force: true });
-            console.log('>> [COM-C5] SweetAlert confirmed');
-          }
+        console.log('>> [COM-C6] "Ready" clicked to resume');
+        const swalConfirm = comPage.locator('button.swal2-confirm').first();
+        if (await swalConfirm.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await swalConfirm.click({ force: true });
+          console.log('>> [COM-C6] SweetAlert confirmed');
         }
       } else {
-        const btns = await card2.locator('button, .btn').evaluateAll(els => els.map(e => e.getAttribute('data-original-title') || e.textContent?.trim()));
-        console.log(`>> [COM-C5] WARNING — Resume button not found. Buttons: ${JSON.stringify(btns)}`);
+        const btns = await card2.locator('button').evaluateAll(els => els.map(e => `${e.getAttribute('data-original-title') || ''} ${e.textContent?.trim() || ''}`));
+        console.log(`>> [COM-C6] WARNING — Ready button not found. Buttons: ${JSON.stringify(btns)}`);
       }
-      await comPage.waitForTimeout(12000);
-      // Use COM BO card status to confirm gateway resumed
-      const card3        = await comGotoPaymentStatus(comPage);
-      const resumeTxt    = (await card3.locator('.ibox-content').innerText().catch(() => '')).toLowerCase();
-      const resumeResult = resumeTxt.includes('running') ? 'running' : 'maintenance';
-      console.log(`>> [COM-C5] COM BO after resume: ${resumeResult} ("${resumeTxt.substring(0, 60).trim()}")`);
-      await snap(comPage, 'COM-C5d - Resumed');
-      if (firstMethod) await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C5e - Playsite after Resume').catch(() => {});
+      await comPage.waitForTimeout(4000);
+      await snap(comPage, 'COM-C6d - Resumed');
 
-      results['COM-C5-maintenance'] = (maintResult === 'maintenance' && resumeResult === 'running')
-        ? `PASS — COM BO: maintenance, resume→running`
-        : `FAIL — COM BO: maintenance→${maintResult}, resume→${resumeResult}`;
+      const resumeResult = firstMethod
+        ? await playSiteCheckMaintenance(playerPage, firstMethod, 'COM-C6e - Playsite after Resume')
+        : 'SKIP';
+      console.log(`>> [COM-C6] Resume → Playsite: ${resumeResult}`);
+
+      results['COM-C6-maintenance'] = ((maintResult === 'maintenance' || maintResult === 'hidden') && resumeResult === 'visible')
+        ? `PASS — maintenance→${maintResult}, resume→visible`
+        : `FAIL — maintenance→${maintResult}, resume→${resumeResult}`;
     } catch (e) {
-      results['COM-C5-maintenance'] = `FAIL: ${e.message.split('\n')[0]}`;
+      results['COM-C6-maintenance'] = `FAIL: ${e.message.split('\n')[0]}`;
       try {
         const c  = await comGotoPaymentStatus(comPage);
-        const rb = c.locator('.btn.btn-sm.btn-primary').first();
+        const rb = c.locator('button[data-original-title="Ready"]').first();
         if (await rb.isVisible({ timeout: 3000 }).catch(() => false)) {
           await rb.click({ force: true });
-          await comPage.waitForTimeout(800);
-          const cb = comPage.getByRole('button', { name: 'Confirm' }).first();
-          if (await cb.isVisible({ timeout: 3000 }).catch(() => false)) {
-            await cb.click({ force: true });
-          } else {
-            const sc = comPage.locator('button.swal2-confirm').first();
-            if (await sc.isVisible({ timeout: 2000 }).catch(() => false)) await sc.click({ force: true });
-          }
+          const sc = comPage.locator('button.swal2-confirm').first();
+          if (await sc.isVisible({ timeout: 3000 }).catch(() => false)) await sc.click({ force: true });
           await comPage.waitForTimeout(2000);
         }
       } catch {}
     }
-    console.log(`>> [COM-C5] ${results['COM-C5-maintenance']}`);
+    console.log(`>> [COM-C6] ${results['COM-C6-maintenance']}`);
 
   } finally {
     if (comPage)    await comPage.close({ runBeforeUnload: false }).catch(() => {});
