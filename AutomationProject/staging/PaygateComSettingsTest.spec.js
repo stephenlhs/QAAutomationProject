@@ -63,54 +63,45 @@ async function dismissModals(page) {
 }
 
 // ─── Login helpers ────────────────────────────────
-async function loginCOMBO(browser) {
-  const comCtx  = await browser.newContext();
-  const comPage = await comCtx.newPage();
-  await comPage.goto(URLS.backoffice, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await comPage.waitForTimeout(1000);
-  const roleTab = comPage.locator('li').filter({ hasText: COM_BO_ROLE }).first();
+async function loginCOMBO(page) {
+  await page.goto(URLS.backoffice, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.waitForTimeout(1000);
+  const roleTab = page.locator('li').filter({ hasText: COM_BO_ROLE }).first();
   if (await roleTab.count()) await roleTab.click({ force: true }).catch(() => {});
-  await comPage.waitForTimeout(300);
-  await comPage.getByRole('textbox', { name: 'Username' }).fill(COM_BO_USERNAME);
-  await comPage.getByRole('textbox', { name: 'Password' }).fill(COM_BO_PASSWORD);
-  const cap = new CaptchaHelper(comPage, 'com-bo');
+  await page.waitForTimeout(300);
+  await page.getByRole('textbox', { name: 'Username' }).fill(COM_BO_USERNAME);
+  await page.getByRole('textbox', { name: 'Password' }).fill(COM_BO_PASSWORD);
+  const cap = new CaptchaHelper(page, 'com-bo');
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const captchaImg  = comPage.getByRole('img').first();
+    const captchaImg  = page.getByRole('img').first();
     const captchaText = await cap.solve(captchaImg);
-    if (captchaText.length !== 4) { await captchaImg.click(); await comPage.waitForTimeout(1000); continue; }
-    await comPage.getByRole('textbox', { name: 'Captcha' }).fill(captchaText);
-    await comPage.getByRole('button', { name: 'Login' }).click();
-    await comPage.waitForTimeout(1500);
-    if (!comPage.url().includes('/login')) break;
+    if (captchaText.length !== 4) { await captchaImg.click(); await page.waitForTimeout(1000); continue; }
+    await page.getByRole('textbox', { name: 'Captcha' }).fill(captchaText);
+    await page.getByRole('button', { name: 'Login' }).click();
+    await page.waitForTimeout(1500);
+    if (!page.url().includes('/login')) break;
     await captchaImg.click();
-    await comPage.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
   }
-  if (comPage.url().includes('/login')) throw new Error('COM BO login failed after 3 attempts');
-  await dismissModals(comPage);
+  if (page.url().includes('/login')) throw new Error('COM BO login failed after 3 attempts');
+  await dismissModals(page);
   console.log('>> [COM BO] Login successful');
-  return { comCtx, comPage };
 }
 
-async function loginSSRBO(browser) {
-  const ssrCtx  = await browser.newContext();
-  const ssrPage = await ssrCtx.newPage();
-  const bo  = new BackofficePage(ssrPage, 'backoffice');
-  const cap = new CaptchaHelper(ssrPage, 'backoffice');
+async function loginSSRBO(page) {
+  const bo  = new BackofficePage(page, 'backoffice');
+  const cap = new CaptchaHelper(page, 'backoffice');
   await bo.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, cap, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
   await bo.closeExtraTabs();
-  await dismissModals(ssrPage);
+  await dismissModals(page);
   console.log('>> [SSR BO] Login successful');
-  return { ssrCtx, ssrPage };
 }
 
-async function loginPlaysite(browser) {
-  const playerCtx  = await browser.newContext();
-  const playerPage = await playerCtx.newPage();
-  const lp  = new LoginPage(playerPage, 'player');
-  const cap = new CaptchaHelper(playerPage, 'player');
+async function loginPlaysite(page) {
+  const lp  = new LoginPage(page, 'player');
+  const cap = new CaptchaHelper(page, 'player');
   await lp.loginAndSaveSession(PLAYER.username, PLAYER.password, cap, PLAYER.sessionPath);
   console.log('>> [Playsite] Login successful');
-  return { playerCtx, playerPage };
 }
 
 // ─── COM BO helpers ───────────────────────────────
@@ -322,15 +313,22 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
   const bankMethod   = (enabledMethods.find(([n]) => n === 'Bank') || enabledMethods.find(([n]) => n.toLowerCase().includes('bank')))?.[1];
   const testBankName = bankMethod?.banks?.[testCurrency]?.find(b => b.enabled)?.name || null;
 
+  // COM BO and SSR BO share the same domain so they need separate contexts (different sessions).
+  // SSR BO (stage-bo.linkv2.com) and Playsite (stage-mem.linkv2.com) are different domains,
+  // so they share one context — result: 2 browser windows instead of 3.
   let comCtx = null, comPage = null;
-  let ssrCtx = null, ssrPage = null;
-  let playerCtx = null, playerPage = null;
+  let verifyCtx = null, ssrPage = null, playerPage = null;
 
   try {
-    console.log('>> Opening COM BO, SSR BO, and Playsite simultaneously...');
-    ({ comCtx, comPage }       = await loginCOMBO(browser));
-    ({ ssrCtx, ssrPage }       = await loginSSRBO(browser));
-    ({ playerCtx, playerPage } = await loginPlaysite(browser));
+    console.log('>> Opening COM BO (window 1) and SSR BO + Playsite (window 2)...');
+    comCtx     = await browser.newContext();
+    comPage    = await comCtx.newPage();
+    verifyCtx  = await browser.newContext();
+    ssrPage    = await verifyCtx.newPage();
+    playerPage = await verifyCtx.newPage();
+    await loginCOMBO(comPage);
+    await loginSSRBO(ssrPage);
+    await loginPlaysite(playerPage);
 
     await snap(comPage,    'COM-Setup - COM BO');
     await snap(ssrPage,    'COM-Setup - SSR BO');
@@ -669,9 +667,8 @@ test('Paygate COM settings — C2 toggle, Bank&QR, Display, Prod, Maintenance', 
     if (comPage)    await comPage.close({ runBeforeUnload: false }).catch(() => {});
     if (comCtx)     await comCtx.close().catch(() => {});
     if (ssrPage)    await ssrPage.close({ runBeforeUnload: false }).catch(() => {});
-    if (ssrCtx)     await ssrCtx.close().catch(() => {});
     if (playerPage) await playerPage.close({ runBeforeUnload: false }).catch(() => {});
-    if (playerCtx)  await playerCtx.close().catch(() => {});
+    if (verifyCtx)  await verifyCtx.close().catch(() => {});
   }
 
   // ── Summary ──────────────────────────────────────

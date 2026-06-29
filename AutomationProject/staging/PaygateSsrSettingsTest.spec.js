@@ -63,26 +63,20 @@ async function dismissModals(page) {
 }
 
 // ─── Login helpers ────────────────────────────────
-async function loginSSRBO(browser) {
-  const ssrCtx  = await browser.newContext();
-  const ssrPage = await ssrCtx.newPage();
-  const bo  = new BackofficePage(ssrPage, 'backoffice');
-  const cap = new CaptchaHelper(ssrPage, 'backoffice');
+async function loginSSRBO(page) {
+  const bo  = new BackofficePage(page, 'backoffice');
+  const cap = new CaptchaHelper(page, 'backoffice');
   await bo.loginAndSaveSession(BACKOFFICE.username, BACKOFFICE.password, cap, BACKOFFICE.sessionPath, BACKOFFICE.twoFASecret);
   await bo.closeExtraTabs();
-  await dismissModals(ssrPage);
+  await dismissModals(page);
   console.log('>> [SSR BO] Login successful');
-  return { ssrCtx, ssrPage };
 }
 
-async function loginPlaysite(browser) {
-  const playerCtx  = await browser.newContext();
-  const playerPage = await playerCtx.newPage();
-  const lp  = new LoginPage(playerPage, 'player');
-  const cap = new CaptchaHelper(playerPage, 'player');
+async function loginPlaysite(page) {
+  const lp  = new LoginPage(page, 'player');
+  const cap = new CaptchaHelper(page, 'player');
   await lp.loginAndSaveSession(PLAYER.username, PLAYER.password, cap, PLAYER.sessionPath);
   console.log('>> [Playsite] Login successful');
-  return { playerCtx, playerPage };
 }
 
 // ─── SSR BO helpers ───────────────────────────────
@@ -272,13 +266,17 @@ test('Paygate SSR settings — gateway/QR/bank toggles and min/max validation', 
   const firstMethod     = enabledMethods[0]?.[1];
   const testBankName    = bankMethod?.banks?.[testCurrency]?.find(b => b.enabled)?.name || null;
 
-  let ssrCtx = null, ssrPage = null;
-  let playerCtx = null, playerPage = null;
+  // SSR BO (stage-bo.linkv2.com) and Playsite (stage-mem.linkv2.com) are different domains,
+  // so they share one context without session conflict — one browser window, two tabs.
+  let ctx = null, ssrPage = null, playerPage = null;
 
   try {
-    console.log('>> Opening SSR BO and Playsite simultaneously...');
-    ({ ssrCtx, ssrPage }       = await loginSSRBO(browser));
-    ({ playerCtx, playerPage } = await loginPlaysite(browser));
+    console.log('>> Opening SSR BO and Playsite in one browser...');
+    ctx        = await browser.newContext();
+    ssrPage    = await ctx.newPage();
+    playerPage = await ctx.newPage();
+    await loginSSRBO(ssrPage);
+    await loginPlaysite(playerPage);
 
     await snap(ssrPage,    'SSR-Setup - SSR BO');
     await snap(playerPage, 'SSR-Setup - Playsite');
@@ -532,9 +530,8 @@ test('Paygate SSR settings — gateway/QR/bank toggles and min/max validation', 
 
   } finally {
     if (ssrPage)    await ssrPage.close({ runBeforeUnload: false }).catch(() => {});
-    if (ssrCtx)     await ssrCtx.close().catch(() => {});
     if (playerPage) await playerPage.close({ runBeforeUnload: false }).catch(() => {});
-    if (playerCtx)  await playerCtx.close().catch(() => {});
+    if (ctx)        await ctx.close().catch(() => {});
   }
 
   // ── Summary ──────────────────────────────────────
