@@ -1,7 +1,8 @@
 # QA Automation Project (v2)
 
-Automated testing suite for deposit, withdrawal, paygate, and member-setup flows using Playwright.
+Automated testing suite for deposit, withdrawal, paygate, member-setup, and game flows using Playwright.
 Supports Staging, UAT, and Production environments with auto captcha solving and 2FA handling.
+Includes an AI-assisted QA layer powered by Claude Code agents for exploratory testing, ticket verification, and GitLab reporting.
 
 ---
 
@@ -39,7 +40,7 @@ npm install
 ### 4. Install Python dependencies
 
 ```
-pip install openpyxl ddddocr
+pip install openpyxl ddddocr requests
 ```
 
 ### 5. Install Playwright browser
@@ -67,6 +68,57 @@ This starts:
 - QA Dashboard (port 4000)
 - ngrok public tunnel (see ngrok window for your HTTPS URL)
 - Opens browser at `http://localhost:4000`
+
+---
+
+## AI-Assisted QA (Claude Code)
+
+This project includes a Claude Code agent layer for exploratory and verification testing that runs alongside the Playwright suite.
+
+### Agents
+
+| Agent | Role |
+|-------|------|
+| `qa-analyst` | Reads a GitLab issue or feature description and drafts a structured test case table for review — never runs tests or posts to GitLab |
+| `qa-tester` | Executes an assigned QA task (Playwright spec, API check, exploratory game test, XSS verification) and drafts a GitLab report for approval |
+
+Agent definitions live in `.claude/agents/`. They are invoked via Claude Code (Claude Desktop or CLI) — not from the terminal directly.
+
+### Typical workflow
+
+1. **qa-analyst** reads the GitLab issue → outputs a TC table
+2. Stephen reviews and approves the TCs
+3. **qa-tester** runs the assigned tests → drafts a report in `.screenshots-tmp/`
+4. Stephen reviews and posts the report to GitLab
+
+### GitLab Reporting
+
+The `gitlab_report.py` script (in `.claude/skills/qa-gitlab-report/scripts/`) handles:
+- Uploading screenshots to a GitLab project (returns `![name](/uploads/...)` refs)
+- Posting a Markdown report as a note on any GitLab issue
+- Reading existing issue body + comments
+
+```bash
+# Upload a screenshot
+python .claude/skills/qa-gitlab-report/scripts/gitlab_report.py upload ".screenshots-tmp/flow/screenshot.png"
+
+# Post a report to an issue
+python .claude/skills/qa-gitlab-report/scripts/gitlab_report.py post --issue 9908 --body-file ".screenshots-tmp/flow/body-gitlab.md"
+```
+
+Requires `GITLAB_TOKEN` in `.env`. Reports are **never posted automatically** — only on explicit approval from Stephen.
+
+### playwright-cli (interactive browser)
+
+`playwright-cli` provides a persistent browser session for exploratory testing outside of the Playwright spec runner:
+
+```bash
+playwright-cli open https://stage-mem.linkv2.com/
+playwright-cli goto /user/withdrawal
+playwright-cli screenshot --filename=before.png
+```
+
+The captcha server must be running on `:3333` for login to work in both the spec runner and `playwright-cli` sessions.
 
 ---
 
@@ -245,15 +297,27 @@ QAAutomationProject/
 │   │   ├── ManualRejectWithdrawal.spec.js
 │   │   ├── PaygateDepositTest.spec.js
 │   │   ├── PaygateDepositSettingsTest.spec.js
+│   │   ├── PaygateComSettingsTest.spec.js    COM-level paygate settings (C1–C6)
+│   │   ├── PaygateSsrSettingsTest.spec.js    SSR-level paygate settings
+│   │   ├── PaygateIntegrationTest.spec.js    End-to-end paygate integration
 │   │   └── PaygateWithdrawTest.spec.js
 │   ├── uat/                          Same structure as staging (excl. PaygateWithdrawTest)
 │   └── prod/                         Same structure as staging (excl. PaygateWithdrawTest)
+├── .claude/
+│   ├── agents/
+│   │   ├── qa-analyst.md             AI agent — drafts test cases from GitLab issues
+│   │   └── qa-tester.md              AI agent — runs tests and drafts GitLab reports
+│   └── skills/
+│       ├── linkv2-system-reference/  System map (envs, API hosts, auth, gotchas)
+│       ├── playwright-cli/           Browser automation skill docs
+│       └── qa-gitlab-report/         GitLab upload + report posting scripts
 ├── docs/
 │   ├── deposit-reward/
 │   │   ├── TestCases_TC020-TC031.md  Test case definitions for advanced suite
 │   │   ├── planner.md                Design notes and approach
 │   │   └── tester.md                 Execution notes
 │   └── AI_AGENT_DESIGN.md
+├── .screenshots-tmp/                 QA report screenshots (not committed to git)
 ├── reports/                          Auto-generated Excel reports per env
 ├── .auth/                            Saved login sessions (not committed to git)
 ├── .env                              Your credentials (not committed to git)
@@ -328,6 +392,33 @@ QAAutomationProject/
 4. Cash History verified — transaction recorded
 5. Player records balance/rollover/target after
 6. BO logs in, verifies transaction in Cash Withdraw List and confirms paygate label
+
+### PaygateComSettingsTest (VaderPay C2 — COM Level)
+
+Tests that COM-level BO settings correctly propagate to the SSR panel and the playsite deposit page.
+
+1. COM BO logs in and toggles each setting (gateway on/off, Bank & QR, Display, Prod, Maintenance)
+2. SSR panel is verified to reflect the COM setting change
+3. Playsite deposit page is verified to show or hide the gateway card accordingly
+
+Checks covered: C1 (gateway toggle), C2 (Bank & QR toggle), C3 (Display Setting), C4 (Prod On/Off), C5 (Maintenance start), C6 (Resume from maintenance).
+
+### PaygateSsrSettingsTest (VaderPay C2 — SSR Level)
+
+Tests that SSR-level BO settings correctly propagate to the playsite deposit page.
+
+1. SSR BO logs in and toggles each setting (gateway checkbox, QR Pay, Gateway Transfer, individual banks, min/max limits)
+2. Playsite deposit page is verified after each toggle
+
+Checks covered: gateway enable/disable, method visibility, bank list visibility, deposit min/max validation on playsite.
+
+### PaygateIntegrationTest (VaderPay C2 — Full Integration)
+
+End-to-end integration tests for all paygate deposit callback scenarios.
+
+1. Player submits paygate deposit
+2. Vendor callback simulated (approve / reject / pending-approve / pending-reject)
+3. Assertions on playsite balance, BO deposit list status, PG Transactions, Webtools Wallet Log, and Tally
 
 ### DepositReward (Base Suite — TC-001 to TC-019)
 Tests core Deposit Reward behaviour: BO enable/disable, tier rates, bonus cap, counter resets, and rollover.
